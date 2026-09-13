@@ -2,178 +2,171 @@ using UnityEngine;
 
 public class Boid : Agent
 {
-    public bool isDead = false;
+    public bool isDead= false;
     private HunterAI hunter;
 
-    [Header("Radios de Flocking")]
-    public float radioVisionBoids = 6f;
-    public float radioSeparacion = 2.5f;
+    [Header("Flocking Radii")]
+    public float boidVisionRadius= 6f;
+    public float separationRadius= 2.5f;
 
-    [Header("Radios Fruta")]
-    public float radioDeteccionFruta = 7f;
-    public float distanciaFrenadoFruta = 2f;
+    [Header("Fruit Radii")]
+    public float fruitDetectionRadius= 7f;
+    public float fruitBrakeDistance= 2f;
 
     protected override void Start()
     {
         base.Start();
-        BuscarCazadorEnEscena();
+        FindHunterInScene();
     }
 
     void Update()
     {
-        // Si el agente está muerto, se detiene completamente en el lugar
         if (isDead)
         {
-            velocity = Vector2.zero;
-            aceleracion = Vector2.zero;
+            velocity= Vector2.zero;
+            acceleration= Vector2.zero;
             return;
         }
 
-        if (hunter == null) BuscarCazadorEnEscena();
+        if (hunter== null) FindHunterInScene();
 
-        // Evade Prioritario sobre Flocking si el Cazador entra en su rango de visión
         if (hunter != null)
         {
-            float distAlHunter = Vector2.Distance(transform.position, hunter.transform.position);
-            if (distAlHunter < hunter.visionRadius)
+            float distToHunter= Vector2.Distance(transform.position, hunter.transform.position);
+            if (distToHunter< hunter.visionRadius)
             {
-                Vector2 fuerzaEvadir = Evade(hunter);
-                Vector2 escapeLateral = new Vector2(-hunter.velocity.y, hunter.velocity.x).normalized;
-                fuerzaEvadir += escapeLateral * fMax * 0.4f;
+                Vector2 evadeForce= Evade(hunter);
+                Vector2 sideEscape= new Vector2(-hunter.velocity.y, hunter.velocity.x).normalized;
+                evadeForce += sideEscape* fMax* 0.4f;
 
-                MeterFuerza(Vector2.ClampMagnitude(fuerzaEvadir, fMax * 1.5f));
-                AplicarFisicas();
+                AddForce(Vector2.ClampMagnitude(evadeForce, fMax* 1.5f));
+                ApplyPhysics();
                 return;
-                
             }
         }
 
-        // Si no hay amenaza, calcula Flocking
-        Vector2 fuerzasGrupo = CalcularFlocking();
-        if (fuerzasGrupo == Vector2.zero && velocity.sqrMagnitude < 0.05f)
+        Vector2 groupForces= CalculateFlocking();
+        if (groupForces== Vector2.zero && velocity.sqrMagnitude< 0.05f)
         {
-            fuerzasGrupo = Random.insideUnitCircle.normalized * 0.5f;
+            groupForces= Random.insideUnitCircle.normalized* 0.5f;
         }
-        MeterFuerza(fuerzasGrupo);
+        AddForce(groupForces);
 
-        // Búsqueda y consumo de Manzanas utilizando Arrive
-        Fruit manzana = BuscarFrutaCercana();
-        if (manzana != null)
+        Fruit fruit= FindNearestFruit();
+        if (fruit!= null)
         {
-            float distAlManzana = Vector2.Distance(transform.position, manzana.transform.position);
+            float distToFruit= Vector2.Distance(transform.position, fruit.transform.position);
 
-            if (distAlManzana <= manzana.radioComer)
+            if (distToFruit <= fruit.consumeRadius)
             {
-                velocity = Vector2.zero;
-                manzana.SerConsumida(manzana.dmgPorSeg * Time.deltaTime);
+                velocity= Vector2.zero;
+                fruit.Consume(fruit.damagePerSecond* Time.deltaTime);
             }
             else
             {
-                MeterFuerza(Arrive(manzana.transform.position, distanciaFrenadoFruta) * 1.2f);
+                AddForce(Arrive(fruit.transform.position, fruitBrakeDistance)* 1.2f);
             }
         }
 
-        AplicarFisicas();
+        ApplyPhysics();
     }
 
-    void BuscarCazadorEnEscena()
+    void FindHunterInScene()
     {
-        hunter = GameObject.FindAnyObjectByType<HunterAI>();
+        hunter= GameObject.FindFirstObjectByType<HunterAI>();
     }
 
-    Vector2 CalcularFlocking()
+    Vector2 CalculateFlocking()
     {
-        Boid[] todos = Object.FindObjectsByType<Boid>(FindObjectsSortMode.None);
-        Vector2 centroMasa = Vector2.zero;
-        Vector2 velPromedio = Vector2.zero;
-        Vector2 fuerzaSeparacion = Vector2.zero;
+        Boid[] allBoids= Object.FindObjectsByType<Boid>(FindObjectsSortMode.None);
+        Vector2 centerOfMass= Vector2.zero;
+        Vector2 avgVelocity= Vector2.zero;
+        Vector2 separationForce= Vector2.zero;
 
-        int vecCount = 0;
-        int sepCount = 0;
+        int neighborCount= 0;
+        int sepCount= 0;
 
-        foreach (var otro in todos)
+        foreach (var other in allBoids)
         {
-            if (otro == this || otro.isDead) continue;
-            float d = Vector2.Distance(transform.position, otro.transform.position);
+            if (other== this || other.isDead) continue;
+            float d= Vector2.Distance(transform.position, other.transform.position);
 
-            // Cohesión y Alineación
-            if (d < radioVisionBoids && d > 0.01f)
+            if (d< boidVisionRadius && d> 0.01f)
             {
-                centroMasa += (Vector2)otro.transform.position;
-                velPromedio += otro.velocity;
-                vecCount++;
+                centerOfMass += (Vector2)other.transform.position;
+                avgVelocity += other.velocity;
+                neighborCount++;
             }
 
-            // Separación (Rango menor obligatorio)
-            if (d < radioSeparacion && d > 0.01f)
+            if (d< separationRadius && d> 0.01f)
             {
-                Vector2 repulsion = (Vector2)transform.position - (Vector2)otro.transform.position;
-                fuerzaSeparacion += repulsion.normalized / d;
+                Vector2 push= (Vector2)transform.position - (Vector2)other.transform.position;
+                separationForce += push.normalized / d;
                 sepCount++;
             }
         }
 
-        Vector2 fuerzaResultante = Vector2.zero;
+        Vector2 resultForce= Vector2.zero;
 
-        if (vecCount > 0)
+        if (neighborCount> 0)
         {
-            centroMasa /= vecCount;
-            velPromedio /= vecCount;
+            centerOfMass /= neighborCount;
+            avgVelocity /= neighborCount;
 
-            Vector2 fuerzaCohesion = Seek(centroMasa);
-            Vector2 fuerzaAlineacion = Vector2.ClampMagnitude(velPromedio.normalized * vMax - velocity, fMax);
+            Vector2 cohesionForce= Seek(centerOfMass);
+            Vector2 alignForce= Vector2.ClampMagnitude(avgVelocity.normalized* vMax - velocity, fMax);
 
-            fuerzaResultante += fuerzaCohesion * 0.4f;
-            fuerzaResultante += fuerzaAlineacion * 0.3f;
+            resultForce += cohesionForce* 0.4f;
+            resultForce += alignForce* 0.3f;
         }
 
-        if (sepCount > 0)
+        if (sepCount> 0)
         {
-            fuerzaSeparacion /= sepCount;
-            Vector2 deseadaSep = fuerzaSeparacion.normalized * vMax;
-            Vector2 fuerzaSepSteering = Vector2.ClampMagnitude(deseadaSep - velocity, fMax);
+            separationForce /= sepCount;
+            Vector2 desiredSep= separationForce.normalized* vMax;
+            Vector2 sepSteering= Vector2.ClampMagnitude(desiredSep - velocity, fMax);
 
-            fuerzaResultante += fuerzaSepSteering * 2.5f;
+            resultForce += sepSteering* 2.5f;
         }
 
-        return fuerzaResultante;
+        return resultForce;
     }
 
-    public void Morir()
+    public void Die()
     {
-        isDead = true;
-        velocity = Vector2.zero;
-        aceleracion = Vector2.zero;
-        if (miRender != null) miRender.color = new Color(0.2f, 0.2f, 0.2f, 1f);
+        isDead= true;
+        velocity= Vector2.zero;
+        acceleration= Vector2.zero;
+        if (myRenderer!= null) myRenderer.color= new Color(0.2f, 0.2f, 0.2f, 1f);
     }
 
-    public void Revivir()
+    public void Revive()
     {
-        isDead = false;
-        velocity = Random.insideUnitCircle * vMax;
-        aceleracion = Vector2.zero;
-        if (miRender != null) miRender.color = Color.white;
+        isDead= false;
+        velocity= Random.insideUnitCircle* vMax;
+        acceleration= Vector2.zero;
+        if (myRenderer!= null) myRenderer.color= Color.white;
     }
 
-    Fruit BuscarFrutaCercana()
+    Fruit FindNearestFruit()
     {
-        Fruit[] frutas = Object.FindObjectsByType<Fruit>(FindObjectsSortMode.None);
-        Fruit masCercana = null;
-        float dMin = radioDeteccionFruta;
+        Fruit[] fruits= Object.FindObjectsByType<Fruit>(FindObjectsSortMode.None);
+        Fruit nearest= null;
+        float minDistance= fruitDetectionRadius;
 
-        foreach (var f in frutas)
+        foreach (var f in fruits)
         {
-            if (f == null) continue;
-            float d = Vector2.Distance(transform.position, f.transform.position);
-            if (d < dMin) { dMin = d; masCercana = f; }
+            if (f== null) continue;
+            float d= Vector2.Distance(transform.position, f.transform.position);
+            if (d< minDistance) { minDistance= d; nearest= f; }
         }
-        return masCercana;
+        return nearest;
     }
 
     private void OnDrawGizmos()
     {
-        Gizmos.color = Color.white; Gizmos.DrawWireSphere(transform.position, radioVisionBoids);
-        Gizmos.color = Color.red; Gizmos.DrawWireSphere(transform.position, radioSeparacion);
-        Gizmos.color = Color.green; Gizmos.DrawWireSphere(transform.position, radioDeteccionFruta);
+        Gizmos.color= Color.white; Gizmos.DrawWireSphere(transform.position, boidVisionRadius);
+        Gizmos.color= Color.red; Gizmos.DrawWireSphere(transform.position, separationRadius);
+        Gizmos.color= Color.green; Gizmos.DrawWireSphere(transform.position, fruitDetectionRadius);
     }
 }

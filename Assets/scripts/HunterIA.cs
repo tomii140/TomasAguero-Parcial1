@@ -5,108 +5,108 @@ public class HunterAI : Agent
 {
     public FiniteStateMachine FSM { get; private set; }
 
-    [Header("Configuración de Ataque (Variables Consigna)")]
-    public float visionRadius = 8f;
-    public float RangeAttackRadius = 5f;
-    public float MeleeAttackRadius = 2f;
-    public float TBA = 3f;
-    
+    [Header("Attack Settings")]
+    public float visionRadius= 8f;
+    public float RangeAttackRadius= 5f;
+    public float MeleeAttackRadius= 2f;
+    public float TBA= 3f;
+
     public float TimerTBA { get; private set; }
 
-    [Header("Manzanas Spawn")]
-    public GameObject applePrefab;
-    public float tiempoSpawnApple = 3f;
-    public float radioSpawnApple = 6f;
-    private float timerApple = 0f;
+    [Header("Fruit Spawn")]
+    public GameObject fruitPrefab;
+    public float fruitSpawnInterval= 3f;
+    public float fruitSpawnRadius= 6f;
+    private float fruitTimer= 0f;
 
-    [Header("Navegación por Waypoints")]
+    [Header("Navigation")]
     public Transform[] waypoints;
 
-    private Boid victimaTarget;
+    private Boid targetBoid;
 
     protected override void Start()
     {
         base.Start();
-        TimerTBA = 0f;
+        TimerTBA= 0f;
 
-        FSM = new FiniteStateMachine();
+        FSM= new FiniteStateMachine();
         FSM.ChangeState(new HunterPatrolState(this));
     }
 
     void Update()
     {
-        if (TimerTBA > 0)
+        if (TimerTBA> 0)
             TimerTBA -= Time.deltaTime;
 
-        ManejarSpawnManzanas();
+        HandleFruitSpawning();
         FSM.Update();
-        AplicarFisicas();
+        ApplyPhysics();
     }
 
-    void ManejarSpawnManzanas()
+    void HandleFruitSpawning()
     {
-        timerApple += Time.deltaTime;
+        fruitTimer += Time.deltaTime;
 
-        if (timerApple >= tiempoSpawnApple)
+        if (fruitTimer>= fruitSpawnInterval)
         {
-            timerApple = 0f;
-            Fruit[] manzanasActuales = Object.FindObjectsByType<Fruit>(FindObjectsSortMode.None);
-            if (manzanasActuales.Length < 5)
+            fruitTimer= 0f;
+            Fruit[] currentFruits= Object.FindObjectsByType<Fruit>(FindObjectsSortMode.None);
+            if (currentFruits.Length< 5)
             {
-                Vector2 p = (Vector2)transform.position + Random.insideUnitCircle * radioSpawnApple;
-                Instantiate(applePrefab, p, Quaternion.identity);
+                Vector2 p= (Vector2)transform.position + Random.insideUnitCircle* fruitSpawnRadius;
+                Instantiate(fruitPrefab, p, Quaternion.identity);
             }
         }
     }
 
     public void SetColorFeedback(Color c)
     {
-        if (miRender != null) miRender.color = c;
+        if (myRenderer!= null) myRenderer.color= c;
     }
 
-    public void SetVictimaTarget(Boid b) => victimaTarget = b;
-    public Boid GetVictimaTarget() => victimaTarget;
-    public void ResetTBA() => TimerTBA = TBA;
+    public void SetTargetBoid(Boid b) => targetBoid= b;
+    public Boid GetTargetBoid() => targetBoid;
+    public void ResetTBA() => TimerTBA= TBA;
 
-    public void IniciarCorrutinaRecoleccion() => StartCoroutine(RutinaRecoleccionBoid());
+    public void StartGatheringRoutine() => StartCoroutine(GatheringRoutine());
 
-    public Boid BuscarBoidEntorno(bool buscarMuerto)
+    public Boid FindBoidInVision(bool lookForDead)
     {
-        Boid[] grupo = Object.FindObjectsByType<Boid>(FindObjectsSortMode.None);
-        Boid masCercano = null;
-        float dMin = float.MaxValue;
+        Boid[] group= Object.FindObjectsByType<Boid>(FindObjectsSortMode.None);
+        Boid nearest= null;
+        float minDist= float.MaxValue;
 
-        foreach (var b in grupo)
+        foreach (var b in group)
         {
-            if (b.isDead == buscarMuerto)
+            if (b.isDead== lookForDead)
             {
-                float d = Vector2.Distance(transform.position, b.transform.position);
-                if (d < dMin) { dMin = d; masCercano = b; }
+                float d= Vector2.Distance(transform.position, b.transform.position);
+                if (d< minDist) { minDist= d; nearest= b; }
             }
         }
-        return masCercano;
+        return nearest;
     }
 
-    private IEnumerator RutinaRecoleccionBoid()
+    private IEnumerator GatheringRoutine()
     {
-        velocity = Vector2.zero;
-        aceleracion = Vector2.zero;
+        velocity= Vector2.zero;
+        acceleration= Vector2.zero;
         yield return new WaitForSeconds(2.0f);
 
-        if (victimaTarget != null)
+        if (targetBoid != null)
         {
-            if (UIManager.Instance) UIManager.Instance.SumarBoidAtrapado();
-            if (GameManager.Instance) GameManager.Instance.NotificarMuerteBoidExistente(victimaTarget);
+            if (UIManager.Instance) UIManager.Instance.AddCapturedBoid();
+            if (GameManager.Instance) GameManager.Instance.NotifyBoidDeath(targetBoid);
         }
 
-        victimaTarget = null;
+        targetBoid= null;
         FSM.ChangeState(new HunterPatrolState(this));
     }
 
     private void OnDrawGizmos()
     {
-        Gizmos.color = Color.yellow; Gizmos.DrawWireSphere(transform.position, visionRadius);
-        Gizmos.color = Color.cyan; Gizmos.DrawWireSphere(transform.position, RangeAttackRadius);
-        Gizmos.color = Color.red; Gizmos.DrawWireSphere(transform.position, MeleeAttackRadius);
+        Gizmos.color= Color.yellow; Gizmos.DrawWireSphere(transform.position, visionRadius);
+        Gizmos.color= Color.cyan; Gizmos.DrawWireSphere(transform.position, RangeAttackRadius);
+        Gizmos.color= Color.red; Gizmos.DrawWireSphere(transform.position, MeleeAttackRadius);
     }
 }

@@ -5,49 +5,49 @@ public class GameManager : MonoBehaviour
 {
     public static GameManager Instance;
 
-    [Header("Configuración de Boids")]
-    public GameObject prefabBoid;
-    public int cantidadInicial = 6;
-    public float tiempoRespawn = 4f;
+    [Header("Boid Configuration")]
+    public GameObject boidPrefab;
+    public int initialAmount= 6;
+    public float respawnDelay= 4f;
 
-    [Header("Límites de Spawn")]
-    public float minX = -8f;
-    public float maxX = 8f;
-    public float minY = -5f;
-    public float maxY = 5f;
+    [Header("Spawn Limits")]
+    public float minX= -8f;
+    public float maxX= 8f;
+    public float minY= -5f;
+    public float maxY= 5f;
 
     void Awake()
     {
-        if (Instance == null) Instance = this;
+        if (Instance== null) Instance= this;
         else Destroy(gameObject);
     }
 
     void Start()
     {
-        for (int i = 0; i < cantidadInicial; i++)
+        for (int i= 0; i< initialAmount; i++)
         {
-            SpawnBoidAleatorio();
+            SpawnRandomBoid();
         }
     }
 
-    public void NotificarMuerteBoidExistente(Boid boidMuerto)
+    public void NotifyBoidDeath(Boid deadBoid)
     {
-        boidMuerto.gameObject.SetActive(false);
-        StartCoroutine(RutinaRespawnBoidExistente(boidMuerto));
+        deadBoid.gameObject.SetActive(false);
+        StartCoroutine(RespawnBoidRoutine(deadBoid));
     }
 
-    private IEnumerator RutinaRespawnBoidExistente(Boid boid)
+    private IEnumerator RespawnBoidRoutine(Boid boid)
     {
-        yield return new WaitForSeconds(tiempoRespawn);
-        Vector2 nuevaPos = new Vector2(Random.Range(minX, maxX), Random.Range(minY, maxY));
-        boid.transform.position = nuevaPos;
+        yield return new WaitForSeconds(respawnDelay);
+        Vector2 newPos= new Vector2(Random.Range(minX, maxX), Random.Range(minY, maxY));
+        boid.transform.position= newPos;
         boid.gameObject.SetActive(true);
-        boid.Revivir();
+        boid.Revive();
     }
 
-    private void SpawnBoidAleatorio()
+    private void SpawnRandomBoid()
     {
-        Vector2 posicion = new Vector2(Random.Range(minX, maxX), Random.Range(minY, maxY));
-        Instantiate(prefabBoid, posicion, Quaternion.identity);
+        Vector2 pos= new Vector2(Random.Range(minX, maxX), Random.Range(minY, maxY));
+        Instantiate(boidPrefab, pos, Quaternion.identity);
     }
 }

@@ -2,21 +2,21 @@ using UnityEngine;
 
 public class Fruit : MonoBehaviour
 {
-    public float vidaMax = 100f;
-    public float vidaAct;
-    public float dmgPorSeg = 25f;
-    public float radioComer = 1.3f;
+    public float maxHealth= 100f;
+    public float currentHealth;
+    public float damagePerSecond= 25f;
+    public float consumeRadius= 1.3f;
 
-    void Start() => vidaAct = vidaMax;
+    void Start() => currentHealth= maxHealth;
 
-    public void SerConsumida(float daño)
+    public void Consume(float amount)
     {
-        vidaAct -= daño;
-        transform.localScale = Vector3.one * (vidaAct / vidaMax);
+        currentHealth -= amount;
+        transform.localScale= Vector3.one* (currentHealth / maxHealth);
 
-        if (vidaAct <= 0f)
+        if (currentHealth<= 0f)
         {
-            if (UIManager.Instance) UIManager.Instance.SumarFruta();
+            if (UIManager.Instance) UIManager.Instance.AddFruit();
             Destroy(gameObject);
         }
     }

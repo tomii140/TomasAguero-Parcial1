@@ -5,27 +5,27 @@ public class UIManager : MonoBehaviour
 {
     public static UIManager Instance;
 
-    public TextMeshProUGUI textoFrutas;
-    public TextMeshProUGUI textoBoids;
+    public TextMeshProUGUI fruitText;
+    public TextMeshProUGUI boidText;
 
-    private int contadorFrutas = 0;
-    private int contadorBoids = 0;
+    private int fruitCount= 0;
+    private int boidCount= 0;
 
     void Awake()
     {
-        if (Instance == null) Instance = this;
+        if (Instance== null) Instance= this;
         else Destroy(gameObject);
     }
 
-    public void SumarFruta()
+    public void AddFruit()
     {
-        contadorFrutas++;
-        if (textoFrutas != null) textoFrutas.text = "Apples: " + contadorFrutas;
+        fruitCount++;
+        if (fruitText != null) fruitText.text= "Fruits: " + fruitCount;
     }
 
-    public void SumarBoidAtrapado()
+    public void AddCapturedBoid()
     {
-        contadorBoids++;
-        if (textoBoids != null) textoBoids.text = "Boids Atrapados: " + contadorBoids;
+        boidCount++;
+        if (boidText != null) boidText.text= "Captured Boids: " + boidCount;
     }
 }

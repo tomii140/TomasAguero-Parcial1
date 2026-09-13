@@ -1,56 +1,52 @@
 using UnityEngine;
 
-// ------------------- ESTADO PATROL -------------------
 public class HunterPatrolState : IState
 {
     private HunterAI _hunter;
-    private int _idxWp = 0;
-    private bool _reversa = false;
+    private int _idxWp= 0;
+    private bool _reverse= false;
 
-    public HunterPatrolState(HunterAI hunter) => _hunter = hunter;
+    public HunterPatrolState(HunterAI hunter) => _hunter= hunter;
 
     public void Enter() => _hunter.SetColorFeedback(Color.green);
 
     public void Update()
     {
-        // 1. Transición Prioritaria: Recolección de Boids muertos en visión
-        Boid muerto = _hunter.BuscarBoidEntorno(true);
-        if (muerto && Vector2.Distance(_hunter.transform.position, muerto.transform.position) < _hunter.visionRadius)
+        Boid dead= _hunter.FindBoidInVision(true);
+        if (dead && Vector2.Distance(_hunter.transform.position, dead.transform.position)< _hunter.visionRadius)
         {
-            _hunter.SetVictimaTarget(muerto);
+            _hunter.SetTargetBoid(dead);
             _hunter.FSM.ChangeState(new HunterGatherState(_hunter));
             return;
         }
 
-        // 2. Transición a Ataque: TBA finalizado + Boid vivo en rango de percepción
-        if (_hunter.TimerTBA <= 0)
+        if (_hunter.TimerTBA<= 0)
         {
-            Boid vivo = _hunter.BuscarBoidEntorno(false);
-            if (vivo && Vector2.Distance(_hunter.transform.position, vivo.transform.position) < _hunter.visionRadius)
+            Boid alive= _hunter.FindBoidInVision(false);
+            if (alive && Vector2.Distance(_hunter.transform.position, alive.transform.position)< _hunter.visionRadius)
             {
-                _hunter.SetVictimaTarget(vivo);
+                _hunter.SetTargetBoid(alive);
                 _hunter.FSM.ChangeState(new HunterAttackState(_hunter));
                 return;
             }
         }
 
-        // 3. Recorrido de Waypoints (Ping-Pong / Inverso)
-        if (_hunter.waypoints == null || _hunter.waypoints.Length == 0) return;
+        if (_hunter.waypoints== null || _hunter.waypoints.Length== 0) return;
 
-        Vector2 dest = _hunter.waypoints[_idxWp].position;
-        _hunter.MeterFuerza(_hunter.Seek(dest));
+        Vector2 dest= _hunter.waypoints[_idxWp].position;
+        _hunter.AddForce(_hunter.Seek(dest));
 
-        if (Vector2.Distance(_hunter.transform.position, dest) < 1.2f)
+        if (Vector2.Distance(_hunter.transform.position, dest)< 1.2f)
         {
-            if (!_reversa)
+            if (!_reverse)
             {
-                if (_idxWp + 1 < _hunter.waypoints.Length) _idxWp++;
-                else { _reversa = true; _idxWp--; }
+                if (_idxWp+ 1 < _hunter.waypoints.Length) _idxWp++;
+                else { _reverse= true; _idxWp--; }
             }
             else
             {
                 if (_idxWp - 1 >= 0) _idxWp--;
-                else { _reversa = false; _idxWp++; }
+                else { _reverse= false; _idxWp++; }
             }
         }
     }
@@ -58,91 +54,84 @@ public class HunterPatrolState : IState
     public void Exit() { }
 }
 
-// ------------------- ESTADO ATTACK -------------------
 public class HunterAttackState : IState
 {
     private HunterAI _hunter;
 
-    public HunterAttackState(HunterAI hunter) => _hunter = hunter;
+    public HunterAttackState(HunterAI hunter) => _hunter= hunter;
 
     public void Enter() => _hunter.SetColorFeedback(Color.red);
 
     public void Update()
     {
-        Boid target = _hunter.GetVictimaTarget();
+        Boid target= _hunter.GetTargetBoid();
 
-        if (target == null || target.isDead)
+        if (target== null || target.isDead)
         {
             _hunter.FSM.ChangeState(new HunterPatrolState(_hunter));
             return;
         }
 
-        float d = Vector2.Distance(_hunter.transform.position, target.transform.position);
+        float d= Vector2.Distance(_hunter.transform.position, target.transform.position);
 
-        // Abandona rango de visión: Vuelve a Patrol SIN reiniciar TBA (Consigna)
-        if (d > _hunter.visionRadius)
+        if (d> _hunter.visionRadius)
         {
-            _hunter.SetVictimaTarget(null);
+            _hunter.SetTargetBoid(null);
             _hunter.FSM.ChangeState(new HunterPatrolState(_hunter));
             return;
         }
 
-        // Evaluación de rangos según la consigna:
-        if (d <= _hunter.MeleeAttackRadius)
+        if (d<= _hunter.MeleeAttackRadius)
         {
-            // Ataque Melee Exitoso
-            target.Morir();
+            target.Die();
             _hunter.ResetTBA();
-            _hunter.SetVictimaTarget(null);
+            _hunter.SetTargetBoid(null);
             _hunter.FSM.ChangeState(new HunterPatrolState(_hunter));
         }
-        else if (d <= _hunter.RangeAttackRadius)
+        else if (d<= _hunter.RangeAttackRadius)
         {
-            // Ataque a Distancia Exitoso
-            target.Morir();
+            target.Die();
             _hunter.ResetTBA();
-            _hunter.SetVictimaTarget(null);
+            _hunter.SetTargetBoid(null);
             _hunter.FSM.ChangeState(new HunterPatrolState(_hunter));
         }
         else
         {
-            // Fuera de rango de ataque: Perseguir para acortar distancia
-            _hunter.MeterFuerza(_hunter.Seek(target.transform.position));
+            _hunter.AddForce(_hunter.Seek(target.transform.position));
         }
     }
 
     public void Exit() { }
 }
 
-// ------------------- ESTADO GATHER -------------------
 public class HunterGatherState : IState
 {
     private HunterAI _hunter;
-    private bool _corrutinaIniciada = false;
+    private bool _routineStarted= false;
 
-    public HunterGatherState(HunterAI hunter) => _hunter = hunter;
+    public HunterGatherState(HunterAI hunter) => _hunter= hunter;
 
     public void Enter()
     {
         _hunter.SetColorFeedback(Color.blue);
-        _corrutinaIniciada = false;
+        _routineStarted= false;
     }
 
     public void Update()
     {
-        Boid target = _hunter.GetVictimaTarget();
-        if (target == null)
+        Boid target= _hunter.GetTargetBoid();
+        if (target== null)
         {
             _hunter.FSM.ChangeState(new HunterPatrolState(_hunter));
             return;
         }
 
-        _hunter.MeterFuerza(_hunter.Arrive(target.transform.position, 1.5f));
+        _hunter.AddForce(_hunter.Arrive(target.transform.position, 1.5f));
 
-        if (!_corrutinaIniciada && Vector2.Distance(_hunter.transform.position, target.transform.position) < 0.7f)
+        if (!_routineStarted && Vector2.Distance(_hunter.transform.position, target.transform.position)< 0.7f)
         {
-            _corrutinaIniciada = true;
-            _hunter.IniciarCorrutinaRecoleccion();
+            _routineStarted= true;
+            _hunter.StartGatheringRoutine();
         }
     }
 

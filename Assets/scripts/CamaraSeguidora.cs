@@ -2,20 +2,20 @@ using UnityEngine;
 
 public class CamaraSeguidora : MonoBehaviour
 {
-    public Transform objetivo; 
-    [Range(0, 1)] public float suavizado = 0.125f; 
-    public Vector3 offset = new Vector3(0, 0, -10); 
+    public Transform target;
+    [Range(0, 1)] public float smoothTime= 0.125f;
+    public Vector3 offset= new Vector3(0, 0, -10);
 
     void FixedUpdate()
     {
-        if (objetivo == null)
+        if (target== null)
         {
-            HunterAI h = FindObjectOfType<HunterAI>();
-            if (h) objetivo = h.transform;
+            HunterAI h= Object.FindFirstObjectByType<HunterAI>();
+            if (h) target= h.transform;
             return;
         }
 
-        Vector3 posicionDeseada = objetivo.position + offset;
-        transform.position = Vector3.Lerp(transform.position, posicionDeseada, suavizado);
+        Vector3 desiredPos= target.position + offset;
+        transform.position= Vector3.Lerp(transform.position, desiredPos, smoothTime);
     }
 }

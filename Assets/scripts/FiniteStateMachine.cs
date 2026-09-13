@@ -6,12 +6,12 @@ public class FiniteStateMachine
 
     public void ChangeState(IState newState)
     {
-        if (_currentState != null)
+        if (_currentState!= null)
             _currentState.Exit();
 
-        _currentState = newState;
+        _currentState= newState;
 
-        if (_currentState != null)
+        if (_currentState!= null)
             _currentState.Enter();
     }
 
