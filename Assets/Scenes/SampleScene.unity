@@ -880,9 +880,9 @@ MonoBehaviour:
   maxSpeed: 15
   maxForce: 30
   visionRadius: 10
-  rangeAttackRadius: 5
-  meleeAttackRadius: 2
-  timeBetweenAttacks: 3
+  rangeAttackRadius: 5.5
+  meleeAttackRadius: 3
+  timeBetweenAttacks: 2
   fruitPrefab: {fileID: 9158020852175835326, guid: 390089845a1148643b7232cdc4882d22, type: 3}
   fruitSpawnInterval: 3
   fruitSpawnRadius: 6

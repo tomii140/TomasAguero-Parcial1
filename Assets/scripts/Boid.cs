@@ -18,13 +18,13 @@ public class Boid : Agent
 
     [Header("Evade & Boundaries")]
     [SerializeField] private float sideEscapeWeight = 0.4f;
-    [SerializeField] private float maxEvadeForceMultiplier = 1.5f;
+    [SerializeField] private float maxEvadeForceMultiplier = 2.0f;
     [SerializeField] private float worldLimitRadius = 15f;
     [SerializeField] private float wallPushWeight = 3f;
 
     [Header("Fruit Interaction")]
     [SerializeField] private float fruitDetectionRadius = 15f;
-    [SerializeField, Range(0f, 5f)] private float fruitWeight = 3.5f; // Mayor peso por defecto
+    [SerializeField, Range(0f, 5f)] private float fruitWeight = 2.5f;
 
     [Header("Debug Visual UI")]
     [SerializeField] private TextMeshPro stateTextUI;
@@ -52,6 +52,13 @@ public class Boid : Agent
             GameManager.Instance.UnregisterBoid(this);
     }
 
+    public void Revive()
+    {
+        isDead = false;
+        Velocity = Random.insideUnitCircle * maxSpeed;
+        UpdateDebugText("FLOCKING");
+    }
+
     private void Update()
     {
         if (isDead)
@@ -62,21 +69,23 @@ public class Boid : Agent
             return;
         }
 
-        // 1. Huida del Cazador (Prioridad 1)
+        // 1. Huida del Cazador (Prioridad 1 Absoluta)
         if (cachedHunter != null)
         {
             float distToHunter = Vector2.Distance(transform.position, cachedHunter.transform.position);
             if (distToHunter < cachedHunter.VisionRadius)
             {
                 UpdateDebugText("EVADING");
+                
                 Vector2 evadeForce = Evade(cachedHunter);
                 Vector2 sideEscape = new Vector2(-cachedHunter.Velocity.y, cachedHunter.Velocity.x).normalized;
                 evadeForce += sideEscape * maxForce * sideEscapeWeight;
 
-                Vector2 combinedForce = Vector2.ClampMagnitude(evadeForce, maxForce * maxEvadeForceMultiplier) + CalculateFlocking();
-                AddForce(combinedForce);
+                Vector2 pureEvade = Vector2.ClampMagnitude(evadeForce, maxForce * maxEvadeForceMultiplier);
+                
+                AddForce(pureEvade);
                 ApplyPhysics();
-                return;
+                return; // Ignora frutas y flocking mientras escapa
             }
         }
 
@@ -91,22 +100,18 @@ public class Boid : Agent
             if (distToFruit <= targetFruit.ConsumeRadius)
             {
                 UpdateDebugText("EAT");
-                Velocity = Vector2.zero; // Frenado exacto en la manzana
+                Velocity = Vector2.zero;
                 targetFruit.Consume(targetFruit.DamagePerSecond * Time.deltaTime);
             }
             else
             {
                 UpdateDebugText("SEEK FRUIT");
                 
-                // Calculamos fuerza directa a la fruta
                 Vector2 fruitSeek = Seek(targetFruit.transform.position) * fruitWeight;
-                
-                // La separación se atenúa mucho para que no le gane al Seek
                 Vector2 softSeparation = GetSeparationForce() * (separationWeight * 0.3f); 
                 
                 totalSteering = fruitSeek + softSeparation;
 
-                // Romper inercia si el boid está atascado con velocidad casi nula
                 if (Velocity.sqrMagnitude < 0.2f)
                 {
                     Vector2 dirToFruit = ((Vector2)targetFruit.transform.position - (Vector2)transform.position).normalized;
@@ -133,6 +138,27 @@ public class Boid : Agent
         {
             stateTextUI.text = state;
         }
+    }
+
+    private Fruit FindNearestFruit()
+    {
+        if (GameManager.Instance == null) return null;
+
+        Fruit nearest = null;
+        float minDistance = fruitDetectionRadius;
+
+        foreach (var fruit in GameManager.Instance.ActiveFruits)
+        {
+            if (fruit == null) continue;
+            float dist = Vector2.Distance(transform.position, fruit.transform.position);
+            if (dist < minDistance)
+            {
+                minDistance = dist;
+                nearest = fruit;
+            }
+        }
+
+        return nearest;
     }
 
     private Vector2 CalculateWorldBoundsForce()
@@ -207,8 +233,8 @@ public class Boid : Agent
             float d = Vector2.Distance(transform.position, other.transform.position);
             if (d < separationRadius && d > 0.01f)
             {
-                Vector2 pushVector = (Vector2)transform.position - (Vector2)other.transform.position;
-                separationSteer += pushVector.normalized / d;
+                Vector2 diff = (Vector2)transform.position - (Vector2)other.transform.position;
+                separationSteer += diff.normalized / d;
                 count++;
             }
         }
@@ -218,68 +244,4 @@ public class Boid : Agent
         Vector2 desiredVelocity = separationSteer.normalized * maxSpeed;
         return Vector2.ClampMagnitude(desiredVelocity - Velocity, maxForce);
     }
-
-    public void Die()
-    {
-        isDead = true;
-        Velocity = Vector2.zero;
-        acceleration = Vector2.zero;
-        if (agentRenderer != null) agentRenderer.color = new Color(0.2f, 0.2f, 0.2f, 1f);
-    }
-
-    public void Revive()
-    {
-        isDead = false;
-        Velocity = Random.insideUnitCircle * maxSpeed;
-        acceleration = Vector2.zero;
-        if (agentRenderer != null) agentRenderer.color = Color.white;
-    }
-
-    private Fruit FindNearestFruit()
-    {
-        Fruit nearest = null;
-        float minDistance = fruitDetectionRadius;
-
-        foreach (var fruit in GameManager.Instance.ActiveFruits)
-        {
-            if (fruit == null) continue;
-            float d = Vector2.Distance(transform.position, fruit.transform.position);
-            if (d < minDistance)
-            {
-                minDistance = d;
-                nearest = fruit;
-            }
-        }
-        return nearest;
-    }
-
-    private void OnDrawGizmos()
-{
-    // Radio de Cohesión (Violeta/Translúcido)
-    Gizmos.color = new Color(1f, 0f, 1f, 0.4f);
-    Gizmos.DrawWireSphere(transform.position, cohesionRadius);
-
-    // Radio de Separación (Rojo)
-    Gizmos.color = new Color(1f, 0f, 0f, 0.5f);
-    Gizmos.DrawWireSphere(transform.position, separationRadius);
-
-    // Radio de Detección de Fruta (Verde Verde/Lima brillante)
-    Gizmos.color = Color.green;
-    Gizmos.DrawWireSphere(transform.position, fruitDetectionRadius);
-
-    if (GameManager.Instance == null || GameManager.Instance.ActiveBoids == null) return;
-
-    // Conexiones de Flocking
-    Gizmos.color = Color.yellow;
-    foreach (var other in GameManager.Instance.ActiveBoids)
-    {
-        if (other == null || other == this || other.isDead) continue;
-        float distance = Vector2.Distance(transform.position, other.transform.position);
-
-        if (distance <= cohesionRadius)
-        {
-            Gizmos.DrawLine(transform.position, other.transform.position);
-        }
-    }
-}
 }

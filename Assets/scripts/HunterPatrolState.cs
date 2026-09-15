@@ -12,16 +12,7 @@ public class HunterPatrolState : IState
 
     public void Update()
     {
-        // 1. Detectar Boid muerto para recolectar
-        Boid deadBoid = _hunter.FindBoidInVision(true);
-        if (deadBoid != null)
-        {
-            _hunter.SetTargetBoid(deadBoid);
-            _hunter.FSM.ChangeState(_hunter.GatherState);
-            return;
-        }
-
-        // 2. Detectar Boid vivo para atacar si finalizó TBA
+        // Detectar únicamente Boid vivo para atacar si finalizó el cooldown (TBA)
         if (_hunter.TimerAttackCooldown <= 0)
         {
             Boid aliveBoid = _hunter.FindBoidInVision(false);

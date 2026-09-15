@@ -35,6 +35,7 @@ public class HunterAI : Agent
     [SerializeField] private TextMeshPro stateTextUI;
 
     private Boid targetBoid;
+    private Coroutine _gatheringCoroutine; // Guard de Corrutina
 
     protected override void Start()
     {
@@ -92,7 +93,12 @@ public class HunterAI : Agent
     public Boid GetTargetBoid() => targetBoid;
     public void ResetAttackCooldown() => TimerAttackCooldown = timeBetweenAttacks;
 
-    public void StartGatheringRoutine() => StartCoroutine(GatheringRoutine());
+    public void StartGatheringRoutine()
+    {
+        // Si ya hay una corrutina en progreso, bloqueamos cualquier llamada extra desde Update/Estados
+        if (_gatheringCoroutine != null) return;
+        _gatheringCoroutine = StartCoroutine(GatheringRoutine());
+    }
 
     public Boid FindBoidInVision(bool lookForDead)
     {
@@ -121,15 +127,23 @@ public class HunterAI : Agent
         Velocity = Vector2.zero;
         acceleration = Vector2.zero;
 
+        Debug.Log($"<color=yellow>[PRINT STRING]</color> Entrando en GatheringRoutine con Target: {(targetBoid != null ? targetBoid.name : "NULL")}");
+
         yield return new WaitForSeconds(2.0f);
 
         if (targetBoid != null)
         {
+            Debug.Log($"<color=green>[PRINT STRING]</color> Llamando a AddCapturedBoid() para: {targetBoid.name}");
             if (UIManager.Instance) UIManager.Instance.AddCapturedBoid();
             if (GameManager.Instance) GameManager.Instance.NotifyBoidDeath(targetBoid);
         }
+        else
+        {
+            Debug.LogWarning("<color=orange>[PRINT STRING]</color> GatheringRoutine terminó pero targetBoid era NULL!");
+        }
 
         targetBoid = null;
+        _gatheringCoroutine = null; // Liberamos el flag para habilitar la próxima recolección
         FSM.ChangeState(PatrolState);
     }
 
@@ -167,7 +181,6 @@ public class HunterAI : Agent
                 float dist = Vector2.Distance(transform.position, boid.transform.position);
                 if (dist <= visionRadius)
                 {
-                    // Línea tenue para Boids dentro del radio de visión
                     Gizmos.color = new Color(1f, 1f, 1f, 0.25f);
                     Gizmos.DrawLine(transform.position, boid.transform.position);
                 }

@@ -17,11 +17,12 @@ public class UIManager : MonoBehaviour
         else Destroy(gameObject);
     }
 
-    public void AddCapturedBoid()
-    {
-        capturedBoids++;
-        if (capturedBoidsText) capturedBoidsText.text = $"Capturados: {capturedBoids}";
-    }
+   public void AddCapturedBoid()
+{
+    capturedBoids++;
+    Debug.Log($"<color=red>[PRINT STRING]</color> Boid Capturado! Total: {capturedBoids}");
+    if (capturedBoidsText) capturedBoidsText.text = $"Capturados: {capturedBoids}";
+}
 
     public void AddFruit()
     {
