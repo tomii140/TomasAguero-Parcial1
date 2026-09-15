@@ -2,62 +2,70 @@ using UnityEngine;
 
 public abstract class Agent : MonoBehaviour
 {
-    [Header("Steering Settings")]
-    public float vMax= 5f;
-    public float fMax= 5f;
-    public Vector2 velocity;
+    [Header("Steering Parameters")]
+    [SerializeField] protected float maxSpeed = 5f;
+    [SerializeField] protected float maxForce = 5f;
+
+    public Vector2 Velocity { get; protected set; }
     protected Vector2 acceleration;
-    protected SpriteRenderer myRenderer;
+    protected SpriteRenderer agentRenderer;
+
+    public float MaxSpeed => maxSpeed;
+    public float MaxForce => maxForce;
 
     protected virtual void Start()
     {
-        myRenderer= GetComponent<SpriteRenderer>();
-        velocity= Random.insideUnitCircle* vMax;
+        agentRenderer = GetComponent<SpriteRenderer>();
+        Velocity = Random.insideUnitCircle * maxSpeed;
     }
 
     protected void ApplyPhysics()
     {
-        velocity += acceleration* Time.deltaTime;
-        velocity= Vector2.ClampMagnitude(velocity, vMax);
-        transform.position += (Vector3)velocity* Time.deltaTime;
-        acceleration= Vector2.zero;
+        Velocity += acceleration * Time.deltaTime;
+        Velocity = Vector2.ClampMagnitude(Velocity, maxSpeed);
+        transform.position += (Vector3)Velocity * Time.deltaTime;
+        acceleration = Vector2.zero;
 
-        if (velocity.x != 0 && myRenderer != null)
+        if (Velocity.x != 0 && agentRenderer != null)
         {
-            myRenderer.flipX= velocity.x< 0;
+            agentRenderer.flipX = Velocity.x < 0;
         }
     }
 
-    public void AddForce(Vector2 f) => acceleration += f;
+    public void AddForce(Vector2 forceVector) => acceleration += forceVector;
 
-    public Vector2 Seek(Vector2 target)
+    public Vector2 Seek(Vector2 targetPosition)
     {
-        Vector2 desired= (target - (Vector2)transform.position).normalized* vMax;
-        return Vector2.ClampMagnitude(desired - velocity, fMax);
+        Vector2 desiredVelocity = (targetPosition - (Vector2)transform.position).normalized * maxSpeed;
+        return Vector2.ClampMagnitude(desiredVelocity - Velocity, maxForce);
     }
 
-    public Vector2 Flee(Vector2 target)
+    public Vector2 Flee(Vector2 targetPosition)
     {
-        Vector2 desired= ((Vector2)transform.position - target).normalized* vMax;
-        return Vector2.ClampMagnitude(desired - velocity, fMax);
+        Vector2 desiredVelocity = ((Vector2)transform.position - targetPosition).normalized * maxSpeed;
+        return Vector2.ClampMagnitude(desiredVelocity - Velocity, maxForce);
     }
 
-    public Vector2 Arrive(Vector2 target, float brakeRadius)
+    public Vector2 Arrive(Vector2 targetPosition, float slowingRadius)
     {
-        Vector2 desired= target - (Vector2)transform.position;
-        float d= desired.magnitude;
-        if (d< 0.1f) return -velocity;
+        Vector2 desiredVector = targetPosition - (Vector2)transform.position;
+        float distanceToTarget = desiredVector.magnitude;
+        
+        if (distanceToTarget < 0.05f) return -Velocity;
 
-        float speed= (d< brakeRadius) ? vMax* (d / brakeRadius) : vMax;
-        return Vector2.ClampMagnitude((desired.normalized* speed) - velocity, fMax);
+        float calculatedSpeed = (distanceToTarget < slowingRadius) ? maxSpeed * (distanceToTarget / slowingRadius) : maxSpeed;
+        Vector2 desiredVelocity = desiredVector.normalized * calculatedSpeed;
+        return Vector2.ClampMagnitude(desiredVelocity - Velocity, maxForce);
     }
 
-    public Vector2 Evade(Agent target)
+    public Vector2 Evade(Agent targetAgent)
     {
-        if (target== null) return Vector2.zero;
-        float dist= Vector2.Distance(transform.position, target.transform.position);
-        float t= dist / vMax;
-        Vector2 futurePos= (Vector2)target.transform.position + target.velocity* t;
-        return Flee(futurePos);
+        if (targetAgent == null) return Vector2.zero;
+        
+        float distanceToTarget = Vector2.Distance(transform.position, targetAgent.transform.position);
+        float predictionTime = distanceToTarget / maxSpeed;
+        Vector2 futurePosition = (Vector2)targetAgent.transform.position + targetAgent.Velocity * predictionTime;
+        
+        return Flee(futurePosition);
     }
 }
