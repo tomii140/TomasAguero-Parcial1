@@ -1,112 +1,198 @@
 using UnityEngine;
-using System.Collections;
+using TMPro;
 
 public class HunterAI : Agent
 {
     public FiniteStateMachine FSM { get; private set; }
 
-    [Header("Attack Settings")]
-    public float visionRadius= 8f;
-    public float RangeAttackRadius= 5f;
-    public float MeleeAttackRadius= 2f;
-    public float TBA= 3f;
+    public HunterPatrolState PatrolState { get; private set; }
+    public HunterAttackState AttackState { get; private set; }
+    public HunterGatherState GatherState { get; private set; }
 
-    public float TimerTBA { get; private set; }
+    [Header("Configuración del Cazador")]
+    [SerializeField] private float visionRadius = 8f;
+    [SerializeField] private float rangeAttackRadius = 5f;
+    [SerializeField] private float meleeAttackRadius = 2f;
+    [SerializeField] private float timeBetweenAttacks = 3f;
 
-    [Header("Fruit Spawn")]
-    public GameObject fruitPrefab;
-    public float fruitSpawnInterval= 3f;
-    public float fruitSpawnRadius= 6f;
-    private float fruitTimer= 0f;
+    public float VisionRadius => visionRadius;
+    public float RangeAttackRadius => rangeAttackRadius;
+    public float MeleeAttackRadius => meleeAttackRadius;
+    public float TimeBetweenAttacks => timeBetweenAttacks;
+    public float TimerAttackCooldown { get; private set; }
 
-    [Header("Navigation")]
-    public Transform[] waypoints;
+    [Header("Fruit Spawning (Máximo 5 en escena)")]
+    [SerializeField] private GameObject fruitPrefab;
+    [SerializeField] private float fruitSpawnInterval = 3f;
+    [SerializeField] private float fruitSpawnRadius = 6f;
+    private float fruitTimer = 0f;
+
+    [Header("Waypoints")]
+    [SerializeField] private Transform[] waypoints;
+    public Transform[] Waypoints => waypoints;
+
+    [Header("Feedback Visual")]
+    [SerializeField] private TextMeshPro stateTextUI;
 
     private Boid targetBoid;
+    private Coroutine _gatheringCoroutine; // Guard de Corrutina
 
     protected override void Start()
     {
         base.Start();
-        TimerTBA= 0f;
+        TimerAttackCooldown = 0f;
 
-        FSM= new FiniteStateMachine();
-        FSM.ChangeState(new HunterPatrolState(this));
+        PatrolState = new HunterPatrolState(this);
+        AttackState = new HunterAttackState(this);
+        GatherState = new HunterGatherState(this);
+
+        FSM = new FiniteStateMachine();
+        FSM.ChangeState(PatrolState);
     }
 
-    void Update()
+    private void Update()
     {
-        if (TimerTBA> 0)
-            TimerTBA -= Time.deltaTime;
+        if (TimerAttackCooldown > 0)
+            TimerAttackCooldown -= Time.deltaTime;
 
         HandleFruitSpawning();
         FSM.Update();
         ApplyPhysics();
+
+        UpdateStateFeedback();
     }
 
-    void HandleFruitSpawning()
+    private void UpdateStateFeedback()
+    {
+        if (stateTextUI != null && FSM.CurrentState != null)
+        {
+            stateTextUI.text = FSM.CurrentState.GetType().Name.Replace("Hunter", "").Replace("State", "");
+        }
+    }
+
+    private void HandleFruitSpawning()
     {
         fruitTimer += Time.deltaTime;
-
-        if (fruitTimer>= fruitSpawnInterval)
+        if (fruitTimer >= fruitSpawnInterval)
         {
-            fruitTimer= 0f;
-            Fruit[] currentFruits= Object.FindObjectsByType<Fruit>(FindObjectsSortMode.None);
-            if (currentFruits.Length< 5)
+            fruitTimer = 0f;
+            if (GameManager.Instance != null && GameManager.Instance.ActiveFruits.Count < 5)
             {
-                Vector2 p= (Vector2)transform.position + Random.insideUnitCircle* fruitSpawnRadius;
-                Instantiate(fruitPrefab, p, Quaternion.identity);
+                Vector2 spawnPosition = (Vector2)transform.position + Random.insideUnitCircle * fruitSpawnRadius;
+                Instantiate(fruitPrefab, spawnPosition, Quaternion.identity);
             }
         }
     }
 
-    public void SetColorFeedback(Color c)
+    public void SetColorFeedback(Color color)
     {
-        if (myRenderer!= null) myRenderer.color= c;
+        if (agentRenderer != null) agentRenderer.color = color;
     }
 
-    public void SetTargetBoid(Boid b) => targetBoid= b;
+    public void SetTargetBoid(Boid boid) => targetBoid = boid;
     public Boid GetTargetBoid() => targetBoid;
-    public void ResetTBA() => TimerTBA= TBA;
+    public void ResetAttackCooldown() => TimerAttackCooldown = timeBetweenAttacks;
 
-    public void StartGatheringRoutine() => StartCoroutine(GatheringRoutine());
+    public void StartGatheringRoutine()
+    {
+        // Si ya hay una corrutina en progreso, bloqueamos cualquier llamada extra desde Update/Estados
+        if (_gatheringCoroutine != null) return;
+        _gatheringCoroutine = StartCoroutine(GatheringRoutine());
+    }
 
     public Boid FindBoidInVision(bool lookForDead)
     {
-        Boid[] group= Object.FindObjectsByType<Boid>(FindObjectsSortMode.None);
-        Boid nearest= null;
-        float minDist= float.MaxValue;
+        Boid nearestBoid = null;
+        float minimumDistance = float.MaxValue;
 
-        foreach (var b in group)
+        if (GameManager.Instance == null) return null;
+
+        foreach (var boid in GameManager.Instance.ActiveBoids)
         {
-            if (b.isDead== lookForDead)
+            if (boid != null && boid.isDead == lookForDead)
             {
-                float d= Vector2.Distance(transform.position, b.transform.position);
-                if (d< minDist) { minDist= d; nearest= b; }
+                float distanceToBoid = Vector2.Distance(transform.position, boid.transform.position);
+                if (distanceToBoid < visionRadius && distanceToBoid < minimumDistance)
+                {
+                    minimumDistance = distanceToBoid;
+                    nearestBoid = boid;
+                }
             }
         }
-        return nearest;
+        return nearestBoid;
     }
 
-    private IEnumerator GatheringRoutine()
+    private System.Collections.IEnumerator GatheringRoutine()
     {
-        velocity= Vector2.zero;
-        acceleration= Vector2.zero;
+        Velocity = Vector2.zero;
+        acceleration = Vector2.zero;
+
+        Debug.Log($"<color=yellow>[PRINT STRING]</color> Entrando en GatheringRoutine con Target: {(targetBoid != null ? targetBoid.name : "NULL")}");
+
         yield return new WaitForSeconds(2.0f);
 
         if (targetBoid != null)
         {
+            Debug.Log($"<color=green>[PRINT STRING]</color> Llamando a AddCapturedBoid() para: {targetBoid.name}");
             if (UIManager.Instance) UIManager.Instance.AddCapturedBoid();
             if (GameManager.Instance) GameManager.Instance.NotifyBoidDeath(targetBoid);
         }
+        else
+        {
+            Debug.LogWarning("<color=orange>[PRINT STRING]</color> GatheringRoutine terminó pero targetBoid era NULL!");
+        }
 
-        targetBoid= null;
-        FSM.ChangeState(new HunterPatrolState(this));
+        targetBoid = null;
+        _gatheringCoroutine = null; // Liberamos el flag para habilitar la próxima recolección
+        FSM.ChangeState(PatrolState);
     }
 
     private void OnDrawGizmos()
     {
-        Gizmos.color= Color.yellow; Gizmos.DrawWireSphere(transform.position, visionRadius);
-        Gizmos.color= Color.cyan; Gizmos.DrawWireSphere(transform.position, RangeAttackRadius);
-        Gizmos.color= Color.red; Gizmos.DrawWireSphere(transform.position, MeleeAttackRadius);
+        // Radios de detección
+        Gizmos.color = Color.yellow; Gizmos.DrawWireSphere(transform.position, visionRadius);
+        Gizmos.color = Color.cyan; Gizmos.DrawWireSphere(transform.position, rangeAttackRadius);
+        Gizmos.color = Color.red; Gizmos.DrawWireSphere(transform.position, meleeAttackRadius);
+
+        // Gizmo entre Waypoints
+        if (waypoints != null && waypoints.Length > 0)
+        {
+            Gizmos.color = Color.green;
+            for (int i = 0; i < waypoints.Length; i++)
+            {
+                if (waypoints[i] == null) continue;
+
+                Gizmos.DrawSphere(waypoints[i].position, 0.3f);
+                Transform nextWaypoint = waypoints[(i + 1) % waypoints.Length];
+                if (nextWaypoint != null)
+                {
+                    Gizmos.DrawLine(waypoints[i].position, nextWaypoint.position);
+                }
+            }
+        }
+
+        // Conexiones visuales a los Boids
+        if (GameManager.Instance != null && GameManager.Instance.ActiveBoids != null)
+        {
+            foreach (var boid in GameManager.Instance.ActiveBoids)
+            {
+                if (boid == null || boid.isDead) continue;
+
+                float dist = Vector2.Distance(transform.position, boid.transform.position);
+                if (dist <= visionRadius)
+                {
+                    Gizmos.color = new Color(1f, 1f, 1f, 0.25f);
+                    Gizmos.DrawLine(transform.position, boid.transform.position);
+                }
+            }
+        }
+
+        // Gizmo destacado para el FOCUS (Objetivo actual del Hunter)
+        if (targetBoid != null && !targetBoid.isDead)
+        {
+            Gizmos.color = Color.white;
+            Gizmos.DrawLine(transform.position, targetBoid.transform.position);
+            Gizmos.DrawWireSphere(targetBoid.transform.position, 0.4f);
+        }
     }
 }

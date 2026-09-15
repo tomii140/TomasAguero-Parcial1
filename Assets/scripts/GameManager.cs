@@ -1,34 +1,41 @@
-using UnityEngine;
 using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
 
 public class GameManager : MonoBehaviour
 {
-    public static GameManager Instance;
+    public static GameManager Instance { get; private set; }
 
-    [Header("Boid Configuration")]
-    public GameObject boidPrefab;
-    public int initialAmount= 6;
-    public float respawnDelay= 4f;
+    [Header("Boid Management")]
+    [SerializeField] private GameObject boidPrefab;
+    [SerializeField] private int initialAmount = 6;
+    [SerializeField] private float respawnDelay = 4f;
 
-    [Header("Spawn Limits")]
-    public float minX= -8f;
-    public float maxX= 8f;
-    public float minY= -5f;
-    public float maxY= 5f;
+    [Header("Spawn Settings")]
+    [SerializeField] private float spawnRadius = 2.5f;
 
-    void Awake()
+    public List<Boid> ActiveBoids { get; private set; } = new List<Boid>();
+    public List<Fruit> ActiveFruits { get; private set; } = new List<Fruit>();
+
+    private void Awake()
     {
-        if (Instance== null) Instance= this;
+        if (Instance == null) Instance = this;
         else Destroy(gameObject);
     }
 
-    void Start()
+    private void Start()
     {
-        for (int i= 0; i< initialAmount; i++)
+        for (int i = 0; i < initialAmount; i++)
         {
-            SpawnRandomBoid();
+            SpawnGroupedBoid();
         }
     }
+
+    public void RegisterBoid(Boid boid) => ActiveBoids.Add(boid);
+    public void UnregisterBoid(Boid boid) => ActiveBoids.Remove(boid);
+
+    public void RegisterFruit(Fruit fruit) => ActiveFruits.Add(fruit);
+    public void UnregisterFruit(Fruit fruit) => ActiveFruits.Remove(fruit);
 
     public void NotifyBoidDeath(Boid deadBoid)
     {
@@ -39,15 +46,16 @@ public class GameManager : MonoBehaviour
     private IEnumerator RespawnBoidRoutine(Boid boid)
     {
         yield return new WaitForSeconds(respawnDelay);
-        Vector2 newPos= new Vector2(Random.Range(minX, maxX), Random.Range(minY, maxY));
-        boid.transform.position= newPos;
+        Vector2 newPos = Random.insideUnitCircle * spawnRadius;
+        boid.transform.position = newPos;
         boid.gameObject.SetActive(true);
         boid.Revive();
     }
 
-    private void SpawnRandomBoid()
+    private void SpawnGroupedBoid()
     {
-        Vector2 pos= new Vector2(Random.Range(minX, maxX), Random.Range(minY, maxY));
+        // Spawnea a todos pegados en un radio de 2.5 alrededor del centro
+        Vector2 pos = Random.insideUnitCircle * spawnRadius;
         Instantiate(boidPrefab, pos, Quaternion.identity);
     }
 }

@@ -4,20 +4,19 @@ public class FiniteStateMachine
 {
     private IState _currentState;
 
+    public IState CurrentState => _currentState;
+
     public void ChangeState(IState newState)
     {
-        if (_currentState!= null)
-            _currentState.Exit();
+        if (newState == null || _currentState == newState) return;
 
-        _currentState= newState;
-
-        if (_currentState!= null)
-            _currentState.Enter();
+        _currentState?.Exit();
+        _currentState = newState;
+        _currentState.Enter();
     }
 
     public void Update()
     {
-        if (_currentState != null)
-            _currentState.Update();
+        _currentState?.Update();
     }
 }
