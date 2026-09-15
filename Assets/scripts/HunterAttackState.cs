@@ -2,45 +2,64 @@ using UnityEngine;
 
 public class HunterAttackState : IState
 {
-    private readonly HunterAI hunter;
+    private HunterAI hunter;
 
-    public HunterAttackState(HunterAI hunter) => this.hunter = hunter;
+    public HunterAttackState(HunterAI hunter)
+    {
+        this.hunter = hunter;
+    }
 
-    public void Enter() => hunter.SetColorFeedback(Color.red);
+    public void Enter()
+    {
+        hunter.SetColorFeedback(Color.red);
+    }
 
     public void Update()
     {
         Boid target = hunter.GetTargetBoid();
 
-        // 1. Validar si el objetivo existe y sigue vivo
+        // 1. Si no hay objetivo asignado o el objetivo ya murió, buscar el Boid más cercano
         if (target == null || target.isDead)
         {
-            hunter.SetTargetBoid(null);
-            hunter.FSM.ChangeState(hunter.PatrolState);
-            return;
+            target = hunter.FindBoidInVision(lookForDead: false);
+            if (target != null)
+            {
+                hunter.SetTargetBoid(target);
+            }
+            else
+            {
+                // Si no hay ningún Boid vivo en el rango de visión, volver a Patrulla
+                hunter.FSM.ChangeState(hunter.PatrolState);
+                return;
+            }
         }
 
-        float distanceToBoid = Vector2.Distance(hunter.transform.position, target.transform.position);
+        float distanceToTarget = Vector2.Distance(hunter.transform.position, target.transform.position);
 
-        // 2. Pérdida de visión
-        if (distanceToBoid > hunter.VisionRadius)
+        // 2. Si se escapó más allá del radio de visión, perder el foco y patrullar
+        if (distanceToTarget > hunter.VisionRadius)
         {
             hunter.SetTargetBoid(null);
             hunter.FSM.ChangeState(hunter.PatrolState);
             return;
         }
 
-        // 3. Rango Melee: Aplicar daño y pasar al estado de Recolección (sin iniciar corrutina prematura)
-        if (distanceToBoid <= hunter.MeleeAttackRadius)
+        // 3. Captura / Ataque Melee exitoso
+        if (distanceToTarget <= hunter.MeleeAttackRadius)
         {
-            target.Die();
-            hunter.ResetAttackCooldown();
+            target.isDead = true;             // Marca el Boid como muerto
+            hunter.StartGatheringRoutine();   // Inicia la rutina de recolección de 2 segundos
             hunter.FSM.ChangeState(hunter.GatherState);
             return;
         }
 
-        // 4. Persecución directa a velocidad máxima (Seek para acortar distancia)
-        hunter.AddForce(hunter.Seek(target.transform.position));
+        // 4. Persecución (Ajuste para evitar que orbite o gire en círculos)
+        // Si está a menos del doble del radio Melee, usa Seek directo; de lo contrario usa Pursuit
+        Vector2 attackForce = (distanceToTarget < hunter.MeleeAttackRadius * 2.5f) 
+            ? hunter.Seek(target.transform.position) 
+            : hunter.Pursuit(target);
+
+        hunter.AddForce(attackForce);
     }
 
     public void Exit() { }

@@ -99,9 +99,11 @@ public class HunterAI : Agent
         Boid nearestBoid = null;
         float minimumDistance = float.MaxValue;
 
+        if (GameManager.Instance == null) return null;
+
         foreach (var boid in GameManager.Instance.ActiveBoids)
         {
-            if (boid.isDead == lookForDead)
+            if (boid != null && boid.isDead == lookForDead)
             {
                 float distanceToBoid = Vector2.Distance(transform.position, boid.transform.position);
                 if (distanceToBoid < visionRadius && distanceToBoid < minimumDistance)
@@ -139,20 +141,45 @@ public class HunterAI : Agent
         Gizmos.color = Color.red; Gizmos.DrawWireSphere(transform.position, meleeAttackRadius);
 
         // Gizmo entre Waypoints
-        if (waypoints == null || waypoints.Length == 0) return;
-
-        Gizmos.color = Color.green;
-        for (int i = 0; i < waypoints.Length; i++)
+        if (waypoints != null && waypoints.Length > 0)
         {
-            if (waypoints[i] == null) continue;
-
-            Gizmos.DrawSphere(waypoints[i].position, 0.3f);
-
-            Transform nextWaypoint = waypoints[(i + 1) % waypoints.Length];
-            if (nextWaypoint != null)
+            Gizmos.color = Color.green;
+            for (int i = 0; i < waypoints.Length; i++)
             {
-                Gizmos.DrawLine(waypoints[i].position, nextWaypoint.position);
+                if (waypoints[i] == null) continue;
+
+                Gizmos.DrawSphere(waypoints[i].position, 0.3f);
+                Transform nextWaypoint = waypoints[(i + 1) % waypoints.Length];
+                if (nextWaypoint != null)
+                {
+                    Gizmos.DrawLine(waypoints[i].position, nextWaypoint.position);
+                }
             }
+        }
+
+        // Conexiones visuales a los Boids
+        if (GameManager.Instance != null && GameManager.Instance.ActiveBoids != null)
+        {
+            foreach (var boid in GameManager.Instance.ActiveBoids)
+            {
+                if (boid == null || boid.isDead) continue;
+
+                float dist = Vector2.Distance(transform.position, boid.transform.position);
+                if (dist <= visionRadius)
+                {
+                    // Línea tenue para Boids dentro del radio de visión
+                    Gizmos.color = new Color(1f, 1f, 1f, 0.25f);
+                    Gizmos.DrawLine(transform.position, boid.transform.position);
+                }
+            }
+        }
+
+        // Gizmo destacado para el FOCUS (Objetivo actual del Hunter)
+        if (targetBoid != null && !targetBoid.isDead)
+        {
+            Gizmos.color = Color.white;
+            Gizmos.DrawLine(transform.position, targetBoid.transform.position);
+            Gizmos.DrawWireSphere(targetBoid.transform.position, 0.4f);
         }
     }
 }

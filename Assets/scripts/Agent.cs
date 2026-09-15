@@ -40,6 +40,17 @@ public abstract class Agent : MonoBehaviour
         return Vector2.ClampMagnitude(desiredVelocity - Velocity, maxForce);
     }
 
+    public Vector2 Pursuit(Agent targetAgent)
+    {
+        if (targetAgent == null) return Vector2.zero;
+
+        float distanceToTarget = Vector2.Distance(transform.position, targetAgent.transform.position);
+        float predictionTime = distanceToTarget / maxSpeed;
+        Vector2 futurePosition = (Vector2)targetAgent.transform.position + targetAgent.Velocity * predictionTime;
+
+        return Seek(futurePosition);
+    }
+
     public Vector2 Flee(Vector2 targetPosition)
     {
         Vector2 desiredVelocity = ((Vector2)transform.position - targetPosition).normalized * maxSpeed;

@@ -145,7 +145,7 @@ Transform:
   m_GameObject: {fileID: 163785272}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 24.36, y: -0.3, z: 0}
+  m_LocalPosition: {x: 24.53, y: -12.31, z: 0}
   m_LocalScale: {x: 4.05, y: 4.05, z: 1.35}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -500,7 +500,7 @@ Transform:
   m_GameObject: {fileID: 507571589}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 22.71, y: 19.6, z: 0}
+  m_LocalPosition: {x: 24.5, y: 17.43, z: 0}
   m_LocalScale: {x: 4.05, y: 4.05, z: 1.35}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -829,7 +829,7 @@ MonoBehaviour:
   boidPrefab: {fileID: 4534568143340519004, guid: b4b2dd5481c42e34fa6a8b02b1917dc4, type: 3}
   initialAmount: 6
   respawnDelay: 4
-  spawnRadius: 2.5
+  spawnRadius: 8
 --- !u!4 &892302579
 Transform:
   m_ObjectHideFlags: 0
@@ -877,8 +877,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 62d8834b1ee751c4496016f240f8c558, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::HunterAI
-  maxSpeed: 8
-  maxForce: 7
+  maxSpeed: 15
+  maxForce: 30
   visionRadius: 10
   rangeAttackRadius: 5
   meleeAttackRadius: 2
@@ -1159,7 +1159,7 @@ Transform:
   m_GameObject: {fileID: 1350998592}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: -25.03, y: 18.93, z: 0}
+  m_LocalPosition: {x: -26.95, y: 17.21, z: 0}
   m_LocalScale: {x: 4.05, y: 4.05, z: 1.35}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -1509,7 +1509,7 @@ Transform:
   m_GameObject: {fileID: 1788857391}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: -26.29, y: 0.17649996, z: 0}
+  m_LocalPosition: {x: -26.97, y: -12.37, z: 0}
   m_LocalScale: {x: 6.75, y: 6.75, z: 6.75}
   m_ConstrainProportionsScale: 0
   m_Children: []
