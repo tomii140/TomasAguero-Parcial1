@@ -2,7 +2,7 @@ using UnityEngine;
 
 public class HunterAttackState : IState
 {
-    private HunterAI hunter;
+    private readonly HunterAI hunter;
 
     public HunterAttackState(HunterAI hunter)
     {
@@ -18,7 +18,6 @@ public class HunterAttackState : IState
     {
         Boid target = hunter.GetTargetBoid();
 
-        // 1. Si no hay objetivo asignado o el objetivo ya murió, buscar el Boid más cercano
         if (target == null || target.isDead)
         {
             target = hunter.FindBoidInVision(lookForDead: false);
@@ -28,7 +27,6 @@ public class HunterAttackState : IState
             }
             else
             {
-                // Si no hay ningún Boid vivo en el rango de visión, volver a Patrulla
                 hunter.FSM.ChangeState(hunter.PatrolState);
                 return;
             }
@@ -36,7 +34,6 @@ public class HunterAttackState : IState
 
         float distanceToTarget = Vector2.Distance(hunter.transform.position, target.transform.position);
 
-        // 2. Si se escapó más allá del radio de visión, perder el foco y patrullar
         if (distanceToTarget > hunter.VisionRadius)
         {
             hunter.SetTargetBoid(null);
@@ -44,19 +41,17 @@ public class HunterAttackState : IState
             return;
         }
 
-        // 3. Captura / Ataque Melee exitoso
         if (distanceToTarget <= hunter.MeleeAttackRadius)
         {
-            target.isDead = true;             // Marca el Boid como muerto
-            hunter.StartGatheringRoutine();   // Inicia la rutina de recolección de 2 segundos
+            target.isDead = true;
+            hunter.ResetAttackCooldown();
+            hunter.StartGatheringRoutine();
             hunter.FSM.ChangeState(hunter.GatherState);
             return;
         }
 
-        // 4. Persecución (Ajuste para evitar que orbite o gire en círculos)
-        // Si está a menos del doble del radio Melee, usa Seek directo; de lo contrario usa Pursuit
-        Vector2 attackForce = (distanceToTarget < hunter.MeleeAttackRadius * 2.5f) 
-            ? hunter.Seek(target.transform.position) 
+        Vector2 attackForce = (distanceToTarget < hunter.MeleeAttackRadius * hunter.DirectSeekFactor)
+            ? hunter.Seek(target.transform.position)
             : hunter.Pursuit(target);
 
         hunter.AddForce(attackForce);

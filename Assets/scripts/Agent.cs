@@ -3,8 +3,11 @@ using UnityEngine;
 public abstract class Agent : MonoBehaviour
 {
     [Header("Steering Parameters")]
-    [SerializeField] protected float maxSpeed = 5f;
-    [SerializeField] protected float maxForce = 5f;
+    [SerializeField, Range(1f, 30f)] protected float maxSpeed = 5f;
+    [SerializeField, Range(1f, 30f)] protected float maxForce = 5f;
+
+    [Header("Arrive Settings")]
+    [SerializeField, Range(0.01f, 0.5f)] private float stopThreshold = 0.05f;
 
     public Vector2 Velocity { get; protected set; }
     protected Vector2 acceleration;
@@ -61,8 +64,8 @@ public abstract class Agent : MonoBehaviour
     {
         Vector2 desiredVector = targetPosition - (Vector2)transform.position;
         float distanceToTarget = desiredVector.magnitude;
-        
-        if (distanceToTarget < 0.05f) return -Velocity;
+
+        if (distanceToTarget < stopThreshold) return -Velocity;
 
         float calculatedSpeed = (distanceToTarget < slowingRadius) ? maxSpeed * (distanceToTarget / slowingRadius) : maxSpeed;
         Vector2 desiredVelocity = desiredVector.normalized * calculatedSpeed;
@@ -72,11 +75,11 @@ public abstract class Agent : MonoBehaviour
     public Vector2 Evade(Agent targetAgent)
     {
         if (targetAgent == null) return Vector2.zero;
-        
+
         float distanceToTarget = Vector2.Distance(transform.position, targetAgent.transform.position);
         float predictionTime = distanceToTarget / maxSpeed;
         Vector2 futurePosition = (Vector2)targetAgent.transform.position + targetAgent.Velocity * predictionTime;
-        
+
         return Flee(futurePosition);
     }
 }

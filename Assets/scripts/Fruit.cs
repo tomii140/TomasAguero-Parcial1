@@ -2,9 +2,10 @@ using UnityEngine;
 
 public class Fruit : MonoBehaviour
 {
-    [SerializeField] private float maxHealth = 100f;
-    [SerializeField] private float damagePerSecond = 25f;
-    [SerializeField] private float consumeRadius = 1.3f;
+    [Header("Fruit Health Settings")]
+    [SerializeField, Range(10f, 500f)] private float maxHealth = 100f;
+    [SerializeField, Range(1f, 100f)] private float damagePerSecond = 25f;
+    [SerializeField, Range(0.5f, 5f)] private float consumeRadius = 1.3f;
 
     public float CurrentHealth { get; private set; }
     public float DamagePerSecond => damagePerSecond;
@@ -14,13 +15,17 @@ public class Fruit : MonoBehaviour
     {
         CurrentHealth = maxHealth;
         if (GameManager.Instance != null)
+        {
             GameManager.Instance.RegisterFruit(this);
+        }
     }
 
     private void OnDestroy()
     {
         if (GameManager.Instance != null)
+        {
             GameManager.Instance.UnregisterFruit(this);
+        }
     }
 
     public void Consume(float amount)
@@ -30,7 +35,10 @@ public class Fruit : MonoBehaviour
 
         if (CurrentHealth <= 0f)
         {
-            if (UIManager.Instance) UIManager.Instance.AddFruit();
+            if (UIManager.Instance != null)
+            {
+                UIManager.Instance.AddFruit();
+            }
             Destroy(gameObject);
         }
     }

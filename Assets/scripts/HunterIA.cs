@@ -9,33 +9,41 @@ public class HunterAI : Agent
     public HunterAttackState AttackState { get; private set; }
     public HunterGatherState GatherState { get; private set; }
 
-    [Header("Configuración del Cazador")]
-    [SerializeField] private float visionRadius = 8f;
-    [SerializeField] private float rangeAttackRadius = 5f;
-    [SerializeField] private float meleeAttackRadius = 2f;
-    [SerializeField] private float timeBetweenAttacks = 3f;
+    [Header("Detection & Combat Settings")]
+    [SerializeField, Range(1f, 20f)] private float visionRadius = 8f;
+    [SerializeField, Range(1f, 15f)] private float rangeAttackRadius = 5f;
+    [SerializeField, Range(0.5f, 5f)] private float meleeAttackRadius = 2f;
+    [SerializeField, Range(0.5f, 10f)] private float timeBetweenAttacks = 3f;
+    [SerializeField, Range(0.5f, 5f)] private float gatheringTime = 2f;
+
+    [Header("State Thresholds")]
+    [SerializeField, Range(0.1f, 3f)] private float waypointThreshold = 0.8f;
+    [SerializeField, Range(1f, 5f)] private float directSeekFactor = 2.5f;
 
     public float VisionRadius => visionRadius;
     public float RangeAttackRadius => rangeAttackRadius;
     public float MeleeAttackRadius => meleeAttackRadius;
     public float TimeBetweenAttacks => timeBetweenAttacks;
+    public float WaypointThreshold => waypointThreshold;
+    public float DirectSeekFactor => directSeekFactor;
     public float TimerAttackCooldown { get; private set; }
 
-    [Header("Fruit Spawning (Máximo 5 en escena)")]
+    [Header("Fruit Spawning")]
     [SerializeField] private GameObject fruitPrefab;
-    [SerializeField] private float fruitSpawnInterval = 3f;
-    [SerializeField] private float fruitSpawnRadius = 6f;
+    [SerializeField, Range(1f, 10f)] private float fruitSpawnInterval = 3f;
+    [SerializeField, Range(1f, 15f)] private float fruitSpawnRadius = 6f;
+    [SerializeField, Range(1, 20)] private int maxFruitsInScene = 5;
     private float fruitTimer = 0f;
 
     [Header("Waypoints")]
     [SerializeField] private Transform[] waypoints;
     public Transform[] Waypoints => waypoints;
 
-    [Header("Feedback Visual")]
+    [Header("UI Feedback")]
     [SerializeField] private TextMeshPro stateTextUI;
 
     private Boid targetBoid;
-    private Coroutine _gatheringCoroutine; // Guard de Corrutina
+    private Coroutine _gatheringCoroutine;
 
     protected override void Start()
     {
@@ -76,7 +84,7 @@ public class HunterAI : Agent
         if (fruitTimer >= fruitSpawnInterval)
         {
             fruitTimer = 0f;
-            if (GameManager.Instance != null && GameManager.Instance.ActiveFruits.Count < 5)
+            if (GameManager.Instance != null && GameManager.Instance.ActiveFruits.Count < maxFruitsInScene)
             {
                 Vector2 spawnPosition = (Vector2)transform.position + Random.insideUnitCircle * fruitSpawnRadius;
                 Instantiate(fruitPrefab, spawnPosition, Quaternion.identity);
@@ -95,7 +103,6 @@ public class HunterAI : Agent
 
     public void StartGatheringRoutine()
     {
-        // Si ya hay una corrutina en progreso, bloqueamos cualquier llamada extra desde Update/Estados
         if (_gatheringCoroutine != null) return;
         _gatheringCoroutine = StartCoroutine(GatheringRoutine());
     }
@@ -127,34 +134,33 @@ public class HunterAI : Agent
         Velocity = Vector2.zero;
         acceleration = Vector2.zero;
 
-        Debug.Log($"<color=yellow>[PRINT STRING]</color> Entrando en GatheringRoutine con Target: {(targetBoid != null ? targetBoid.name : "NULL")}");
-
-        yield return new WaitForSeconds(2.0f);
+        yield return new WaitForSeconds(gatheringTime);
 
         if (targetBoid != null)
         {
-            Debug.Log($"<color=green>[PRINT STRING]</color> Llamando a AddCapturedBoid() para: {targetBoid.name}");
             if (UIManager.Instance) UIManager.Instance.AddCapturedBoid();
             if (GameManager.Instance) GameManager.Instance.NotifyBoidDeath(targetBoid);
         }
-        else
-        {
-            Debug.LogWarning("<color=orange>[PRINT STRING]</color> GatheringRoutine terminó pero targetBoid era NULL!");
-        }
 
         targetBoid = null;
-        _gatheringCoroutine = null; // Liberamos el flag para habilitar la próxima recolección
+        _gatheringCoroutine = null;
         FSM.ChangeState(PatrolState);
     }
 
     private void OnDrawGizmos()
     {
-        // Radios de detección
         Gizmos.color = Color.yellow; Gizmos.DrawWireSphere(transform.position, visionRadius);
         Gizmos.color = Color.cyan; Gizmos.DrawWireSphere(transform.position, rangeAttackRadius);
         Gizmos.color = Color.red; Gizmos.DrawWireSphere(transform.position, meleeAttackRadius);
 
-        // Gizmo entre Waypoints
+        // Feedback visual del Boid targeteado
+        if (targetBoid != null)
+        {
+            Gizmos.color = Color.red;
+            Gizmos.DrawLine(transform.position, targetBoid.transform.position);
+            Gizmos.DrawWireSphere(targetBoid.transform.position, 0.6f);
+        }
+
         if (waypoints != null && waypoints.Length > 0)
         {
             Gizmos.color = Color.green;
@@ -169,30 +175,6 @@ public class HunterAI : Agent
                     Gizmos.DrawLine(waypoints[i].position, nextWaypoint.position);
                 }
             }
-        }
-
-        // Conexiones visuales a los Boids
-        if (GameManager.Instance != null && GameManager.Instance.ActiveBoids != null)
-        {
-            foreach (var boid in GameManager.Instance.ActiveBoids)
-            {
-                if (boid == null || boid.isDead) continue;
-
-                float dist = Vector2.Distance(transform.position, boid.transform.position);
-                if (dist <= visionRadius)
-                {
-                    Gizmos.color = new Color(1f, 1f, 1f, 0.25f);
-                    Gizmos.DrawLine(transform.position, boid.transform.position);
-                }
-            }
-        }
-
-        // Gizmo destacado para el FOCUS (Objetivo actual del Hunter)
-        if (targetBoid != null && !targetBoid.isDead)
-        {
-            Gizmos.color = Color.white;
-            Gizmos.DrawLine(transform.position, targetBoid.transform.position);
-            Gizmos.DrawWireSphere(targetBoid.transform.position, 0.4f);
         }
     }
 }

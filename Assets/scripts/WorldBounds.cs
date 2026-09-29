@@ -2,19 +2,24 @@ using UnityEngine;
 
 public class WorldBounds : MonoBehaviour
 {
-    public float limitRadius= 60f;
-    public float pushForce= 8f;
+    [Header("Bounds Settings")]
+    [SerializeField, Range(10f, 100f)] private float limitRadius = 60f;
+    [SerializeField, Range(1f, 20f)] private float pushForce = 8f;
+
     private Agent myAgent;
 
-    void Start() => myAgent= GetComponent<Agent>();
-
-    void Update()
+    private void Start()
     {
-        if (myAgent== null) return;
+        myAgent = GetComponent<Agent>();
+    }
 
-        if (Vector2.Distance(transform.position, Vector2.zero)> limitRadius)
+    private void Update()
+    {
+        if (myAgent == null) return;
+
+        if (Vector2.Distance(transform.position, Vector2.zero) > limitRadius)
         {
-            myAgent.AddForce(myAgent.Seek(Vector2.zero)* pushForce);
+            myAgent.AddForce(myAgent.Seek(Vector2.zero) * pushForce);
         }
     }
 }

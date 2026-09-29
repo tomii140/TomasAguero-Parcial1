@@ -12,10 +12,9 @@ public class HunterPatrolState : IState
 
     public void Update()
     {
-        // Detectar únicamente Boid vivo para atacar si finalizó el cooldown (TBA)
         if (_hunter.TimerAttackCooldown <= 0)
         {
-            Boid aliveBoid = _hunter.FindBoidInVision(false);
+            Boid aliveBoid = _hunter.FindBoidInVision(lookForDead: false);
             if (aliveBoid != null)
             {
                 _hunter.SetTargetBoid(aliveBoid);
@@ -24,13 +23,12 @@ public class HunterPatrolState : IState
             }
         }
 
-        // Patrullaje por Waypoints
         if (_hunter.Waypoints == null || _hunter.Waypoints.Length == 0) return;
 
         Vector2 destination = _hunter.Waypoints[_waypointIndex].position;
         _hunter.AddForce(_hunter.Seek(destination));
 
-        if (Vector2.Distance(_hunter.transform.position, destination) < 0.8f)
+        if (Vector2.Distance(_hunter.transform.position, destination) < _hunter.WaypointThreshold)
         {
             if (!_isReversing)
             {

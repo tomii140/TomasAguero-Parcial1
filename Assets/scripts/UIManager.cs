@@ -5,6 +5,7 @@ public class UIManager : MonoBehaviour
 {
     public static UIManager Instance { get; private set; }
 
+    [Header("UI Text References")]
     [SerializeField] private TextMeshProUGUI capturedBoidsText;
     [SerializeField] private TextMeshProUGUI consumedFruitsText;
 
@@ -13,20 +14,32 @@ public class UIManager : MonoBehaviour
 
     private void Awake()
     {
-        if (Instance == null) Instance = this;
-        else Destroy(gameObject);
+        if (Instance == null)
+        {
+            Instance = this;
+        }
+        else
+        {
+            Destroy(gameObject);
+            return;
+        }
     }
 
-   public void AddCapturedBoid()
-{
-    capturedBoids++;
-    Debug.Log($"<color=red>[PRINT STRING]</color> Boid Capturado! Total: {capturedBoids}");
-    if (capturedBoidsText) capturedBoidsText.text = $"Capturados: {capturedBoids}";
-}
+    public void AddCapturedBoid()
+    {
+        capturedBoids++;
+        if (capturedBoidsText != null)
+        {
+            capturedBoidsText.text = $"Capturados: {capturedBoids}";
+        }
+    }
 
     public void AddFruit()
     {
         consumedFruits++;
-        if (consumedFruitsText) consumedFruitsText.text = $"Frutas consumidas: {consumedFruits}";
+        if (consumedFruitsText != null)
+        {
+            consumedFruitsText.text = $"Frutas consumidas: {consumedFruits}";
+        }
     }
 }

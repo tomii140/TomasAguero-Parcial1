@@ -6,21 +6,32 @@ public class GameManager : MonoBehaviour
 {
     public static GameManager Instance { get; private set; }
 
+    [Header("Hunter Configuration")]
+    [SerializeField] private HunterAI hunter;
+    public HunterAI Hunter => hunter;
+
     [Header("Boid Management")]
     [SerializeField] private GameObject boidPrefab;
-    [SerializeField] private int initialAmount = 6;
-    [SerializeField] private float respawnDelay = 4f;
+    [SerializeField, Range(1, 50)] private int initialAmount = 6;
+    [SerializeField, Range(0.5f, 10f)] private float respawnDelay = 4f;
 
     [Header("Spawn Settings")]
-    [SerializeField] private float spawnRadius = 2.5f;
+    [SerializeField, Range(0.5f, 20f)] private float spawnRadius = 2.5f;
 
     public List<Boid> ActiveBoids { get; private set; } = new List<Boid>();
     public List<Fruit> ActiveFruits { get; private set; } = new List<Fruit>();
 
     private void Awake()
     {
-        if (Instance == null) Instance = this;
-        else Destroy(gameObject);
+        if (Instance == null)
+        {
+            Instance = this;
+        }
+        else
+        {
+            Destroy(gameObject);
+            return;
+        }
     }
 
     private void Start()
@@ -54,7 +65,6 @@ public class GameManager : MonoBehaviour
 
     private void SpawnGroupedBoid()
     {
-        // Spawnea a todos pegados en un radio de 2.5 alrededor del centro
         Vector2 pos = Random.insideUnitCircle * spawnRadius;
         Instantiate(boidPrefab, pos, Quaternion.identity);
     }

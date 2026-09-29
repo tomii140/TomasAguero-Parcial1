@@ -222,6 +222,7 @@ GameObject:
   - component: {fileID: 330585545}
   - component: {fileID: 330585544}
   - component: {fileID: 330585547}
+  - component: {fileID: 330585548}
   m_Layer: 0
   m_Name: Main Camera
   m_TagString: MainCamera
@@ -347,6 +348,21 @@ MonoBehaviour:
     m_VarianceClampScale: 0.9
     m_ContrastAdaptiveSharpening: 0
   m_Version: 2
+--- !u!114 &330585548
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 330585543}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 16eebd54176543048adaf5964eb077a1, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::CamaraSeguidora
+  target: {fileID: 1163919235}
+  smoothTime: 0.125
+  offset: {x: 0, y: 0, z: -10}
 --- !u!1 &410087039
 GameObject:
   m_ObjectHideFlags: 0
@@ -826,6 +842,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 776acaadb731f3a4289452aec917d988, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::GameManager
+  hunter: {fileID: 1163919233}
   boidPrefab: {fileID: 4534568143340519004, guid: b4b2dd5481c42e34fa6a8b02b1917dc4, type: 3}
   initialAmount: 6
   respawnDelay: 4
@@ -883,9 +900,11 @@ MonoBehaviour:
   rangeAttackRadius: 5.5
   meleeAttackRadius: 3
   timeBetweenAttacks: 2
+  gatheringTime: 2
   fruitPrefab: {fileID: 9158020852175835326, guid: 390089845a1148643b7232cdc4882d22, type: 3}
   fruitSpawnInterval: 3
   fruitSpawnRadius: 6
+  maxFruitsInScene: 5
   waypoints:
   - {fileID: 1788857392}
   - {fileID: 1350998593}
