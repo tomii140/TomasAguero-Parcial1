@@ -80,13 +80,17 @@ public class Boid : Agent
             if (distToHunter < hunter.VisionRadius)
             {
                 UpdateDebugText("EVADING");
-                
                 Vector2 evadeForce = Evade(hunter);
+
+
+                //---------------------------------------------------------------------------------------------
+                // Prioridad alta: evade al cazador usando velocidad relativa lateral para escapes dinámicos
                 Vector2 sideEscape = new Vector2(-hunter.Velocity.y, hunter.Velocity.x).normalized;
                 evadeForce += sideEscape * maxForce * sideEscapeWeight;
-
+                //---------------------------------------------------------------------------------------------
                 Vector2 pureEvade = Vector2.ClampMagnitude(evadeForce, maxForce * maxEvadeForceMultiplier);
                 
+
                 AddForce(pureEvade);
                 ApplyPhysics();
                 return;
@@ -235,10 +239,12 @@ public class Boid : Agent
 
             if (distance < separationRadius && distance > 0.001f)
             {
-                // Repulsión inversamente proporcional a la distancia
+
+                // fuerza de separacion inversamente proporcional a la distancia 
                 Vector2 pushDirection = (Vector2)(transform.position - other.transform.position);
                 separationVector += pushDirection.normalized / distance;
                 count++;
+                
             }
         }
 

@@ -9,7 +9,7 @@ public class HunterGatherState : IState
     public void Enter()
     {
         _hunter.SetColorFeedback(Color.blue);
-        _hunter.StartGatheringRoutine();
+        //_hunter.StartGatheringRoutine(); . lo desactivamos por llamda redundante , porque ya se dispara en HunterAttackState.cs
     }
 
     public void Update()

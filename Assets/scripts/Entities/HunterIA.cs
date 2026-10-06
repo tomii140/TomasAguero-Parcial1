@@ -99,8 +99,10 @@ public class HunterAI : Agent
 
     public void SetTargetBoid(Boid boid) => targetBoid = boid;
     public Boid GetTargetBoid() => targetBoid;
-    public void ResetAttackCooldown() => TimerAttackCooldown = timeBetweenAttacks;
 
+    // Reinicia el temporizador de cooldown antes de pasar a la corrutina de recolección
+    public void ResetAttackCooldown() => TimerAttackCooldown = timeBetweenAttacks;
+    //-------------------------------------------------------------------------------
     public void StartGatheringRoutine()
     {
         if (_gatheringCoroutine != null) return;

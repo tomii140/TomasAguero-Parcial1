@@ -50,10 +50,11 @@ public class HunterAttackState : IState
             return;
         }
 
+        // Transición a persecución predictiva si está fuera del rango directo
         Vector2 attackForce = (distanceToTarget < hunter.MeleeAttackRadius * hunter.DirectSeekFactor)
             ? hunter.Seek(target.transform.position)
             : hunter.Pursuit(target);
-
+        //---------------------------------------------------------------------------------
         hunter.AddForce(attackForce);
     }
 
