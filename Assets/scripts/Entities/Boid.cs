@@ -15,11 +15,9 @@ public class Boid : Agent
     [SerializeField, Range(0f, 5f)] private float cohesionWeight = 0.8f;
     [SerializeField, Range(0f, 5f)] private float alignmentWeight = 0.5f;
 
-    [Header("Evade & Limits Settings")]
+    [Header("Evade Settings")]
     [SerializeField, Range(0f, 2f)] private float sideEscapeWeight = 0.4f;
     [SerializeField, Range(1f, 5f)] private float maxEvadeForceMultiplier = 2.0f;
-    [SerializeField, Range(5f, 50f)] private float worldLimitRadius = 15f;
-    [SerializeField, Range(1f, 10f)] private float wallPushWeight = 3f;
 
     [Header("Fruit Interaction Settings")]
     [SerializeField, Range(1f, 30f)] private float fruitDetectionRadius = 15f;
@@ -82,14 +80,11 @@ public class Boid : Agent
                 UpdateDebugText("EVADING");
                 Vector2 evadeForce = Evade(hunter);
 
-
-                //---------------------------------------------------------------------------------------------
                 // Prioridad alta: evade al cazador usando velocidad relativa lateral para escapes dinámicos
                 Vector2 sideEscape = new Vector2(-hunter.Velocity.y, hunter.Velocity.x).normalized;
                 evadeForce += sideEscape * maxForce * sideEscapeWeight;
-                //---------------------------------------------------------------------------------------------
+
                 Vector2 pureEvade = Vector2.ClampMagnitude(evadeForce, maxForce * maxEvadeForceMultiplier);
-                
 
                 AddForce(pureEvade);
                 ApplyPhysics();
@@ -128,8 +123,6 @@ public class Boid : Agent
             totalSteering += CalculateFlocking();
         }
 
-        totalSteering += CalculateWorldBoundsForce();
-
         AddForce(totalSteering);
         ApplyPhysics();
     }
@@ -162,15 +155,6 @@ public class Boid : Agent
         }
 
         return nearest;
-    }
-
-    private Vector2 CalculateWorldBoundsForce()
-    {
-        if (Vector2.Distance(transform.position, Vector2.zero) > worldLimitRadius)
-        {
-            return Seek(Vector2.zero) * wallPushWeight;
-        }
-        return Vector2.zero;
     }
 
     private Vector2 CalculateFlocking()
@@ -221,9 +205,8 @@ public class Boid : Agent
 
         if (count == 0) return Vector2.zero;
         avgVelocity /= count;
-        
-        Vector2 desired = avgVelocity.normalized * maxSpeed;
-        return Vector2.ClampMagnitude(desired - Velocity, maxForce);
+        Vector2 desiredVelocity = avgVelocity.normalized * maxSpeed;
+        return Vector2.ClampMagnitude(desiredVelocity - Velocity, maxForce);
     }
 
     private Vector2 GetSeparationForce()
@@ -239,12 +222,10 @@ public class Boid : Agent
 
             if (distance < separationRadius && distance > 0.001f)
             {
-
-                // fuerza de separacion inversamente proporcional a la distancia 
+                // Repulsión inversamente proporcional a la distancia (1/d)
                 Vector2 pushDirection = (Vector2)(transform.position - other.transform.position);
                 separationVector += pushDirection.normalized / distance;
                 count++;
-                
             }
         }
 

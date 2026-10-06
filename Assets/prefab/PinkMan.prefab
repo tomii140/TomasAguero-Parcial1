@@ -289,6 +289,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::Boid
   maxSpeed: 6
   maxForce: 5
+  stopThreshold: 0.05
   isDead: 0
   separationRadius: 2.5
   cohesionRadius: 15
@@ -298,10 +299,9 @@ MonoBehaviour:
   alignmentWeight: 0.3
   sideEscapeWeight: 0.4
   maxEvadeForceMultiplier: 1.5
-  worldLimitRadius: 15
-  wallPushWeight: 3
   fruitDetectionRadius: 12
   fruitWeight: 1.5
+  eatingSeparationFactor: 0.3
   stateTextUI: {fileID: 5359436004500219845}
 --- !u!114 &6394056854790566956
 MonoBehaviour:
@@ -315,5 +315,5 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0ae7503c967293c40a5893cab536680c, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::WorldBounds
-  limitRadius: 40
-  pushForce: 8
+  limitRadius: 30
+  pushForce: 10
