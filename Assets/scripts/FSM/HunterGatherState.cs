@@ -9,12 +9,11 @@ public class HunterGatherState : IState
     public void Enter()
     {
         _hunter.SetColorFeedback(Color.blue);
-        //_hunter.StartGatheringRoutine(); . lo desactivamos por llamda redundante , porque ya se dispara en HunterAttackState.cs
     }
 
     public void Update()
     {
-        // Estado pasivo: La Corrutina en HunterAI gestiona la espera de 2s y la transición posterior
+        // Estado pasivo: La Corrutina en HunterAI gestiona la espera y la transición posterior
     }
 
     public void Exit() { }

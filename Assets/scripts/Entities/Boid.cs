@@ -55,7 +55,8 @@ public class Boid : Agent
     public void Revive()
     {
         isDead = false;
-        Velocity = Random.insideUnitCircle * maxSpeed;
+        Vector2 randomCircle = Random.insideUnitCircle * maxSpeed;
+        Velocity = new Vector3(randomCircle.x, 0f, randomCircle.y);
         UpdateDebugText("FLOCKING");
     }
 
@@ -63,8 +64,8 @@ public class Boid : Agent
     {
         if (isDead)
         {
-            Velocity = Vector2.zero;
-            acceleration = Vector2.zero;
+            Velocity = Vector3.zero;
+            acceleration = Vector3.zero;
             UpdateDebugText("DEAD");
             return;
         }
@@ -74,17 +75,17 @@ public class Boid : Agent
         // 1. Huida prioritaria del Cazador
         if (hunter != null)
         {
-            float distToHunter = Vector2.Distance(transform.position, hunter.transform.position);
+            float distToHunter = Vector3.Distance(transform.position, hunter.transform.position);
             if (distToHunter < hunter.VisionRadius)
             {
                 UpdateDebugText("EVADING");
-                Vector2 evadeForce = Evade(hunter);
+                Vector3 evadeForce = Evade(hunter);
 
-                // Prioridad alta: evade al cazador usando velocidad relativa lateral para escapes dinámicos
-                Vector2 sideEscape = new Vector2(-hunter.Velocity.y, hunter.Velocity.x).normalized;
+                // Evasión lateral en el plano XZ usando rotación ortogonal de la velocidad del cazador
+                Vector3 sideEscape = new Vector3(-hunter.Velocity.z, 0f, hunter.Velocity.x).normalized;
                 evadeForce += sideEscape * maxForce * sideEscapeWeight;
 
-                Vector2 pureEvade = Vector2.ClampMagnitude(evadeForce, maxForce * maxEvadeForceMultiplier);
+                Vector3 pureEvade = Vector3.ClampMagnitude(evadeForce, maxForce * maxEvadeForceMultiplier);
 
                 AddForce(pureEvade);
                 ApplyPhysics();
@@ -93,27 +94,27 @@ public class Boid : Agent
         }
 
         // 2. Comportamiento Estándar
-        Vector2 totalSteering = Vector2.zero;
+        Vector3 totalSteering = Vector3.zero;
         Fruit targetFruit = FindNearestFruit();
 
         if (targetFruit != null)
         {
-            float distToFruit = Vector2.Distance(transform.position, targetFruit.transform.position);
+            float distToFruit = Vector3.Distance(transform.position, targetFruit.transform.position);
 
             if (distToFruit <= targetFruit.ConsumeRadius)
             {
                 UpdateDebugText("EAT");
-                Velocity = Vector2.zero;
-                acceleration = Vector2.zero;
+                Velocity = Vector3.zero;
+                acceleration = Vector3.zero;
                 targetFruit.Consume(targetFruit.DamagePerSecond * Time.deltaTime);
             }
             else
             {
                 UpdateDebugText("SEEK FRUIT");
-                
-                Vector2 fruitSeek = Seek(targetFruit.transform.position) * fruitWeight;
-                Vector2 softSeparation = GetSeparationForce() * (separationWeight * eatingSeparationFactor); 
-                
+
+                Vector3 fruitSeek = Seek(targetFruit.transform.position) * fruitWeight;
+                Vector3 softSeparation = GetSeparationForce() * (separationWeight * eatingSeparationFactor);
+
                 totalSteering = fruitSeek + softSeparation;
             }
         }
@@ -146,7 +147,7 @@ public class Boid : Agent
         foreach (var fruit in GameManager.Instance.ActiveFruits)
         {
             if (fruit == null) continue;
-            float dist = Vector2.Distance(transform.position, fruit.transform.position);
+            float dist = Vector3.Distance(transform.position, fruit.transform.position);
             if (dist < minDistance)
             {
                 minDistance = dist;
@@ -157,45 +158,45 @@ public class Boid : Agent
         return nearest;
     }
 
-    private Vector2 CalculateFlocking()
+    private Vector3 CalculateFlocking()
     {
-        Vector2 force = Vector2.zero;
+        Vector3 force = Vector3.zero;
         force += GetCohesionForce() * cohesionWeight;
         force += GetAlignmentForce() * alignmentWeight;
         force += GetSeparationForce() * separationWeight;
         return force;
     }
 
-    private Vector2 GetCohesionForce()
+    private Vector3 GetCohesionForce()
     {
-        Vector2 centerOfMass = Vector2.zero;
+        Vector3 centerOfMass = Vector3.zero;
         int count = 0;
 
         foreach (var other in GameManager.Instance.ActiveBoids)
         {
             if (other == this || other == null || other.isDead) continue;
-            float d = Vector2.Distance(transform.position, other.transform.position);
+            float d = Vector3.Distance(transform.position, other.transform.position);
             if (d < cohesionRadius && d > 0.01f)
             {
-                centerOfMass += (Vector2)other.transform.position;
+                centerOfMass += other.transform.position;
                 count++;
             }
         }
 
-        if (count == 0) return Vector2.zero;
+        if (count == 0) return Vector3.zero;
         centerOfMass /= count;
         return Seek(centerOfMass);
     }
 
-    private Vector2 GetAlignmentForce()
+    private Vector3 GetAlignmentForce()
     {
-        Vector2 avgVelocity = Vector2.zero;
+        Vector3 avgVelocity = Vector3.zero;
         int count = 0;
 
         foreach (var other in GameManager.Instance.ActiveBoids)
         {
             if (other == this || other == null || other.isDead) continue;
-            float d = Vector2.Distance(transform.position, other.transform.position);
+            float d = Vector3.Distance(transform.position, other.transform.position);
             if (d < alignmentRadius && d > 0.01f)
             {
                 avgVelocity += other.Velocity;
@@ -203,35 +204,33 @@ public class Boid : Agent
             }
         }
 
-        if (count == 0) return Vector2.zero;
+        if (count == 0) return Vector3.zero;
         avgVelocity /= count;
-        Vector2 desiredVelocity = avgVelocity.normalized * maxSpeed;
-        return Vector2.ClampMagnitude(desiredVelocity - Velocity, maxForce);
+        Vector3 desiredVelocity = avgVelocity.normalized * maxSpeed;
+        return Vector3.ClampMagnitude(desiredVelocity - Velocity, maxForce);
     }
 
-    private Vector2 GetSeparationForce()
+    private Vector3 GetSeparationForce()
     {
-        Vector2 separationVector = Vector2.zero;
+        Vector3 separationVector = Vector3.zero;
         int count = 0;
 
         foreach (var other in GameManager.Instance.ActiveBoids)
         {
             if (other == this || other == null || other.isDead) continue;
-
-            float distance = Vector2.Distance(transform.position, other.transform.position);
-
-            if (distance < separationRadius && distance > 0.001f)
+            float d = Vector3.Distance(transform.position, other.transform.position);
+            if (d < separationRadius && d > 0.01f)
             {
-                // Repulsión inversamente proporcional a la distancia (1/d)
-                Vector2 pushDirection = (Vector2)(transform.position - other.transform.position);
-                separationVector += pushDirection.normalized / distance;
+                Vector3 repulseVector = transform.position - other.transform.position;
+                repulseVector.y = 0f;
+                separationVector += repulseVector.normalized / d;
                 count++;
             }
         }
 
-        if (count == 0) return Vector2.zero;
-
-        Vector2 desiredVelocity = (separationVector / count).normalized * maxSpeed;
-        return Vector2.ClampMagnitude(desiredVelocity - Velocity, maxForce);
+        if (count == 0) return Vector3.zero;
+        separationVector /= count;
+        Vector3 desiredVelocity = separationVector.normalized * maxSpeed;
+        return Vector3.ClampMagnitude(desiredVelocity - Velocity, maxForce);
     }
 }

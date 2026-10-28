@@ -32,7 +32,7 @@ public class HunterAttackState : IState
             }
         }
 
-        float distanceToTarget = Vector2.Distance(hunter.transform.position, target.transform.position);
+        float distanceToTarget = Vector3.Distance(hunter.transform.position, target.transform.position);
 
         if (distanceToTarget > hunter.VisionRadius)
         {
@@ -50,11 +50,10 @@ public class HunterAttackState : IState
             return;
         }
 
-        // Transición a persecución predictiva si está fuera del rango directo
-        Vector2 attackForce = (distanceToTarget < hunter.MeleeAttackRadius * hunter.DirectSeekFactor)
+        Vector3 attackForce = (distanceToTarget < hunter.MeleeAttackRadius * hunter.DirectSeekFactor)
             ? hunter.Seek(target.transform.position)
             : hunter.Pursuit(target);
-        //---------------------------------------------------------------------------------
+
         hunter.AddForce(attackForce);
     }
 

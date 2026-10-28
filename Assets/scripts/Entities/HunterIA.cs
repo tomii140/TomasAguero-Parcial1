@@ -86,7 +86,8 @@ public class HunterAI : Agent
             fruitTimer = 0f;
             if (GameManager.Instance != null && GameManager.Instance.ActiveFruits.Count < maxFruitsInScene)
             {
-                Vector2 spawnPosition = (Vector2)transform.position + Random.insideUnitCircle * fruitSpawnRadius;
+                Vector2 randomCircle = Random.insideUnitCircle * fruitSpawnRadius;
+                Vector3 spawnPosition = transform.position + new Vector3(randomCircle.x, 0f, randomCircle.y);
                 Instantiate(fruitPrefab, spawnPosition, Quaternion.identity);
             }
         }
@@ -94,15 +95,17 @@ public class HunterAI : Agent
 
     public void SetColorFeedback(Color color)
     {
-        if (agentRenderer != null) agentRenderer.color = color;
+        if (agentMeshRenderer != null && agentMeshRenderer.material != null)
+        {
+            agentMeshRenderer.material.color = color;
+        }
     }
 
     public void SetTargetBoid(Boid boid) => targetBoid = boid;
     public Boid GetTargetBoid() => targetBoid;
 
-    // Reinicia el temporizador de cooldown antes de pasar a la corrutina de recolección
     public void ResetAttackCooldown() => TimerAttackCooldown = timeBetweenAttacks;
-    //-------------------------------------------------------------------------------
+
     public void StartGatheringRoutine()
     {
         if (_gatheringCoroutine != null) return;
@@ -120,7 +123,7 @@ public class HunterAI : Agent
         {
             if (boid != null && boid.isDead == lookForDead)
             {
-                float distanceToBoid = Vector2.Distance(transform.position, boid.transform.position);
+                float distanceToBoid = Vector3.Distance(transform.position, boid.transform.position);
                 if (distanceToBoid < visionRadius && distanceToBoid < minimumDistance)
                 {
                     minimumDistance = distanceToBoid;
@@ -133,8 +136,8 @@ public class HunterAI : Agent
 
     private System.Collections.IEnumerator GatheringRoutine()
     {
-        Velocity = Vector2.zero;
-        acceleration = Vector2.zero;
+        Velocity = Vector3.zero;
+        acceleration = Vector3.zero;
 
         yield return new WaitForSeconds(gatheringTime);
 
@@ -155,7 +158,6 @@ public class HunterAI : Agent
         Gizmos.color = Color.cyan; Gizmos.DrawWireSphere(transform.position, rangeAttackRadius);
         Gizmos.color = Color.red; Gizmos.DrawWireSphere(transform.position, meleeAttackRadius);
 
-        // Feedback visual del Boid targeteado
         if (targetBoid != null)
         {
             Gizmos.color = Color.red;

@@ -57,7 +57,8 @@ public class GameManager : MonoBehaviour
     private IEnumerator RespawnBoidRoutine(Boid boid)
     {
         yield return new WaitForSeconds(respawnDelay);
-        Vector2 newPos = Random.insideUnitCircle * spawnRadius;
+        Vector2 randomCircle = Random.insideUnitCircle * spawnRadius;
+        Vector3 newPos = new Vector3(randomCircle.x, 0f, randomCircle.y);
         boid.transform.position = newPos;
         boid.gameObject.SetActive(true);
         boid.Revive();
@@ -65,7 +66,8 @@ public class GameManager : MonoBehaviour
 
     private void SpawnGroupedBoid()
     {
-        Vector2 pos = Random.insideUnitCircle * spawnRadius;
+        Vector2 randomCircle = Random.insideUnitCircle * spawnRadius;
+        Vector3 pos = new Vector3(randomCircle.x, 0f, randomCircle.y);
         Instantiate(boidPrefab, pos, Quaternion.identity);
     }
 }

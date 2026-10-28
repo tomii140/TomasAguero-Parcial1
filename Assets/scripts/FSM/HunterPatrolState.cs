@@ -25,10 +25,10 @@ public class HunterPatrolState : IState
 
         if (_hunter.Waypoints == null || _hunter.Waypoints.Length == 0) return;
 
-        Vector2 destination = _hunter.Waypoints[_waypointIndex].position;
+        Vector3 destination = _hunter.Waypoints[_waypointIndex].position;
         _hunter.AddForce(_hunter.Seek(destination));
 
-        if (Vector2.Distance(_hunter.transform.position, destination) < _hunter.WaypointThreshold)
+        if (Vector3.Distance(_hunter.transform.position, destination) < _hunter.WaypointThreshold)
         {
             if (!_isReversing)
             {
