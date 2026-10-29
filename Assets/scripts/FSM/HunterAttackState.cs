@@ -27,7 +27,7 @@ public class HunterAttackState : IState
             }
             else
             {
-                hunter.FSM.ChangeState(hunter.PatrolState);
+                hunter.FSM.ChangeState(hunter.SearchState);
                 return;
             }
         }
@@ -37,7 +37,7 @@ public class HunterAttackState : IState
         if (distanceToTarget > hunter.VisionRadius)
         {
             hunter.SetTargetBoid(null);
-            hunter.FSM.ChangeState(hunter.PatrolState);
+            hunter.FSM.ChangeState(hunter.SearchState);
             return;
         }
 

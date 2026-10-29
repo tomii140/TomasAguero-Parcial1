@@ -11,9 +11,9 @@ public class Boid : Agent
     [SerializeField, Range(1f, 20f)] private float alignmentRadius = 8f;
 
     [Header("Flocking Weights")]
-    [SerializeField, Range(0f, 5f)] private float separationWeight = 2.5f;
-    [SerializeField, Range(0f, 5f)] private float cohesionWeight = 0.8f;
-    [SerializeField, Range(0f, 5f)] private float alignmentWeight = 0.5f;
+    [SerializeField, Range(0f, 5f)] private float separationWeight = 1.5f;
+    [SerializeField, Range(0f, 5f)] private float cohesionWeight = 2.0f;
+    [SerializeField, Range(0f, 5f)] private float alignmentWeight = 1.0f;
 
     [Header("Evade Settings")]
     [SerializeField, Range(0f, 2f)] private float sideEscapeWeight = 0.4f;
@@ -26,6 +26,9 @@ public class Boid : Agent
 
     [Header("UI Feedback")]
     [SerializeField] private TextMeshPro stateTextUI;
+
+    [Header("Gizmos Debug Settings")]
+    [SerializeField] private bool showGizmos = true;
 
     public string CurrentStateDebug { get; private set; } = "Flocking";
 
@@ -55,8 +58,11 @@ public class Boid : Agent
     public void Revive()
     {
         isDead = false;
-        Vector2 randomCircle = Random.insideUnitCircle * maxSpeed;
-        Velocity = new Vector3(randomCircle.x, 0f, randomCircle.y);
+        Vector2 randomCircle = Random.insideUnitCircle * 2f;
+        transform.position += new Vector3(randomCircle.x, 0f, randomCircle.y);
+
+        Vector2 randomVel = Random.insideUnitCircle * maxSpeed;
+        Velocity = new Vector3(randomVel.x, 0f, randomVel.y);
         UpdateDebugText("FLOCKING");
     }
 
@@ -81,7 +87,6 @@ public class Boid : Agent
                 UpdateDebugText("EVADING");
                 Vector3 evadeForce = Evade(hunter);
 
-                // Evasión lateral en el plano XZ usando rotación ortogonal de la velocidad del cazador
                 Vector3 sideEscape = new Vector3(-hunter.Velocity.z, 0f, hunter.Velocity.x).normalized;
                 evadeForce += sideEscape * maxForce * sideEscapeWeight;
 
@@ -169,6 +174,8 @@ public class Boid : Agent
 
     private Vector3 GetCohesionForce()
     {
+        if (GameManager.Instance == null || GameManager.Instance.ActiveBoids == null) return Vector3.zero;
+
         Vector3 centerOfMass = Vector3.zero;
         int count = 0;
 
@@ -190,6 +197,8 @@ public class Boid : Agent
 
     private Vector3 GetAlignmentForce()
     {
+        if (GameManager.Instance == null || GameManager.Instance.ActiveBoids == null) return Vector3.zero;
+
         Vector3 avgVelocity = Vector3.zero;
         int count = 0;
 
@@ -212,6 +221,8 @@ public class Boid : Agent
 
     private Vector3 GetSeparationForce()
     {
+        if (GameManager.Instance == null || GameManager.Instance.ActiveBoids == null) return Vector3.zero;
+
         Vector3 separationVector = Vector3.zero;
         int count = 0;
 
@@ -219,11 +230,12 @@ public class Boid : Agent
         {
             if (other == this || other == null || other.isDead) continue;
             float d = Vector3.Distance(transform.position, other.transform.position);
-            if (d < separationRadius && d > 0.01f)
+
+            if (d < separationRadius && d > 0.001f)
             {
-                Vector3 repulseVector = transform.position - other.transform.position;
-                repulseVector.y = 0f;
-                separationVector += repulseVector.normalized / d;
+                Vector3 diff = transform.position - other.transform.position;
+                float safeDist = Mathf.Max(d, 0.1f);
+                separationVector += diff.normalized / safeDist;
                 count++;
             }
         }
@@ -232,5 +244,34 @@ public class Boid : Agent
         separationVector /= count;
         Vector3 desiredVelocity = separationVector.normalized * maxSpeed;
         return Vector3.ClampMagnitude(desiredVelocity - Velocity, maxForce);
+    }
+
+    // --- GIZMOS DE DEPURACIÓN VISUAL ---
+    private void OnDrawGizmosSelected()
+    {
+        if (!showGizmos) return;
+
+        Gizmos.color = Color.red;
+        Gizmos.DrawWireSphere(transform.position, separationRadius);
+
+        Gizmos.color = Color.green;
+        Gizmos.DrawWireSphere(transform.position, cohesionRadius);
+
+        Gizmos.color = Color.blue;
+        Gizmos.DrawWireSphere(transform.position, alignmentRadius);
+
+        Gizmos.color = Color.yellow;
+        Gizmos.DrawWireSphere(transform.position, fruitDetectionRadius);
+
+        if (GameManager.Instance != null && GameManager.Instance.Hunter != null)
+        {
+            HunterAI hunter = GameManager.Instance.Hunter;
+            float dist = Vector3.Distance(transform.position, hunter.transform.position);
+            if (dist < hunter.VisionRadius)
+            {
+                Gizmos.color = Color.magenta;
+                Gizmos.DrawLine(transform.position, hunter.transform.position);
+            }
+        }
     }
 }

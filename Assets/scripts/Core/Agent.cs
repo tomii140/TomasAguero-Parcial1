@@ -23,6 +23,12 @@ public abstract class Agent : MonoBehaviour
         Velocity = new Vector3(randomCircle.x, 0f, randomCircle.y);
     }
 
+    public void ResetVelocity()
+    {
+        Velocity = Vector3.zero;
+        acceleration = Vector3.zero;
+    }
+
     protected void ApplyPhysics()
     {
         Velocity += acceleration * Time.deltaTime;
@@ -30,7 +36,7 @@ public abstract class Agent : MonoBehaviour
 
         Vector3 pos = transform.position;
         pos += Velocity * Time.deltaTime;
-        pos.y = 0f; // Mantener simulación en el plano XZ
+        pos.y = 0f;
         transform.position = pos;
 
         acceleration = Vector3.zero;

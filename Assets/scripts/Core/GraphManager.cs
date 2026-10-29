@@ -7,6 +7,7 @@ public class GraphManager : MonoBehaviour
 
     [Header("Lista de Nodos del Mapa")]
     [SerializeField] private List<Node> allNodes = new List<Node>();
+    public List<Node> AllNodes => allNodes; // Propiedad pública requerida
 
     private int currentSearchID = 0;
 
@@ -24,7 +25,7 @@ public class GraphManager : MonoBehaviour
         if (startNode == null || targetNode == null) return null;
         if (excludeSafeZones && targetNode.Zone == ZoneType.SafeZone) return null;
 
-        currentSearchID++; // Incrementamos el ID para evitar recorrer toda la lista de nodos
+        currentSearchID++;
 
         List<Node> openSet = new List<Node>();
         HashSet<Node> closedSet = new HashSet<Node>();
@@ -63,12 +64,10 @@ public class GraphManager : MonoBehaviour
             {
                 if (neighbor == null || closedSet.Contains(neighbor)) continue;
 
-                // Si es un lobo buscando y el vecino es Zona Segura, lo salta
                 if (excludeSafeZones && neighbor.Zone == ZoneType.SafeZone) continue;
 
                 float tentativeGCost = currentNode.GCost + Vector3.Distance(currentNode.transform.position, neighbor.transform.position);
 
-                // Inicializar nodo si es la primera vez que se visita en esta búsqueda
                 if (neighbor.LastSearchID != currentSearchID)
                 {
                     neighbor.GCost = float.MaxValue;
