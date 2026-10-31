@@ -24,6 +24,9 @@ public class Boid : Agent
     [SerializeField, Range(0f, 5f)] private float fruitWeight = 2.5f;
     [SerializeField, Range(0f, 1f)] private float eatingSeparationFactor = 0.3f;
 
+    [Header("Referencias Externas")]
+    [SerializeField] private CotoBounds cotoBounds;
+
     [Header("UI Feedback")]
     [SerializeField] private TextMeshPro stateTextUI;
 
@@ -44,6 +47,11 @@ public class Boid : Agent
         if (GameManager.Instance != null)
         {
             GameManager.Instance.RegisterBoid(this);
+        }
+
+        if (cotoBounds == null)
+        {
+            cotoBounds = CotoBounds.Instance;
         }
     }
 
@@ -93,6 +101,7 @@ public class Boid : Agent
                 Vector3 pureEvade = Vector3.ClampMagnitude(evadeForce, maxForce * maxEvadeForceMultiplier);
 
                 AddForce(pureEvade);
+                ApplyBoundaries();
                 ApplyPhysics();
                 return;
             }
@@ -130,7 +139,20 @@ public class Boid : Agent
         }
 
         AddForce(totalSteering);
+        ApplyBoundaries();
         ApplyPhysics();
+    }
+
+    private void ApplyBoundaries()
+    {
+        if (cotoBounds != null)
+        {
+            Vector3 correction = cotoBounds.GetBoundaryCorrection(transform.position);
+            if (correction != Vector3.zero)
+            {
+                AddForce(correction);
+            }
+        }
     }
 
     private void UpdateDebugText(string state)
@@ -246,7 +268,6 @@ public class Boid : Agent
         return Vector3.ClampMagnitude(desiredVelocity - Velocity, maxForce);
     }
 
-    // --- GIZMOS DE DEPURACIÓN VISUAL ---
     private void OnDrawGizmosSelected()
     {
         if (!showGizmos) return;
@@ -262,16 +283,5 @@ public class Boid : Agent
 
         Gizmos.color = Color.yellow;
         Gizmos.DrawWireSphere(transform.position, fruitDetectionRadius);
-
-        if (GameManager.Instance != null && GameManager.Instance.Hunter != null)
-        {
-            HunterAI hunter = GameManager.Instance.Hunter;
-            float dist = Vector3.Distance(transform.position, hunter.transform.position);
-            if (dist < hunter.VisionRadius)
-            {
-                Gizmos.color = Color.magenta;
-                Gizmos.DrawLine(transform.position, hunter.transform.position);
-            }
-        }
     }
 }

@@ -36,14 +36,14 @@ public abstract class Agent : MonoBehaviour
 
         Vector3 pos = transform.position;
         pos += Velocity * Time.deltaTime;
-        pos.y = 0f;
         transform.position = pos;
 
         acceleration = Vector3.zero;
 
         if (Velocity.sqrMagnitude > 0.001f)
         {
-            transform.forward = Velocity.normalized;
+            Quaternion targetRotation = Quaternion.LookRotation(Velocity.normalized);
+            transform.rotation = Quaternion.Slerp(transform.rotation, targetRotation, Time.deltaTime * 10f);
         }
     }
 

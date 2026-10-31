@@ -45,7 +45,7 @@ public class HunterAttackState : IState
         {
             target.isDead = true;
             hunter.ResetAttackCooldown();
-            hunter.StartGatheringRoutine();
+            hunter.StartGatheringRoutine(target); // <-- Corregido: se pasa el target
             hunter.FSM.ChangeState(hunter.GatherState);
             return;
         }

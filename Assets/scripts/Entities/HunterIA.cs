@@ -22,7 +22,7 @@ public class HunterAI : Agent
     [Header("Detection & Combat Settings")]
     [SerializeField, Range(1f, 20f)] private float visionRadius = 8f;
     [SerializeField, Range(1f, 15f)] private float rangeAttackRadius = 5f;
-    [SerializeField, Range(0.5f, 5f)] private float meleeAttackRadius = 2f;
+    [SerializeField, Range(0.5f, 15f)] private float meleeAttackRadius = 2f;
     [SerializeField, Range(0.5f, 10f)] private float timeBetweenAttacks = 3f;
     [SerializeField, Range(0.5f, 5f)] private float gatheringTime = 2f;
     [SerializeField, Range(0.5f, 5f)] private float captureRadius = 1.5f;
@@ -40,6 +40,7 @@ public class HunterAI : Agent
     public float RangeAttackRadius => rangeAttackRadius;
     public float MeleeAttackRadius => meleeAttackRadius;
     public float TimeBetweenAttacks => timeBetweenAttacks;
+    public float GatheringTime => gatheringTime;
     public float CaptureRadius => captureRadius;
     public float WaypointThreshold => waypointThreshold;
     public float DirectSeekFactor => directSeekFactor;
@@ -69,11 +70,13 @@ public class HunterAI : Agent
     private Coroutine _gatheringCoroutine;
     private List<Node> currentPath;
     private int currentPathIndex = 0;
+    private MeshRenderer meshRenderer;
 
     protected override void Start()
     {
         base.Start();
         TimerAttackCooldown = 0f;
+        meshRenderer = GetComponent<MeshRenderer>();
 
         SearchState = new HunterSearchState(this);
         AttackState = new HunterAttackState(this);
@@ -88,10 +91,11 @@ public class HunterAI : Agent
 
     private void Update()
     {
+        if (GameManager.Instance == null || GraphManager.Instance == null) return;
+
         if (TimerAttackCooldown > 0)
             TimerAttackCooldown -= Time.deltaTime;
 
-        // Prioridad máxima: Detección de lobos (Flee)
         if (CheckWolfDetection() && FSM.CurrentState != FleeState && FSM.CurrentState != DeadState)
         {
             FSM.ChangeState(FleeState);
@@ -105,8 +109,8 @@ public class HunterAI : Agent
 
     private bool CheckWolfDetection()
     {
-        if (GameManager.Instance == null) return false;
-        // Asumiendo que GameManager expone una lista de lobos activos
+        if (GameManager.Instance == null || GameManager.Instance.ActiveWolves == null) return false;
+
         foreach (var wolf in GameManager.Instance.ActiveWolves)
         {
             if (wolf != null)
@@ -114,7 +118,6 @@ public class HunterAI : Agent
                 float dist = Vector3.Distance(transform.position, wolf.transform.position);
                 if (dist <= visionRadius)
                 {
-                    // Chequear línea de visión por Raycast
                     Vector3 dir = (wolf.transform.position - transform.position).normalized;
                     if (!Physics.Raycast(transform.position + Vector3.up * 0.5f, dir, dist, LayerMask.GetMask("Obstacles")))
                     {
@@ -140,7 +143,6 @@ public class HunterAI : Agent
     public void FollowPath(List<Node> path, float threshold = 0.8f)
     {
         if (path == null || path.Count == 0) return;
-
         currentPath = path;
         currentPathIndex = 0;
     }
@@ -160,12 +162,14 @@ public class HunterAI : Agent
 
     public Node GetNearestSafeZoneNode()
     {
+        if (GraphManager.Instance == null || GraphManager.Instance.AllNodes == null) return null;
+
         Node nearestSafe = null;
         float minCost = float.MaxValue;
 
         foreach (var node in GraphManager.Instance.AllNodes)
         {
-            if (node.Zone == ZoneType.SafeZone)
+            if (node != null && node.Zone == ZoneType.SafeZone)
             {
                 float dist = Vector3.Distance(transform.position, node.transform.position);
                 if (dist < minCost)
@@ -192,48 +196,51 @@ public class HunterAI : Agent
         if (fruitTimer >= fruitSpawnInterval)
         {
             fruitTimer = 0f;
-            if (GameManager.Instance != null && GameManager.Instance.ActiveFruits.Count < maxFruitsInScene)
+            if (GameManager.Instance != null && GameManager.Instance.ActiveFruits != null && GameManager.Instance.ActiveFruits.Count < maxFruitsInScene)
             {
-                Vector2 randomCircle = Random.insideUnitCircle * fruitSpawnRadius;
-                Vector3 spawnPosition = transform.position + new Vector3(randomCircle.x, 0f, randomCircle.y);
-                Instantiate(fruitPrefab, spawnPosition, Quaternion.identity);
+                if (fruitPrefab != null)
+                {
+                    Vector2 randomCircle = Random.insideUnitCircle * fruitSpawnRadius;
+                    Vector3 spawnPos = transform.position + new Vector3(randomCircle.x, 0f, randomCircle.y);
+                    GameObject fruitObj = Instantiate(fruitPrefab, spawnPos, Quaternion.identity);
+
+                    Fruit fruitComponent = fruitObj.GetComponent<Fruit>();
+                    if (fruitComponent != null)
+                    {
+                        GameManager.Instance.ActiveFruits.Add(fruitComponent);
+                    }
+                }
             }
         }
     }
 
-    public void SetColorFeedback(Color color)
+    public void SetColorFeedback(Color newColor)
     {
-        if (agentMeshRenderer != null && agentMeshRenderer.material != null)
+        if (meshRenderer != null)
         {
-            agentMeshRenderer.material.color = color;
+            meshRenderer.material.color = newColor;
         }
     }
 
-    public void SetTargetBoid(Boid boid) => targetBoid = boid;
     public Boid GetTargetBoid() => targetBoid;
-    public void ResetAttackCooldown() => TimerAttackCooldown = timeBetweenAttacks;
 
-    public void StartGatheringRoutine()
-    {
-        if (_gatheringCoroutine != null) return;
-        _gatheringCoroutine = StartCoroutine(GatheringRoutine());
-    }
+    public void SetTargetBoid(Boid boid) => targetBoid = boid;
 
-    public Boid FindBoidInVision(bool lookForDead)
+    public Boid FindBoidInVision(bool lookForDead = false)
     {
+        if (GameManager.Instance == null || GameManager.Instance.ActiveBoids == null) return null;
+
         Boid nearestBoid = null;
-        float minimumDistance = float.MaxValue;
-
-        if (GameManager.Instance == null) return null;
+        float minDist = float.MaxValue;
 
         foreach (var boid in GameManager.Instance.ActiveBoids)
         {
-            if (boid != null && boid.isDead == lookForDead)
+            if (boid != null)
             {
-                float distanceToBoid = Vector3.Distance(transform.position, boid.transform.position);
-                if (distanceToBoid < visionRadius && distanceToBoid < minimumDistance)
+                float dist = Vector3.Distance(transform.position, boid.transform.position);
+                if (dist <= visionRadius && dist < minDist)
                 {
-                    minimumDistance = distanceToBoid;
+                    minDist = dist;
                     nearestBoid = boid;
                 }
             }
@@ -241,29 +248,35 @@ public class HunterAI : Agent
         return nearestBoid;
     }
 
-    private System.Collections.IEnumerator GatheringRoutine()
+    public void ResetAttackCooldown()
     {
-        Velocity = Vector3.zero;
-        acceleration = Vector3.zero;
+        TimerAttackCooldown = timeBetweenAttacks;
+    }
 
-        yield return new WaitForSeconds(gatheringTime);
-
-        if (targetBoid != null)
+    public void StartGatheringRoutine(Boid boid)
+    {
+        if (_gatheringCoroutine != null)
         {
-            AddGather();
-            if (GameManager.Instance) GameManager.Instance.NotifyBoidDeath(targetBoid);
+            StopCoroutine(_gatheringCoroutine);
+        }
+        _gatheringCoroutine = StartCoroutine(GatheringRoutine(boid));
+    }
+
+    private System.Collections.IEnumerator GatheringRoutine(Boid boid)
+    {
+        float timer = 0f;
+        while (timer < gatheringTime)
+        {
+            timer += Time.deltaTime;
+            yield return null;
         }
 
+        if (boid != null)
+        {
+            Destroy(boid.gameObject);
+            AddGather();
+        }
         targetBoid = null;
         _gatheringCoroutine = null;
-
-        if (CurrentGathers >= requiredGathers)
-        {
-            FSM.ChangeState(ExitState);
-        }
-        else
-        {
-            FSM.ChangeState(SearchState);
-        }
     }
 }
