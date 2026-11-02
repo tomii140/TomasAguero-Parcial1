@@ -41,15 +41,21 @@ public class HunterAttackState : IState
             return;
         }
 
-        if (distanceToTarget <= hunter.MeleeAttackRadius)
+        // Si es un mapa grande, el ataque real (matar al boid) solo debe suceder 
+        // cuando esté lo suficientemente cerca para recolectarlo, o usa el rango configurado pero acércate.
+        // Aquí exigimos que esté dentro del rango de ataque pero validamos la transición limpia:
+        if (distanceToTarget <= hunter.MeleeAttackRadius || distanceToTarget <= hunter.RangeAttackRadius)
         {
+            // Solo marca como muerto si ya está a una distancia donde puede iniciar la recogida, 
+            // o si es ataque a distancia, disparamos pero nos acercamos a recoger.
             target.isDead = true;
             hunter.ResetAttackCooldown();
-            hunter.StartGatheringRoutine(target); // <-- Corregido: se pasa el target
+            hunter.SetTargetBoid(target);
             hunter.FSM.ChangeState(hunter.GatherState);
             return;
         }
 
+        // Persecución para mapas grandes
         Vector3 attackForce = (distanceToTarget < hunter.MeleeAttackRadius * hunter.DirectSeekFactor)
             ? hunter.Seek(target.transform.position)
             : hunter.Pursuit(target);

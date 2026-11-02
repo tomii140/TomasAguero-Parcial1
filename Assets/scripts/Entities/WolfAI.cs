@@ -111,16 +111,48 @@ public class WolfAI : Agent
             {
                 if (!Physics.Raycast(transform.position + Vector3.up * 0.5f, dirToHunter, distToHunter, obstacleMask))
                 {
-                    if (currentState == PatrolState) ChangeState(ChaseState);
+                    // Si detecta al cazador y está patrullando, emite el aullido de alerta a la jauría
+                    if (currentState == PatrolState)
+                    {
+                        EmitHowlAlert(hunter.transform.position);
+                        ChangeState(ChaseState);
+                    }
                 }
             }
         }
     }
 
+    // Emite la señal de alerta (aullido) a los demás lobos
+    private void EmitHowlAlert(Vector3 hunterPosition)
+    {
+        Debug.Log($"[{gameObject.name}] ¡Aullido de alerta emitido! Cazador localizado en: {hunterPosition}");
+
+        if (GameManager.Instance != null && GameManager.Instance.ActiveWolves != null)
+        {
+            foreach (var wolfObj in GameManager.Instance.ActiveWolves)
+            {
+                if (wolfObj != null && wolfObj != gameObject)
+                {
+                    WolfAI otherWolf = wolfObj.GetComponent<WolfAI>();
+                    if (otherWolf != null)
+                    {
+                        otherWolf.ReceiveAlert(hunterPosition);
+                    }
+                }
+            }
+        }
+    }
+
+    // Recibe la alerta de otro lobo y acude a la última posición conocida
     public void ReceiveAlert(Vector3 hunterPosition)
     {
         if (currentState == PatrolState)
         {
+            Debug.Log($"[{gameObject.name}] Alerta de aullido recibida. Acudiendo a la posición.");
+            if (ChaseState is WolfChaseState chaseState)
+            {
+                chaseState.SetLastKnownPosition(hunterPosition);
+            }
             ChangeState(ChaseState);
         }
     }

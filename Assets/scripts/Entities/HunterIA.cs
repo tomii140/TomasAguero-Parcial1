@@ -2,6 +2,10 @@ using UnityEngine;
 using TMPro;
 using System.Collections.Generic;
 
+#if UNITY_EDITOR
+using UnityEditor;
+#endif
+
 public class HunterAI : Agent
 {
     public FiniteStateMachine FSM { get; private set; }
@@ -20,16 +24,16 @@ public class HunterAI : Agent
     private int currentGathers = 0;
 
     [Header("Detection & Combat Settings")]
-    [SerializeField, Range(1f, 20f)] private float visionRadius = 8f;
-    [SerializeField, Range(1f, 15f)] private float rangeAttackRadius = 5f;
-    [SerializeField, Range(0.5f, 15f)] private float meleeAttackRadius = 2f;
-    [SerializeField, Range(0.5f, 10f)] private float timeBetweenAttacks = 3f;
-    [SerializeField, Range(0.5f, 5f)] private float gatheringTime = 2f;
-    [SerializeField, Range(0.5f, 5f)] private float captureRadius = 1.5f;
+    [SerializeField, Range(1f, 50f)] private float visionRadius = 8f;
+    [SerializeField, Range(1f, 50f)] private float rangeAttackRadius = 5f;
+    [SerializeField, Range(0.5f, 50f)] private float meleeAttackRadius = 2f;
+    [SerializeField, Range(0.5f, 50f)] private float timeBetweenAttacks = 3f;
+    [SerializeField, Range(0.5f, 50f)] private float gatheringTime = 2f;
+    [SerializeField, Range(0.5f, 50f)] private float captureRadius = 1.5f;
 
     [Header("State Thresholds")]
-    [SerializeField, Range(0.1f, 3f)] private float waypointThreshold = 0.8f;
-    [SerializeField, Range(1f, 5f)] private float directSeekFactor = 2.5f;
+    [SerializeField, Range(0.1f, 40f)] private float waypointThreshold = 0.8f;
+    [SerializeField, Range(1f, 40f)] private float directSeekFactor = 2.5f;
 
     public int RequiredGathers => requiredGathers;
     public float RespawnTime => respawnTime;
@@ -235,7 +239,7 @@ public class HunterAI : Agent
 
         foreach (var boid in GameManager.Instance.ActiveBoids)
         {
-            if (boid != null)
+            if (boid != null && boid.isDead == lookForDead)
             {
                 float dist = Vector3.Distance(transform.position, boid.transform.position);
                 if (dist <= visionRadius && dist < minDist)
@@ -278,5 +282,69 @@ public class HunterAI : Agent
         }
         targetBoid = null;
         _gatheringCoroutine = null;
+    }
+
+    private void OnDrawGizmos()
+    {
+        // 1. Radio de visión general (Azul tenue)
+        Gizmos.color = new Color(0f, 0.5f, 1f, 0.3f);
+        Gizmos.DrawWireSphere(transform.position, visionRadius);
+
+        // 2. Rango de ataque a distancia (Amarillo)
+        Gizmos.color = new Color(1f, 1f, 0f, 0.5f);
+        Gizmos.DrawWireSphere(transform.position, rangeAttackRadius);
+
+        // 3. Rango de ataque cuerpo a cuerpo (Rojo)
+        Gizmos.color = new Color(1f, 0f, 0f, 0.6f);
+        Gizmos.DrawWireSphere(transform.position, meleeAttackRadius);
+
+        // 4. Radio de captura o proximidad (Naranja)
+        Gizmos.color = new Color(1f, 0.5f, 0f, 0.5f);
+        Gizmos.DrawWireSphere(transform.position, captureRadius);
+
+        // 5. Línea de velocidad actual (Magenta)
+        if (Application.isPlaying)
+        {
+            Gizmos.color = Color.magenta;
+            Gizmos.DrawLine(transform.position + Vector3.up * 0.5f, transform.position + Vector3.up * 0.5f + Velocity);
+
+            // 6. Visualización de Pathfinding (Nodos y camino activo con A*)
+            if (currentPath != null && currentPath.Count > 0)
+            {
+                Gizmos.color = Color.cyan;
+                for (int i = currentPathIndex; i < currentPath.Count; i++)
+                {
+                    if (currentPath[i] != null)
+                    {
+                        Gizmos.DrawSphere(currentPath[i].transform.position, 0.3f);
+
+                        if (i < currentPath.Count - 1 && currentPath[i + 1] != null)
+                        {
+                            Gizmos.DrawLine(currentPath[i].transform.position, currentPath[i + 1].transform.position);
+                        }
+                    }
+                }
+
+                // Línea brillante hacia el nodo objetivo actual al que se dirige
+                if (currentPathIndex < currentPath.Count && currentPath[currentPathIndex] != null)
+                {
+                    Gizmos.color = Color.yellow;
+                    Gizmos.DrawLine(transform.position + Vector3.up * 0.5f, currentPath[currentPathIndex].transform.position);
+                }
+            }
+        }
+
+#if UNITY_EDITOR
+        // 7. Feedback textual en pantalla sobre el estado, recolecciones y velocidad
+        GUIStyle style = new GUIStyle();
+        style.normal.textColor = Color.cyan;
+        style.fontSize = 12;
+        style.fontStyle = FontStyle.Bold;
+
+        string currentStateName = FSM != null && FSM.CurrentState != null ? FSM.CurrentState.GetType().Name.Replace("Hunter", "").Replace("State", "") : "None";
+
+        Vector3 textPos = transform.position + Vector3.up * 2.5f;
+        Handles.Label(textPos, $"[Hunter]\nState: {currentStateName}\nGathers: {currentGathers}/{requiredGathers}\nVel: {Velocity.magnitude:F2}", style);
+#endif
     }
 }

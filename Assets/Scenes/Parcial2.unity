@@ -279,7 +279,7 @@ GameObject:
   - component: {fileID: 13579390}
   - component: {fileID: 13579389}
   m_Layer: 0
-  m_Name: Node_Path (28)
+  m_Name: Node_Coto_2
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -1388,7 +1388,7 @@ GameObject:
   - component: {fileID: 69474073}
   - component: {fileID: 69474075}
   m_Layer: 0
-  m_Name: Node_Path (27)
+  m_Name: Node_Coto_1
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -8803,7 +8803,7 @@ GameObject:
   - component: {fileID: 386320467}
   - component: {fileID: 386320468}
   m_Layer: 0
-  m_Name: Node_Path (29)
+  m_Name: Node_Coto_3
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -9024,7 +9024,7 @@ GameObject:
   - component: {fileID: 390081366}
   - component: {fileID: 390081365}
   m_Layer: 0
-  m_Name: Node_Path (33)
+  m_Name: Node_Coto_7
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -13345,7 +13345,7 @@ GameObject:
   - component: {fileID: 564804677}
   - component: {fileID: 564804678}
   m_Layer: 0
-  m_Name: Node_Path (32)
+  m_Name: Node_Coto_6
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -19989,7 +19989,7 @@ GameObject:
   - component: {fileID: 925274945}
   - component: {fileID: 925274946}
   m_Layer: 0
-  m_Name: Node_Path (31)
+  m_Name: Node_Coto_5
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -22100,7 +22100,7 @@ GameObject:
   - component: {fileID: 1027555068}
   - component: {fileID: 1027555070}
   m_Layer: 0
-  m_Name: Node_Path (35)
+  m_Name: Node_Coto_9
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -29831,7 +29831,7 @@ GameObject:
   - component: {fileID: 1401613479}
   - component: {fileID: 1401613480}
   m_Layer: 0
-  m_Name: Node_Path (30)
+  m_Name: Node_Coto_4
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -36486,7 +36486,7 @@ GameObject:
   - component: {fileID: 1805774125}
   - component: {fileID: 1805774124}
   m_Layer: 0
-  m_Name: Node_Path (34)
+  m_Name: Node_Coto_8
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -43828,7 +43828,7 @@ PrefabInstance:
     m_Modifications:
     - target: {fileID: 7074881594738554672, guid: 32df7eef13771d14cbd545732f05eb69, type: 3}
       propertyPath: m_LocalPosition.x
-      value: 380.8543
+      value: 86.8
       objectReference: {fileID: 0}
     - target: {fileID: 7074881594738554672, guid: 32df7eef13771d14cbd545732f05eb69, type: 3}
       propertyPath: m_LocalPosition.y
@@ -43901,12 +43901,12 @@ MonoBehaviour:
   requiredGathers: 3
   respawnTime: 5
   safeZoneWaitTime: 3
-  visionRadius: 8
-  rangeAttackRadius: 5
-  meleeAttackRadius: 2
+  visionRadius: 40
+  rangeAttackRadius: 20
+  meleeAttackRadius: 10
   timeBetweenAttacks: 3
-  gatheringTime: 2
-  captureRadius: 1.5
+  gatheringTime: 2.5
+  captureRadius: 8
   waypointThreshold: 0.8
   directSeekFactor: 2.5
   fruitPrefab: {fileID: 6968909674394124003, guid: d23c8adde4eba7f42a74682da15cad2e, type: 3}
@@ -43914,9 +43914,9 @@ MonoBehaviour:
   fruitSpawnRadius: 6
   maxFruitsInScene: 5
   waypoints: []
-  cotoCenter: {fileID: 571063298}
-  exitPoint: {fileID: 1089025370}
-  initialSpawnPoint: {fileID: 1140246425}
+  cotoCenter: {fileID: 1027555069}
+  exitPoint: {fileID: 753882366}
+  initialSpawnPoint: {fileID: 803745802}
   stateTextUI: {fileID: 0}
 --- !u!4 &2308825153788157165 stripped
 Transform:
@@ -43974,6 +43974,14 @@ PrefabInstance:
     - target: {fileID: 4552223338147853871, guid: 2006f63c677a79042901518e1065f043, type: 3}
       propertyPath: m_Name
       value: Wolf_West
+      objectReference: {fileID: 0}
+    - target: {fileID: 4552223338147853871, guid: 2006f63c677a79042901518e1065f043, type: 3}
+      propertyPath: m_IsActive
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 4701639067819439604, guid: 2006f63c677a79042901518e1065f043, type: 3}
+      propertyPath: m_IsActive
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 8471762262763063188, guid: 2006f63c677a79042901518e1065f043, type: 3}
       propertyPath: m_Avatar

@@ -112,7 +112,13 @@ public class GraphManager : MonoBehaviour
 
         foreach (var node in allNodes)
         {
-            float dist = Vector3.Distance(position, node.transform.position);
+            if (node == null) continue;
+
+            // Creamos copias de las posiciones aplanando el eje Y para medir solo horizontalmente
+            Vector3 posFlat = new Vector3(position.x, 0f, position.z);
+            Vector3 nodePosFlat = new Vector3(node.transform.position.x, 0f, node.transform.position.z);
+
+            float dist = Vector3.Distance(posFlat, nodePosFlat);
             if (dist < minDistance)
             {
                 minDistance = dist;
