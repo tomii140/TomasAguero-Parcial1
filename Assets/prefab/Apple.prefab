@@ -114,5 +114,5 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Fruit
   maxHealth: 100
-  damagePerSecond: 25
-  consumeRadius: 1.3
+  damagePerSecond: 50
+  consumeRadius: 3

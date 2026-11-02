@@ -166,16 +166,18 @@ public class Boid : Agent
 
     private Fruit FindNearestFruit()
     {
-        if (GameManager.Instance == null) return null;
+        if (GameManager.Instance == null || GameManager.Instance.ActiveFruits == null) return null;
 
         Fruit nearest = null;
-        float minDistance = fruitDetectionRadius;
+        float minDistance = float.MaxValue; // Corregido: Empieza en float.MaxValue para evaluar correctamente la cercanía
 
         foreach (var fruit in GameManager.Instance.ActiveFruits)
         {
             if (fruit == null) continue;
             float dist = Vector3.Distance(transform.position, fruit.transform.position);
-            if (dist < minDistance)
+
+            // Validamos que esté dentro del radio de percepción y sea la más cercana
+            if (dist <= fruitDetectionRadius && dist < minDistance)
             {
                 minDistance = dist;
                 nearest = fruit;
