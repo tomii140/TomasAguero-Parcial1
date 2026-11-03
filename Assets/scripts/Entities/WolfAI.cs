@@ -19,11 +19,13 @@ public class WolfAI : Agent
     public LayerMask ObstacleMask => obstacleMask;
     public float VisionRadius => visionRadius;
     public Animator Animator { get; private set; }
+    public WolfAudioController AudioController { get; private set; }
 
     private IWolfState currentState;
     public WolfPatrolState PatrolState { get; private set; }
     public WolfChaseState ChaseState { get; private set; }
     public WolfAttackState AttackState { get; private set; }
+    public WolfHowlState HowlState { get; private set; }
 
     public string CurrentStateName => currentState != null ? currentState.GetType().Name : "None";
 
@@ -31,8 +33,9 @@ public class WolfAI : Agent
     {
         base.Start();
         Animator = GetComponentInChildren<Animator>();
+        AudioController = GetComponent<WolfAudioController>();
 
-        if (GameManager.Instance != null)
+        if (GameManager.Instance != null && !GameManager.Instance.ActiveWolves.Contains(gameObject))
         {
             GameManager.Instance.ActiveWolves.Add(gameObject);
         }
@@ -40,6 +43,7 @@ public class WolfAI : Agent
         PatrolState = new WolfPatrolState(this, waypoints);
         ChaseState = new WolfChaseState(this);
         AttackState = new WolfAttackState(this);
+        HowlState = new WolfHowlState(this, transform.position);
 
         ChangeState(PatrolState);
     }
@@ -90,18 +94,20 @@ public class WolfAI : Agent
         Node hunterNode = GraphManager.Instance.GetNearestNode(hunter.transform.position);
         if (hunter.FSM.CurrentState is HunterDeadState || (hunterNode != null && hunterNode.Zone == ZoneType.SafeZone))
         {
-            if (currentState == ChaseState) ChangeState(PatrolState);
+            if (currentState == ChaseState || currentState == HowlState) ChangeState(PatrolState);
             return;
         }
 
         float distToHunter = Vector3.Distance(transform.position, hunter.transform.position);
 
+        // Si está en rango de captura, ataca directamente
         if (distToHunter <= captureRadius)
         {
             if (currentState != AttackState) ChangeState(AttackState);
             return;
         }
 
+        // Detección por visión (Radio y Cono FoV)
         if (distToHunter <= visionRadius)
         {
             Vector3 dirToHunter = (hunter.transform.position - transform.position).normalized;
@@ -111,18 +117,17 @@ public class WolfAI : Agent
             {
                 if (!Physics.Raycast(transform.position + Vector3.up * 0.5f, dirToHunter, distToHunter, obstacleMask))
                 {
-                    // Si detecta al cazador y está patrullando, emite el aullido de alerta a la jauría
-                    if (currentState == PatrolState)
+                    // Si detecta al cazador y está patrullando o inactivo, emite la alerta a la jauría
+                    if (currentState == PatrolState || currentState == HowlState == false)
                     {
                         EmitHowlAlert(hunter.transform.position);
-                        ChangeState(ChaseState);
+                        ChangeState(new WolfHowlState(this, hunter.transform.position));
                     }
                 }
             }
         }
     }
 
-    // Emite la señal de alerta (aullido) a los demás lobos
     private void EmitHowlAlert(Vector3 hunterPosition)
     {
         Debug.Log($"[{gameObject.name}] ¡Aullido de alerta emitido! Cazador localizado en: {hunterPosition}");
@@ -143,17 +148,13 @@ public class WolfAI : Agent
         }
     }
 
-    // Recibe la alerta de otro lobo y acude a la última posición conocida
     public void ReceiveAlert(Vector3 hunterPosition)
     {
+        // Si el lobo está patrullando, recibe el aviso, aúlla y va a la posición
         if (currentState == PatrolState)
         {
-            Debug.Log($"[{gameObject.name}] Alerta de aullido recibida. Acudiendo a la posición.");
-            if (ChaseState is WolfChaseState chaseState)
-            {
-                chaseState.SetLastKnownPosition(hunterPosition);
-            }
-            ChangeState(ChaseState);
+            Debug.Log($"[{gameObject.name}] Alerta de aullido recibida de otro lobo. Acudiendo.");
+            ChangeState(new WolfHowlState(this, hunterPosition));
         }
     }
 
