@@ -34,9 +34,28 @@ public abstract class Agent : MonoBehaviour
         Velocity += acceleration * Time.deltaTime;
         Velocity = Vector3.ClampMagnitude(Velocity, maxSpeed);
 
-        Vector3 pos = transform.position;
-        pos += Velocity * Time.deltaTime;
-        transform.position = pos;
+        Vector3 displacement = Velocity * Time.deltaTime;
+        Vector3 targetPos = transform.position + displacement;
+
+        // Radio aproximado del agente para las colisiones con el entorno
+        float agentRadius = 0.4f;
+        Vector3 rayOrigin = transform.position + Vector3.up * 0.5f;
+
+        // Comprobamos si el movimiento va a impactar contra un collider en la escena
+        if (Physics.SphereCast(rayOrigin, agentRadius, displacement.normalized, out RaycastHit hit, displacement.magnitude))
+        {
+            // Si choca contra una valla o pared, detenemos/ajustamos la posición para que no la traspase
+            Vector3 safePosition = hit.point - displacement.normalized * agentRadius;
+            safePosition.y = transform.position.y;
+            transform.position = safePosition;
+
+            // Opcional: anulamos la velocidad en esa dirección para que no "patine" contra el muro
+            Velocity = Vector3.ProjectOnPlane(Velocity, hit.normal);
+        }
+        else
+        {
+            transform.position = targetPos;
+        }
 
         acceleration = Vector3.zero;
 
@@ -46,7 +65,6 @@ public abstract class Agent : MonoBehaviour
             transform.rotation = Quaternion.Slerp(transform.rotation, targetRotation, Time.deltaTime * 10f);
         }
     }
-
     public void AddForce(Vector3 forceVector) => acceleration += forceVector;
 
     public Vector3 Seek(Vector3 targetPosition)

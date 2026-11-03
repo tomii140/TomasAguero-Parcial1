@@ -8,7 +8,7 @@ public class WolfChaseState : IWolfState
     private int pathIndex = 0;
     private float timer = 0f;
     private float interval = 0.5f;
-    private Vector3? customTargetPosition = null; // Permite almacenar la última posición conocida por aullido
+    private Vector3? customTargetPosition = null;
 
     public WolfChaseState(WolfAI wolf)
     {
@@ -17,7 +17,7 @@ public class WolfChaseState : IWolfState
 
     public void Enter()
     {
-        customTargetPosition = null; // Al entrar por visión directa limpia posiciones previas de aullidos
+        customTargetPosition = null;
         RecalculatePath();
     }
 
@@ -28,18 +28,25 @@ public class WolfChaseState : IWolfState
 
         float dist = Vector3.Distance(wolf.transform.position, hunter.transform.position);
 
-        // Si el lobo tiene línea de visión directa con el cazador, lo persigue directamente
-        if (dist <= wolf.VisionRadius && !Physics.Raycast(wolf.transform.position + Vector3.up * 0.5f, (hunter.transform.position - wolf.transform.position).normalized, dist, wolf.ObstacleMask))
+        // Vector y dirección hacia el cazador
+        Vector3 rayOrigin = wolf.transform.position + Vector3.up * 1.0f;
+        Vector3 dirToHunter = (hunter.transform.position - wolf.transform.position).normalized;
+
+        // Validamos si hay obstáculo real (asegúrate de que obstacleMask incluya paredes y vallas)
+        bool lineOfSightClear = !Physics.Raycast(rayOrigin, dirToHunter, dist, wolf.ObstacleMask);
+
+        // Solo persecución directa en línea recta si lo ve DIRECTAMENTE, está muy cerca Y no hay obstáculos físicos
+        if (dist <= (wolf.VisionRadius * 0.5f) && lineOfSightClear)
         {
-            customTargetPosition = null; // Vuelve a rastreo visual directo
+            customTargetPosition = null;
             Vector3 force = wolf.Arrive(hunter.transform.position, 2.0f);
             wolf.AddForce(force);
         }
         else
         {
-            // Si no lo ve directamente, utiliza A* hacia el objetivo (última posición del aullido o la del cazador)
+            // Si hay obstáculos o está lejos, OBLIGATORIAMENTE sigue la ruta de nodos A* sin cortar camino
             timer += Time.deltaTime;
-            if (timer >= interval)
+            if (timer >= interval || currentPath == null || currentPath.Count == 0)
             {
                 timer = 0f;
                 RecalculatePath();
@@ -60,7 +67,6 @@ public class WolfChaseState : IWolfState
         customTargetPosition = null;
     }
 
-    // Método requerido para recibir la alerta de los aullidos de otros lobos
     public void SetLastKnownPosition(Vector3 position)
     {
         customTargetPosition = position;
@@ -73,9 +79,8 @@ public class WolfChaseState : IWolfState
 
     private void RecalculatePath()
     {
-        if (GameManager.Instance.Hunter == null) return;
+        if (GameManager.Instance.Hunter == null || GraphManager.Instance == null) return;
 
-        // Si hay una posición de aullido almacenada y no ve al cazador, calcula hacia esa posición; si no, hacia el cazador
         Vector3 targetDestination = customTargetPosition.HasValue ? customTargetPosition.Value : GameManager.Instance.Hunter.transform.position;
 
         currentPath = GraphManager.Instance.FindPath(wolf.transform.position, targetDestination, excludeSafeZones: true);
@@ -84,31 +89,40 @@ public class WolfChaseState : IWolfState
 
     private void FollowPath()
     {
-        Vector3 finalDestination = customTargetPosition.HasValue ? customTargetPosition.Value : GameManager.Instance.Hunter.transform.position;
-
-        if (currentPath != null && currentPath.Count > 0)
+        if (currentPath == null || currentPath.Count == 0)
         {
-            if (pathIndex < currentPath.Count)
-            {
-                Vector3 targetPos = currentPath[pathIndex].transform.position;
-                Vector3 force = wolf.Arrive(targetPos, 2.0f);
-                wolf.AddForce(force);
+            Vector3 fallbackDest = customTargetPosition.HasValue ? customTargetPosition.Value : GameManager.Instance.Hunter.transform.position;
+            wolf.AddForce(wolf.Arrive(fallbackDest, 2.0f));
+            return;
+        }
 
-                if (Vector3.Distance(wolf.transform.position, targetPos) < 1.5f)
-                {
-                    pathIndex++;
-                }
-            }
-            else
+        if (pathIndex < currentPath.Count)
+        {
+            if (currentPath[pathIndex] == null)
             {
-                Vector3 force = wolf.Arrive(finalDestination, 2.0f);
-                wolf.AddForce(force);
+                pathIndex++;
+                return;
+            }
+
+            Vector3 targetPos = currentPath[pathIndex].transform.position;
+
+            // Fuerza de Arrive optimizada para giros cerrados
+            Vector3 force = wolf.Arrive(targetPos, 1.2f);
+            wolf.AddForce(force);
+
+            // Distancia plana XZ con umbral estricto de 1.0f para evitar cortar camino en las esquinas
+            Vector3 wolfPosXZ = new Vector3(wolf.transform.position.x, 0f, wolf.transform.position.z);
+            Vector3 targetPosXZ = new Vector3(targetPos.x, 0f, targetPos.z);
+
+            if (Vector3.Distance(wolfPosXZ, targetPosXZ) < 1.0f)
+            {
+                pathIndex++;
             }
         }
         else
         {
-            Vector3 force = wolf.Arrive(finalDestination, 2.0f);
-            wolf.AddForce(force);
+            Vector3 finalDestination = customTargetPosition.HasValue ? customTargetPosition.Value : GameManager.Instance.Hunter.transform.position;
+            wolf.AddForce(wolf.Arrive(finalDestination, 2.0f));
         }
     }
 }

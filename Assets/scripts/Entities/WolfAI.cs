@@ -11,8 +11,8 @@ public class WolfAI : Agent
     [SerializeField] private Transform[] waypoints;
 
     [Header("Perception & Vision")]
-    [SerializeField, Range(1f, 25f)] private float visionRadius = 10f;
-    [SerializeField, Range(10f, 120f)] private float fieldOfViewAngle = 60f;
+    [SerializeField, Range(1f, 200f)] private float visionRadius = 10f;
+    [SerializeField, Range(10f, 200f)] private float fieldOfViewAngle = 60f;
     [SerializeField, Range(0.5f, 5f)] private float captureRadius = 1.5f;
     [SerializeField] private LayerMask obstacleMask;
 
@@ -33,7 +33,7 @@ public class WolfAI : Agent
     {
         base.Start();
         Animator = GetComponentInChildren<Animator>();
-        AudioController = GetComponent<WolfAudioController>();
+        AudioController = GetComponentInChildren<WolfAudioController>();
 
         if (GameManager.Instance != null && !GameManager.Instance.ActiveWolves.Contains(gameObject))
         {
@@ -91,7 +91,7 @@ public class WolfAI : Agent
         if (GameManager.Instance == null || GameManager.Instance.Hunter == null) return;
         HunterAI hunter = GameManager.Instance.Hunter;
 
-        Node hunterNode = GraphManager.Instance.GetNearestNode(hunter.transform.position);
+        Node hunterNode = GraphManager.Instance != null ? GraphManager.Instance.GetNearestNode(hunter.transform.position) : null;
         if (hunter.FSM.CurrentState is HunterDeadState || (hunterNode != null && hunterNode.Zone == ZoneType.SafeZone))
         {
             if (currentState == ChaseState || currentState == HowlState) ChangeState(PatrolState);
@@ -100,30 +100,49 @@ public class WolfAI : Agent
 
         float distToHunter = Vector3.Distance(transform.position, hunter.transform.position);
 
-        // Si está en rango de captura, ataca directamente
+        // 1. Revisar si entra en rango de captura
         if (distToHunter <= captureRadius)
         {
+            Debug.Log($"<color=green>[DEBUG-CAPTURE]</color> {gameObject.name} alcanzó al cazador. Distancia: {distToHunter:F2}");
             if (currentState != AttackState) ChangeState(AttackState);
             return;
         }
 
-        // Detección por visión (Radio y Cono FoV)
+        // 2. Revisar si entra en el radio de visión
         if (distToHunter <= visionRadius)
         {
             Vector3 dirToHunter = (hunter.transform.position - transform.position).normalized;
             float angle = Vector3.Angle(transform.forward, dirToHunter);
+            float maxAngle = fieldOfViewAngle / 2f;
 
-            if (angle <= fieldOfViewAngle / 2f)
+            // DEBUG: El cazador está dentro del radio, imprimimos ángulo y distancia constantemente
+            Debug.Log($"<color=yellow>[DEBUG-VISION]</color> {gameObject.name} tiene al cazador a {distToHunter:F2}m (Radio máx: {visionRadius}). Ángulo actual: {angle:F2}° (Máx permitido: {maxAngle}°)");
+
+            if (angle <= maxAngle)
             {
-                if (!Physics.Raycast(transform.position + Vector3.up * 0.5f, dirToHunter, distToHunter, obstacleMask))
+                Vector3 rayOrigin = transform.position + Vector3.up * 1.0f;
+                bool hitObstacle = Physics.Raycast(rayOrigin, dirToHunter, distToHunter, obstacleMask);
+
+                // Dibuja una línea en la escena de Unity: Verde si tiene visión libre, Roja si hay un obstáculo en medio
+                Debug.DrawLine(rayOrigin, hunter.transform.position + Vector3.up * 1.0f, hitObstacle ? Color.red : Color.green, 0.1f);
+
+                if (!hitObstacle)
                 {
-                    // Si detecta al cazador y está patrullando o inactivo, emite la alerta a la jauría
-                    if (currentState == PatrolState || currentState == HowlState == false)
+                    if (currentState == PatrolState)
                     {
+                        Debug.Log($"<color=cyan>[¡DETECTADO EXITOSAMENTE!]</color> {gameObject.name} vio al cazador de frente. Disparando aullido.");
                         EmitHowlAlert(hunter.transform.position);
                         ChangeState(new WolfHowlState(this, hunter.transform.position));
                     }
                 }
+                else
+                {
+                    Debug.Log($"<color=orange>[DEBUG-BLOQUEADO]</color> El raycast chocó con un obstáculo en la máscara '{LayerMask.LayerToName(obstacleMask)}' entre el lobo y el cazador.");
+                }
+            }
+            else
+            {
+                Debug.Log($"<color=magenta>[DEBUG-FUERA DE CONO]</color> El cazador está en el radio pero el lobo está mirando hacia otro lado (Ángulo: {angle:F2}° > {maxAngle}°).");
             }
         }
     }
@@ -131,6 +150,12 @@ public class WolfAI : Agent
     private void EmitHowlAlert(Vector3 hunterPosition)
     {
         Debug.Log($"[{gameObject.name}] ¡Aullido de alerta emitido! Cazador localizado en: {hunterPosition}");
+
+        // Reproducir sonido de aullido en el emisor
+        if (AudioController != null)
+        {
+            AudioController.PlayHowl();
+        }
 
         if (GameManager.Instance != null && GameManager.Instance.ActiveWolves != null)
         {

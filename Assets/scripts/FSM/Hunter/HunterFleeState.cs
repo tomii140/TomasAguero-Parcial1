@@ -30,7 +30,7 @@ public class HunterFleeState : IState
     {
         if (_isInSafeZone) return;
 
-        // 1. Verificación de llegada física a la Zona Segura utilizando el nodo final del path si existe, o el más cercano
+        // 1. Verificación de llegada física a la Zona Segura utilizando el nodo final del path o el más cercano
         Node targetNode = (_fleePath != null && _fleePath.Count > 0) ? _fleePath[_fleePath.Count - 1] : _hunter.GetNearestSafeZoneNode();
 
         if (targetNode != null)
@@ -54,14 +54,14 @@ public class HunterFleeState : IState
                 Vector3 targetNodePos = _fleePath[_currentIndex].transform.position;
 
                 // Aplicar Arrive hacia el nodo actual del path (respetando pasillos y paredes)
-                Vector3 force = _hunter.Arrive(targetNodePos, 2.0f);
+                Vector3 force = _hunter.Arrive(targetNodePos, 1.5f);
                 _hunter.AddForce(force);
 
-                // Control de distancia horizontal XZ para avanzar al siguiente nodo de forma precisa
+                // Control de distancia horizontal XZ ajustado a 1.2f para evitar cortes de camino en esquinas
                 Vector3 hunterXZ = new Vector3(_hunter.transform.position.x, 0f, _hunter.transform.position.z);
                 Vector3 nodeXZ = new Vector3(targetNodePos.x, 0f, targetNodePos.z);
 
-                if (Vector3.Distance(hunterXZ, nodeXZ) < 2.0f)
+                if (Vector3.Distance(hunterXZ, nodeXZ) < 1.2f)
                 {
                     _currentIndex++;
                 }
@@ -69,12 +69,12 @@ public class HunterFleeState : IState
             }
         }
 
-        // 3. Respaldo por si el path viene vacío: Arrive directo al nodo seguro más cercano
+        // 3. Respaldo seguro: Si el path está vacío, intenta recalcularlo en lugar de ir en línea recta atravesando paredes
         Node safeNode = _hunter.GetNearestSafeZoneNode();
-        if (safeNode != null)
+        if (safeNode != null && GraphManager.Instance != null)
         {
-            Vector3 fallbackForce = _hunter.Arrive(safeNode.transform.position, 3.0f);
-            _hunter.AddForce(fallbackForce);
+            _fleePath = GraphManager.Instance.FindPath(_hunter.transform.position, safeNode.transform.position);
+            _currentIndex = 0;
         }
     }
 

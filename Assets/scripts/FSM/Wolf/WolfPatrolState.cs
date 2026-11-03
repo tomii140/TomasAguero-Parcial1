@@ -18,7 +18,7 @@ public class WolfPatrolState : IWolfState
 
     public void Enter()
     {
-        currentIndex = 0;
+        FindNearestWaypointIndex();
         isReversing = false;
         RequestPath();
     }
@@ -29,21 +29,29 @@ public class WolfPatrolState : IWolfState
 
         Transform targetWp = waypoints[currentIndex];
 
-        // Distancia plana en XZ para evitar bloqueos por diferencias en el eje Y
         Vector3 wolfPosXZ = new Vector3(wolf.transform.position.x, 0f, wolf.transform.position.z);
         Vector3 targetWpXZ = new Vector3(targetWp.position.x, 0f, targetWp.position.z);
         float distToWaypoint = Vector3.Distance(wolfPosXZ, targetWpXZ);
 
-        if (distToWaypoint < 2.5f)
+        if (distToWaypoint < 2.0f)
         {
             UpdateWaypointIndex();
             RequestPath();
             return;
         }
 
-        if (currentPath == null || currentPath.Count == 0 || pathIndex >= currentPath.Count)
+        // Si el path es nulo o está vacío, lo solicita de nuevo en lugar de ir en línea recta
+        if (currentPath == null || currentPath.Count == 0)
         {
-            MoveDirectlyToWaypoint(targetWp.position);
+            RequestPath();
+            return;
+        }
+
+        // Si llegó al último nodo del path pero aún no al waypoint físico, se dirige al último nodo de forma segura por grafo
+        if (pathIndex >= currentPath.Count)
+        {
+            Vector3 lastNodePos = currentPath[currentPath.Count - 1].transform.position;
+            wolf.AddForce(wolf.Arrive(lastNodePos, 1.2f));
             return;
         }
 
@@ -61,9 +69,29 @@ public class WolfPatrolState : IWolfState
         currentPath = null;
     }
 
-    private void RequestPath()
+    private void FindNearestWaypointIndex()
     {
         if (waypoints == null || waypoints.Length == 0) return;
+
+        int nearestIndex = 0;
+        float minDist = float.MaxValue;
+
+        for (int i = 0; i < waypoints.Length; i++)
+        {
+            if (waypoints[i] == null) continue;
+            float dist = Vector3.Distance(wolf.transform.position, waypoints[i].position);
+            if (dist < minDist)
+            {
+                minDist = dist;
+                nearestIndex = i;
+            }
+        }
+        currentIndex = nearestIndex;
+    }
+
+    private void RequestPath()
+    {
+        if (waypoints == null || waypoints.Length == 0 || GraphManager.Instance == null) return;
         Transform targetWp = waypoints[currentIndex];
         currentPath = GraphManager.Instance.FindPath(wolf.transform.position, targetWp.position, excludeSafeZones: false);
         pathIndex = 0;
@@ -74,28 +102,16 @@ public class WolfPatrolState : IWolfState
         if (currentPath == null || pathIndex >= currentPath.Count) return;
 
         Vector3 targetPos = currentPath[pathIndex].transform.position;
-        Vector3 force = wolf.Arrive(targetPos, 2.0f);
+        Vector3 force = wolf.Arrive(targetPos, 1.2f);
         wolf.AddForce(force);
 
-        // Distancia plana XZ con umbral de 2.0f para avanzar de nodo sin atascarse
         Vector3 wolfPosXZ = new Vector3(wolf.transform.position.x, 0f, wolf.transform.position.z);
         Vector3 targetPosXZ = new Vector3(targetPos.x, 0f, targetPos.z);
 
-        if (Vector3.Distance(wolfPosXZ, targetPosXZ) < 2.0f)
+        // Umbral estricto de 1.0f para doblar correctamente en las esquinas sin cortar camino
+        if (Vector3.Distance(wolfPosXZ, targetPosXZ) < 1.0f)
         {
             pathIndex++;
-        }
-    }
-
-    private void MoveDirectlyToWaypoint(Vector3 targetPos)
-    {
-        Vector3 directDir = (targetPos - wolf.transform.position);
-        directDir.y = 0;
-
-        if (directDir.magnitude > 0.5f)
-        {
-            Vector3 force = directDir.normalized * wolf.MaxSpeed - wolf.Velocity;
-            wolf.AddForce(Vector3.ClampMagnitude(force, wolf.MaxForce));
         }
     }
 
