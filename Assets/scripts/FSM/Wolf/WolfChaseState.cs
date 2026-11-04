@@ -57,7 +57,11 @@ public class WolfChaseState : IWolfState
         if (wolf.Animator != null)
         {
             float currentSpeed = wolf.Velocity.magnitude;
-            wolf.Animator.SetFloat("Speed", currentSpeed > 0.1f ? 1.5f : 0f);
+
+            // Normalizamos o pasamos la velocidad real dividida por la velocidad máxima para que varíe de 0 a 2 de forma suave
+            float normalizedSpeed = (currentSpeed / 8f) * 2f; // Asumiendo MaxSpeed = 8
+
+            wolf.Animator.SetFloat("Speed", normalizedSpeed);
         }
     }
 

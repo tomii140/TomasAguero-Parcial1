@@ -24,12 +24,12 @@ public class HunterAI : Agent
     private int currentGathers = 0;
 
     [Header("Detection & Combat Settings")]
-    [SerializeField, Range(1f, 50f)] private float visionRadius = 8f;
-    [SerializeField, Range(1f, 50f)] private float rangeAttackRadius = 5f;
-    [SerializeField, Range(0.5f, 50f)] private float meleeAttackRadius = 2f;
-    [SerializeField, Range(0.5f, 50f)] private float timeBetweenAttacks = 3f;
-    [SerializeField, Range(0.5f, 50f)] private float gatheringTime = 2f;
-    [SerializeField, Range(0.5f, 50f)] private float captureRadius = 1.5f;
+    [SerializeField, Range(1f, 80f)] private float visionRadius = 8f;
+    [SerializeField, Range(1f, 80f)] private float rangeAttackRadius = 5f;
+    [SerializeField, Range(0.5f, 80f)] private float meleeAttackRadius = 2f;
+    [SerializeField, Range(0.5f, 80f)] private float timeBetweenAttacks = 3f;
+    [SerializeField, Range(0.5f, 80f)] private float gatheringTime = 2f;
+    [SerializeField, Range(0.5f, 80f)] private float captureRadius = 1.5f;
 
     [Header("State Thresholds")]
     [SerializeField, Range(0.1f, 40f)] private float waypointThreshold = 0.8f;

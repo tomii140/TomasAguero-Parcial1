@@ -7070,14 +7070,14 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 67dabcab9207cb0488f7feda8df94fcb, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::WolfAI
-  maxSpeed: 8
-  maxForce: 4
+  maxSpeed: 15
+  maxForce: 6
   stopThreshold: 0.05
   waypoints:
   - {fileID: 565889313}
   - {fileID: 715149504}
   - {fileID: 404828906}
-  visionRadius: 100
+  visionRadius: 60
   fieldOfViewAngle: 100
   captureRadius: 2
   obstacleMask:
@@ -9708,7 +9708,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::WolfAI
   maxSpeed: 8
-  maxForce: 4
+  maxForce: 6
   stopThreshold: 0.05
   waypoints:
   - {fileID: 2125418324}
@@ -9717,7 +9717,7 @@ MonoBehaviour:
   - {fileID: 558835996}
   - {fileID: 201621530}
   - {fileID: 249616419}
-  visionRadius: 100
+  visionRadius: 60
   fieldOfViewAngle: 100
   captureRadius: 1.5
   obstacleMask:
@@ -37725,7 +37725,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::WolfAI
   maxSpeed: 8
-  maxForce: 4
+  maxForce: 6
   stopThreshold: 0.05
   waypoints:
   - {fileID: 565467161}
@@ -37734,7 +37734,7 @@ MonoBehaviour:
   - {fileID: 512670099}
   - {fileID: 1117208157}
   - {fileID: 168673811}
-  visionRadius: 100
+  visionRadius: 60
   fieldOfViewAngle: 100
   captureRadius: 1.5
   obstacleMask:
@@ -45014,13 +45014,13 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::WolfAI
   maxSpeed: 8
-  maxForce: 4
+  maxForce: 6
   stopThreshold: 0.05
   waypoints:
   - {fileID: 713996431}
   - {fileID: 246866584}
   - {fileID: 1998810341}
-  visionRadius: 100
+  visionRadius: 60
   fieldOfViewAngle: 100
   captureRadius: 1.5
   obstacleMask:
@@ -51640,13 +51640,13 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 62d8834b1ee751c4496016f240f8c558, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::HunterAI
-  maxSpeed: 8
+  maxSpeed: 12
   maxForce: 4
   stopThreshold: 0.05
   requiredGathers: 3
   respawnTime: 5
   safeZoneWaitTime: 3
-  visionRadius: 50
+  visionRadius: 75
   rangeAttackRadius: 20
   meleeAttackRadius: 10
   timeBetweenAttacks: 3

@@ -9,6 +9,7 @@ public class WolfPatrolState : IWolfState
     private bool isReversing = false;
     private List<Node> currentPath;
     private int pathIndex = 0;
+    private float pathRetryTimer = 0f;
 
     public WolfPatrolState(WolfAI wolf, Transform[] waypoints)
     {
@@ -20,6 +21,7 @@ public class WolfPatrolState : IWolfState
     {
         FindNearestWaypointIndex();
         isReversing = false;
+        pathRetryTimer = 0f;
         RequestPath();
     }
 
@@ -28,11 +30,13 @@ public class WolfPatrolState : IWolfState
         if (waypoints == null || waypoints.Length == 0) return;
 
         Transform targetWp = waypoints[currentIndex];
+        if (targetWp == null) return;
 
         Vector3 wolfPosXZ = new Vector3(wolf.transform.position.x, 0f, wolf.transform.position.z);
         Vector3 targetWpXZ = new Vector3(targetWp.position.x, 0f, targetWp.position.z);
         float distToWaypoint = Vector3.Distance(wolfPosXZ, targetWpXZ);
 
+        // Si llegó al waypoint físico, actualiza índice y pide ruta nueva
         if (distToWaypoint < 2.0f)
         {
             UpdateWaypointIndex();
@@ -40,33 +44,41 @@ public class WolfPatrolState : IWolfState
             return;
         }
 
-        // Si el path es nulo o está vacío, lo solicita de nuevo en lugar de ir en línea recta
+        // Si el path es nulo o está vacío, aplicamos fallback: se mueve directo al waypoint 
+        // mientras reintenta calcular el A* cada 1 segundo para evitar que se quede congelado
         if (currentPath == null || currentPath.Count == 0)
         {
-            RequestPath();
+            pathRetryTimer += Time.deltaTime;
+            if (pathRetryTimer >= 1.0f)
+            {
+                pathRetryTimer = 0f;
+                RequestPath();
+            }
+
+            // Movimiento de respaldo directo hacia el objetivo
+            Vector3 fallbackForce = wolf.Arrive(targetWp.position, 1.2f);
+            wolf.AddForce(fallbackForce);
+            UpdateAnimator();
             return;
         }
 
-        // Si llegó al último nodo del path pero aún no al waypoint físico, se dirige al último nodo de forma segura por grafo
+        // Si terminó los nodos del path pero sigue lejos del waypoint físico, va directo al último nodo
         if (pathIndex >= currentPath.Count)
         {
             Vector3 lastNodePos = currentPath[currentPath.Count - 1].transform.position;
             wolf.AddForce(wolf.Arrive(lastNodePos, 1.2f));
+            UpdateAnimator();
             return;
         }
 
         FollowPath();
-
-        if (wolf.Animator != null)
-        {
-            float currentSpeed = wolf.Velocity.magnitude;
-            wolf.Animator.SetFloat("Speed", currentSpeed > 0.1f ? 0.5f : 0f);
-        }
+        UpdateAnimator();
     }
 
     public void Exit()
     {
         currentPath = null;
+        pathRetryTimer = 0f;
     }
 
     private void FindNearestWaypointIndex()
@@ -92,7 +104,10 @@ public class WolfPatrolState : IWolfState
     private void RequestPath()
     {
         if (waypoints == null || waypoints.Length == 0 || GraphManager.Instance == null) return;
+
         Transform targetWp = waypoints[currentIndex];
+        if (targetWp == null) return;
+
         currentPath = GraphManager.Instance.FindPath(wolf.transform.position, targetWp.position, excludeSafeZones: false);
         pathIndex = 0;
     }
@@ -108,7 +123,6 @@ public class WolfPatrolState : IWolfState
         Vector3 wolfPosXZ = new Vector3(wolf.transform.position.x, 0f, wolf.transform.position.z);
         Vector3 targetPosXZ = new Vector3(targetPos.x, 0f, targetPos.z);
 
-        // Umbral estricto de 1.0f para doblar correctamente en las esquinas sin cortar camino
         if (Vector3.Distance(wolfPosXZ, targetPosXZ) < 1.0f)
         {
             pathIndex++;
@@ -142,6 +156,15 @@ public class WolfPatrolState : IWolfState
                 isReversing = false;
                 currentIndex = Mathf.Min(1, waypoints.Length - 1);
             }
+        }
+    }
+
+    private void UpdateAnimator()
+    {
+        if (wolf.Animator != null)
+        {
+            float currentSpeed = wolf.Velocity.magnitude;
+            wolf.Animator.SetFloat("Speed", currentSpeed > 0.1f ? 0.5f : 0f);
         }
     }
 }
