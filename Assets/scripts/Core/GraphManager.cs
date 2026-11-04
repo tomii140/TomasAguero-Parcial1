@@ -7,7 +7,7 @@ public class GraphManager : MonoBehaviour
 
     [Header("Lista de Nodos del Mapa")]
     [SerializeField] private List<Node> allNodes = new List<Node>();
-    public List<Node> AllNodes => allNodes; // Propiedad pública requerida
+    public List<Node> AllNodes => allNodes;
 
     private int currentSearchID = 0;
 
@@ -27,7 +27,9 @@ public class GraphManager : MonoBehaviour
 
         currentSearchID++;
 
-        List<Node> openSet = new List<Node>();
+        // Uso de PriorityQueue y HashSet para rendimiento óptimo
+        PriorityQueue<Node, float> openSet = new PriorityQueue<Node, float>();
+        HashSet<Node> openSetLookup = new HashSet<Node>();
         HashSet<Node> closedSet = new HashSet<Node>();
 
         startNode.GCost = 0;
@@ -35,24 +37,13 @@ public class GraphManager : MonoBehaviour
         startNode.Parent = null;
         startNode.LastSearchID = currentSearchID;
 
-        openSet.Add(startNode);
+        openSet.Enqueue(startNode, startNode.FCost);
+        openSetLookup.Add(startNode);
 
         while (openSet.Count > 0)
         {
-            Node currentNode = openSet[0];
-            int currentIndex = 0;
-
-            for (int i = 1; i < openSet.Count; i++)
-            {
-                if (openSet[i].FCost < currentNode.FCost ||
-                   (openSet[i].FCost == currentNode.FCost && openSet[i].HCost < currentNode.HCost))
-                {
-                    currentNode = openSet[i];
-                    currentIndex = i;
-                }
-            }
-
-            openSet.RemoveAt(currentIndex);
+            Node currentNode = openSet.Dequeue();
+            openSetLookup.Remove(currentNode);
             closedSet.Add(currentNode);
 
             if (currentNode == targetNode)
@@ -63,7 +54,6 @@ public class GraphManager : MonoBehaviour
             foreach (var neighbor in currentNode.Neighbors)
             {
                 if (neighbor == null || closedSet.Contains(neighbor)) continue;
-
                 if (excludeSafeZones && neighbor.Zone == ZoneType.SafeZone) continue;
 
                 float tentativeGCost = currentNode.GCost + Vector3.Distance(currentNode.transform.position, neighbor.transform.position);
@@ -80,9 +70,10 @@ public class GraphManager : MonoBehaviour
                     neighbor.HCost = Vector3.Distance(neighbor.transform.position, targetNode.transform.position);
                     neighbor.Parent = currentNode;
 
-                    if (!openSet.Contains(neighbor))
+                    if (!openSetLookup.Contains(neighbor))
                     {
-                        openSet.Add(neighbor);
+                        openSet.Enqueue(neighbor, neighbor.FCost);
+                        openSetLookup.Add(neighbor);
                     }
                 }
             }
@@ -108,20 +99,19 @@ public class GraphManager : MonoBehaviour
     public Node GetNearestNode(Vector3 position)
     {
         Node nearest = null;
-        float minDistance = float.MaxValue;
+        float minSqrDistance = float.MaxValue;
+        Vector3 posFlat = new Vector3(position.x, 0f, position.z);
 
         foreach (var node in allNodes)
         {
             if (node == null) continue;
 
-            // Creamos copias de las posiciones aplanando el eje Y para medir solo horizontalmente
-            Vector3 posFlat = new Vector3(position.x, 0f, position.z);
             Vector3 nodePosFlat = new Vector3(node.transform.position.x, 0f, node.transform.position.z);
+            float sqrDist = (posFlat - nodePosFlat).sqrMagnitude;
 
-            float dist = Vector3.Distance(posFlat, nodePosFlat);
-            if (dist < minDistance)
+            if (sqrDist < minSqrDistance)
             {
-                minDistance = dist;
+                minSqrDistance = sqrDist;
                 nearest = node;
             }
         }

@@ -2956,7 +2956,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!64 &132950861
 MeshCollider:
   m_ObjectHideFlags: 0
@@ -3045,7 +3045,7 @@ Transform:
   m_GameObject: {fileID: 132950860}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: -0.70710677, z: 0.70710677, w: 0}
-  m_LocalPosition: {x: 970.3, y: 119.6, z: 0.75952}
+  m_LocalPosition: {x: 1332.8, y: 2.2, z: 22.4}
   m_LocalScale: {x: 8.1274, y: 3.2347312, z: 5}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -9865,7 +9865,6 @@ Transform:
   - {fileID: 1907426306}
   - {fileID: 1608963532}
   - {fileID: 387907397}
-  - {fileID: 446004586}
   - {fileID: 2308825153788157165}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
@@ -11480,37 +11479,6 @@ GameObject:
   m_CorrespondingSourceObject: {fileID: 919132149155446097, guid: 3bbe4ea184a761142ac103f6e1e6ebbd, type: 3}
   m_PrefabInstance: {fileID: 800371612}
   m_PrefabAsset: {fileID: 0}
---- !u!1 &446004585
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 446004586}
-  m_Layer: 0
-  m_Name: Wolfs
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!4 &446004586
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 446004585}
-  serializedVersion: 2
-  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 205.95673, y: 0, z: -0.45237}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 393622027}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &446401627 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 919132149155446097, guid: 3bbe4ea184a761142ac103f6e1e6ebbd, type: 3}
@@ -51678,7 +51646,7 @@ MonoBehaviour:
   requiredGathers: 3
   respawnTime: 5
   safeZoneWaitTime: 3
-  visionRadius: 40
+  visionRadius: 50
   rangeAttackRadius: 20
   meleeAttackRadius: 10
   timeBetweenAttacks: 3
@@ -51782,9 +51750,9 @@ SceneRoots:
   - {fileID: 1766445528}
   - {fileID: 246530501}
   - {fileID: 303672480}
-  - {fileID: 132950864}
   - {fileID: 190104873}
   - {fileID: 1714970500}
   - {fileID: 185603202}
   - {fileID: 393622027}
   - {fileID: 2132743607}
+  - {fileID: 132950864}
