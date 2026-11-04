@@ -4,6 +4,7 @@ using TMPro;
 public class Boid : Agent
 {
     public bool isDead = false;
+    private Animator boarAnimator;
 
     [Header("Flocking Radii")]
     [SerializeField, Range(0.5f, 10f)] private float separationRadius = 2.5f;
@@ -53,6 +54,11 @@ public class Boid : Agent
         {
             cotoBounds = CotoBounds.Instance;
         }
+        boarAnimator = GetComponent<Animator>();
+        if (boarAnimator == null)
+        {
+            boarAnimator = GetComponentInChildren<Animator>();
+        }
     }
 
     private void OnDestroy()
@@ -76,6 +82,13 @@ public class Boid : Agent
 
     private void Update()
     {
+
+        if (boarAnimator != null)
+        {
+            float currentSpeed = Velocity.magnitude;
+            // Si la velocidad es baja pasa a Idle (0), si camina o corre manda la magnitud real o un valor fijo de transición
+            boarAnimator.SetFloat("Speed", currentSpeed > 0.1f ? currentSpeed : 0f);
+        }
         if (isDead)
         {
             Velocity = Vector3.zero;
