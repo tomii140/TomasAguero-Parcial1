@@ -21,7 +21,6 @@ public class HunterFleeState : IState
         Node nearestSafe = _hunter.GetNearestSafeZoneNode();
         if (nearestSafe != null && GraphManager.Instance != null)
         {
-            // Calculamos la ruta con A* desde la posición actual hasta la zona segura
             _fleePath = GraphManager.Instance.FindPath(_hunter.transform.position, nearestSafe.transform.position);
         }
     }
@@ -30,34 +29,18 @@ public class HunterFleeState : IState
     {
         if (_isInSafeZone) return;
 
-        // 1. Verificación de llegada física a la Zona Segura utilizando el nodo final del path o el más cercano
-        Node targetNode = (_fleePath != null && _fleePath.Count > 0) ? _fleePath[_fleePath.Count - 1] : _hunter.GetNearestSafeZoneNode();
-
-        if (targetNode != null)
-        {
-            float distToTarget = Vector3.Distance(_hunter.transform.position, targetNode.transform.position);
-            Node currentNearest = GraphManager.Instance.GetNearestNode(_hunter.transform.position);
-
-            if ((currentNearest != null && currentNearest.Zone == ZoneType.SafeZone) || distToTarget <= 2.0f)
-            {
-                _isInSafeZone = true;
-                _hunter.StartCoroutine(SafeZoneWaitRoutine());
-                return;
-            }
-        }
-
-        // 2. Navegación estricta nodo por nodo mediante control local de índice (_currentIndex)
+        // Validar si tenemos un camino válido hacia la zona segura
         if (_fleePath != null && _fleePath.Count > 0)
         {
+            Node targetNode = _fleePath[_fleePath.Count - 1];
+
             if (_currentIndex < _fleePath.Count)
             {
                 Vector3 targetNodePos = _fleePath[_currentIndex].transform.position;
 
-                // Aplicar Arrive hacia el nodo actual del path (respetando pasillos y paredes)
                 Vector3 force = _hunter.Arrive(targetNodePos, 1.5f);
                 _hunter.AddForce(force);
 
-                // Control de distancia horizontal XZ ajustado a 1.2f para evitar cortes de camino en esquinas
                 Vector3 hunterXZ = new Vector3(_hunter.transform.position.x, 0f, _hunter.transform.position.z);
                 Vector3 nodeXZ = new Vector3(targetNodePos.x, 0f, targetNodePos.z);
 
@@ -65,11 +48,22 @@ public class HunterFleeState : IState
                 {
                     _currentIndex++;
                 }
+
+                // Si ya llegó al último nodo (el nodo central de la zona segura)
+                if (_currentIndex >= _fleePath.Count)
+                {
+                    float distToCenter = Vector3.Distance(hunterXZ, new Vector3(targetNode.transform.position.x, 0f, targetNode.transform.position.z));
+                    if (distToCenter <= 1.5f)
+                    {
+                        _isInSafeZone = true;
+                        _hunter.StartCoroutine(SafeZoneWaitRoutine());
+                    }
+                }
                 return;
             }
         }
 
-        // 3. Respaldo seguro: Si el path está vacío, intenta recalcularlo en lugar de ir en línea recta atravesando paredes
+        // Respaldo por si el path falló
         Node safeNode = _hunter.GetNearestSafeZoneNode();
         if (safeNode != null && GraphManager.Instance != null)
         {
@@ -86,7 +80,6 @@ public class HunterFleeState : IState
 
         yield return new WaitForSeconds(_hunter.SafeZoneWaitTime);
 
-        // Al finalizar el tiempo de espera, evalúa correctamente su destino según las recolecciones
         if (_hunter.CurrentGathers >= _hunter.RequiredGathers)
         {
             _hunter.FSM.ChangeState(_hunter.ExitState);

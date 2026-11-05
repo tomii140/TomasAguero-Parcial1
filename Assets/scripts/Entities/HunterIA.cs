@@ -35,6 +35,11 @@ public class HunterAI : Agent
     [SerializeField, Range(0.1f, 40f)] private float waypointThreshold = 0.8f;
     [SerializeField, Range(1f, 40f)] private float directSeekFactor = 2.5f;
 
+    [Header("Animation & Speed Boost")]
+    [SerializeField] private float runSpeedBoost = 3.0f;
+    [SerializeField] private Animator hunterAnimator;
+    private float defaultMaxSpeed;
+
     public int RequiredGathers => requiredGathers;
     public float RespawnTime => respawnTime;
     public float SafeZoneWaitTime => safeZoneWaitTime;
@@ -71,16 +76,27 @@ public class HunterAI : Agent
     [SerializeField] private TextMeshPro stateTextUI;
 
     private Boid targetBoid;
-    private Coroutine _gatheringCoroutine;
     private List<Node> currentPath;
     private int currentPathIndex = 0;
     private MeshRenderer meshRenderer;
 
+    public List<Node> CurrentPath => currentPath;
+
     protected override void Start()
     {
         base.Start();
+        defaultMaxSpeed = maxSpeed;
         TimerAttackCooldown = 0f;
         meshRenderer = GetComponent<MeshRenderer>();
+
+        if (hunterAnimator == null)
+        {
+            hunterAnimator = GetComponent<Animator>();
+            if (hunterAnimator == null)
+            {
+                hunterAnimator = GetComponentInChildren<Animator>();
+            }
+        }
 
         SearchState = new HunterSearchState(this);
         AttackState = new HunterAttackState(this);
@@ -105,10 +121,24 @@ public class HunterAI : Agent
             FSM.ChangeState(FleeState);
         }
 
+        if (FSM.CurrentState == AttackState || FSM.CurrentState == FleeState)
+        {
+            maxSpeed = defaultMaxSpeed + runSpeedBoost;
+        }
+        else
+        {
+            maxSpeed = defaultMaxSpeed;
+        }
+
         HandleFruitSpawning();
         FSM.Update();
         ApplyPhysics();
         UpdateStateFeedback();
+
+        if (hunterAnimator != null)
+        {
+            hunterAnimator.SetFloat("Speed", Velocity.magnitude);
+        }
     }
 
     private bool CheckWolfDetection()
@@ -146,7 +176,6 @@ public class HunterAI : Agent
 
     public void FollowPath(List<Node> path, float threshold = 0.8f)
     {
-        if (path == null || path.Count == 0) return;
         currentPath = path;
         currentPathIndex = 0;
     }
@@ -200,151 +229,80 @@ public class HunterAI : Agent
         if (fruitTimer >= fruitSpawnInterval)
         {
             fruitTimer = 0f;
-            if (GameManager.Instance != null && GameManager.Instance.ActiveFruits != null && GameManager.Instance.ActiveFruits.Count < maxFruitsInScene)
+            if (GameManager.Instance != null && GameManager.Instance.ActiveFruits.Count < maxFruitsInScene && fruitPrefab != null)
             {
-                if (fruitPrefab != null)
-                {
-                    Vector2 randomCircle = Random.insideUnitCircle * fruitSpawnRadius;
-                    Vector3 spawnPos = transform.position + new Vector3(randomCircle.x, 0f, randomCircle.y);
-                    GameObject fruitObj = Instantiate(fruitPrefab, spawnPos, Quaternion.identity);
-
-                    Fruit fruitComponent = fruitObj.GetComponent<Fruit>();
-                    if (fruitComponent != null)
-                    {
-                        GameManager.Instance.ActiveFruits.Add(fruitComponent);
-                    }
-                }
+                Vector2 randomCircle = Random.insideUnitCircle * fruitSpawnRadius;
+                Vector3 spawnPos = transform.position + new Vector3(randomCircle.x, 0f, randomCircle.y);
+                Instantiate(fruitPrefab, spawnPos, Quaternion.identity);
             }
         }
     }
 
-    public void SetColorFeedback(Color newColor)
-    {
-        if (meshRenderer != null)
-        {
-            meshRenderer.material.color = newColor;
-        }
-    }
-
-    public Boid GetTargetBoid() => targetBoid;
-
-    public void SetTargetBoid(Boid boid) => targetBoid = boid;
-
-    public Boid FindBoidInVision(bool lookForDead = false)
+    public Boid FindBoidInVision(bool lookForDead)
     {
         if (GameManager.Instance == null || GameManager.Instance.ActiveBoids == null) return null;
 
-        Boid nearestBoid = null;
-        float minDist = float.MaxValue;
+        Boid nearest = null;
+        float minDistance = float.MaxValue;
 
         foreach (var boid in GameManager.Instance.ActiveBoids)
         {
-            if (boid != null && boid.isDead == lookForDead)
+            if (boid == null) continue;
+            if (boid.isDead != lookForDead) continue;
+
+            float dist = Vector3.Distance(transform.position, boid.transform.position);
+            if (dist <= visionRadius && dist < minDistance)
             {
-                float dist = Vector3.Distance(transform.position, boid.transform.position);
-                if (dist <= visionRadius && dist < minDist)
-                {
-                    minDist = dist;
-                    nearestBoid = boid;
-                }
+                minDistance = dist;
+                nearest = boid;
             }
         }
-        return nearestBoid;
+        return nearest;
     }
+
+    public void SetTargetBoid(Boid boid) => targetBoid = boid;
+    public Boid GetTargetBoid() => targetBoid;
 
     public void ResetAttackCooldown()
     {
         TimerAttackCooldown = timeBetweenAttacks;
     }
 
-    public void StartGatheringRoutine(Boid boid)
+    public void SetColorFeedback(Color color)
     {
-        if (_gatheringCoroutine != null)
+        if (agentMeshRenderer != null)
         {
-            StopCoroutine(_gatheringCoroutine);
+            agentMeshRenderer.material.color = color;
         }
-        _gatheringCoroutine = StartCoroutine(GatheringRoutine(boid));
     }
 
-    private System.Collections.IEnumerator GatheringRoutine(Boid boid)
-    {
-        float timer = 0f;
-        while (timer < gatheringTime)
-        {
-            timer += Time.deltaTime;
-            yield return null;
-        }
-
-        if (boid != null)
-        {
-            Destroy(boid.gameObject);
-            AddGather();
-        }
-        targetBoid = null;
-        _gatheringCoroutine = null;
-    }
-
+    // --- GIZMOS OBLIGATORIOS (Punto 1.12) ---
     private void OnDrawGizmos()
     {
-        // 1. Radio de visión general (Azul tenue)
-        Gizmos.color = new Color(0f, 0.5f, 1f, 0.3f);
+        // 1. Radio de Visión (Amarillo)
+        Gizmos.color = Color.yellow;
         Gizmos.DrawWireSphere(transform.position, visionRadius);
 
-        // 2. Rango de ataque a distancia (Amarillo)
-        Gizmos.color = new Color(1f, 1f, 0f, 0.5f);
+        // 2. Radio de Ataque a Distancia (Cian)
+        Gizmos.color = Color.cyan;
         Gizmos.DrawWireSphere(transform.position, rangeAttackRadius);
 
-        // 3. Rango de ataque cuerpo a cuerpo (Rojo)
-        Gizmos.color = new Color(1f, 0f, 0f, 0.6f);
+        // 3. Radio de Ataque Cuerpo a Cuerpo (Rojo)
+        Gizmos.color = Color.red;
         Gizmos.DrawWireSphere(transform.position, meleeAttackRadius);
 
-        // 4. Radio de captura o proximidad (Naranja)
-        Gizmos.color = new Color(1f, 0.5f, 0f, 0.5f);
-        Gizmos.DrawWireSphere(transform.position, captureRadius);
-
-        // 5. Línea de velocidad actual (Magenta)
-        if (Application.isPlaying)
+        // 4. Dibujar el Path actual de navegación A*
+        if (currentPath != null && currentPath.Count > 0)
         {
-            Gizmos.color = Color.magenta;
-            Gizmos.DrawLine(transform.position + Vector3.up * 0.5f, transform.position + Vector3.up * 0.5f + Velocity);
-
-            // 6. Visualización de Pathfinding (Nodos y camino activo con A*)
-            if (currentPath != null && currentPath.Count > 0)
+            Gizmos.color = Color.green;
+            for (int i = 0; i < currentPath.Count - 1; i++)
             {
-                Gizmos.color = Color.cyan;
-                for (int i = currentPathIndex; i < currentPath.Count; i++)
+                if (currentPath[i] != null && currentPath[i + 1] != null)
                 {
-                    if (currentPath[i] != null)
-                    {
-                        Gizmos.DrawSphere(currentPath[i].transform.position, 0.3f);
-
-                        if (i < currentPath.Count - 1 && currentPath[i + 1] != null)
-                        {
-                            Gizmos.DrawLine(currentPath[i].transform.position, currentPath[i + 1].transform.position);
-                        }
-                    }
-                }
-
-                // Línea brillante hacia el nodo objetivo actual al que se dirige
-                if (currentPathIndex < currentPath.Count && currentPath[currentPathIndex] != null)
-                {
-                    Gizmos.color = Color.yellow;
-                    Gizmos.DrawLine(transform.position + Vector3.up * 0.5f, currentPath[currentPathIndex].transform.position);
+                    Gizmos.DrawLine(currentPath[i].transform.position, currentPath[i + 1].transform.position);
+                    Gizmos.DrawSphere(currentPath[i].transform.position, 0.2f);
                 }
             }
         }
-
-#if UNITY_EDITOR
-        // 7. Feedback textual en pantalla sobre el estado, recolecciones y velocidad
-        GUIStyle style = new GUIStyle();
-        style.normal.textColor = Color.cyan;
-        style.fontSize = 12;
-        style.fontStyle = FontStyle.Bold;
-
-        string currentStateName = FSM != null && FSM.CurrentState != null ? FSM.CurrentState.GetType().Name.Replace("Hunter", "").Replace("State", "") : "None";
-
-        Vector3 textPos = transform.position + Vector3.up * 2.5f;
-        Handles.Label(textPos, $"[Hunter]\nState: {currentStateName}\nGathers: {currentGathers}/{requiredGathers}\nVel: {Velocity.magnitude:F2}", style);
-#endif
     }
 }
