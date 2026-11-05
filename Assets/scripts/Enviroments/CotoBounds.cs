@@ -4,10 +4,10 @@ public class CotoBounds : MonoBehaviour
 {
     public static CotoBounds Instance { get; private set; }
 
-    [Header("Configuración del Recinto")]
-    [SerializeField] private Transform centerNode; // El transform del nodo del medio
-    [SerializeField] private float radiusX = 4f;   // Distancia/radio en el eje X
-    [SerializeField] private float radiusZ = 4f;   // Distancia/radio en el eje Z
+    [Header("Enclosure Settings")]
+    [SerializeField] private Transform centerNode;
+    [SerializeField] private float radiusX = 4f;
+    [SerializeField] private float radiusZ = 4f;
     [SerializeField] private float boundaryForce = 30f;
 
     [Header("Debug Visual")]

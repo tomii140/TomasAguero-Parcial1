@@ -29,7 +29,7 @@ public class HunterSearchState : IState
     {
         if (GraphManager.Instance == null) return;
 
-        // 1. Transiciones prioritarias: Gather
+        // Transición prioritaria al estado Gather si ve un boid muerto
         Boid deadBoid = hunter.FindBoidInVision(lookForDead: true);
         if (deadBoid != null && deadBoid.isDead)
         {
@@ -38,7 +38,7 @@ public class HunterSearchState : IState
             return;
         }
 
-        // 2. Transiciones prioritarias: Attack
+        // Transición prioritaria al estado Attack si el cooldown finalizó y ve un boid vivo
         if (hunter.TimerAttackCooldown <= 0)
         {
             Boid liveBoid = hunter.FindBoidInVision(lookForDead: false);
@@ -50,13 +50,12 @@ public class HunterSearchState : IState
             }
         }
 
-        // 3. Movimiento de búsqueda y navegación hacia el Coto
+        // Control de llegada inicial al Coto de Caza
         if (reachingCoto && hunter.CotoCenter != null)
         {
             Vector3 hunterXZ = new Vector3(hunter.transform.position.x, 0f, hunter.transform.position.z);
             Vector3 cotoXZ = new Vector3(hunter.CotoCenter.position.x, 0f, hunter.CotoCenter.position.z);
 
-            // Si llega cerca del centro o si el path hacia el coto se completó por completo
             if (Vector3.Distance(hunterXZ, cotoXZ) < 5.0f || (currentPath != null && pathIndex >= currentPath.Count))
             {
                 reachingCoto = false;
@@ -79,7 +78,7 @@ public class HunterSearchState : IState
             return;
         }
 
-        // Seguir los nodos del path con distancia XZ robusta
+        // Navegación secuencial por nodos utilizando Arrive
         Vector3 targetNodePos = currentPath[pathIndex].transform.position;
         Vector3 force = hunter.Arrive(targetNodePos, 2.0f);
         hunter.AddForce(force);

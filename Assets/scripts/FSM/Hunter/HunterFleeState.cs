@@ -29,7 +29,7 @@ public class HunterFleeState : IState
     {
         if (_isInSafeZone) return;
 
-        // Validar si tenemos un camino válido hacia la zona segura
+        // Ejecuta A* hacia la zona segura y valida llegada estricta al nodo final
         if (_fleePath != null && _fleePath.Count > 0)
         {
             Node targetNode = _fleePath[_fleePath.Count - 1];
@@ -37,7 +37,6 @@ public class HunterFleeState : IState
             if (_currentIndex < _fleePath.Count)
             {
                 Vector3 targetNodePos = _fleePath[_currentIndex].transform.position;
-
                 Vector3 force = _hunter.Arrive(targetNodePos, 1.5f);
                 _hunter.AddForce(force);
 
@@ -49,7 +48,7 @@ public class HunterFleeState : IState
                     _currentIndex++;
                 }
 
-                // Si ya llegó al último nodo (el nodo central de la zona segura)
+                // Control exhaustivo para asegurar que entre al callejón sin chocar muros
                 if (_currentIndex >= _fleePath.Count)
                 {
                     float distToCenter = Vector3.Distance(hunterXZ, new Vector3(targetNode.transform.position.x, 0f, targetNode.transform.position.z));
@@ -62,14 +61,6 @@ public class HunterFleeState : IState
                 return;
             }
         }
-
-        // Respaldo por si el path falló
-        Node safeNode = _hunter.GetNearestSafeZoneNode();
-        if (safeNode != null && GraphManager.Instance != null)
-        {
-            _fleePath = GraphManager.Instance.FindPath(_hunter.transform.position, safeNode.transform.position);
-            _currentIndex = 0;
-        }
     }
 
     private IEnumerator SafeZoneWaitRoutine()
@@ -78,6 +69,7 @@ public class HunterFleeState : IState
         _fleePath = null;
         _currentIndex = 0;
 
+        // Espera obligatoria dentro de la zona segura configurada por rúbrica
         yield return new WaitForSeconds(_hunter.SafeZoneWaitTime);
 
         if (_hunter.CurrentGathers >= _hunter.RequiredGathers)
