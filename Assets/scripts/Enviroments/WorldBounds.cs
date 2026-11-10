@@ -2,32 +2,38 @@ using UnityEngine;
 
 public class WorldBounds : MonoBehaviour
 {
-    [Header("Bounds Settings")]
-    [SerializeField, Range(10f, 100f)] private float limitRadius = 25f;
-    [SerializeField, Range(1f, 20f)] private float pushForce = 8f;
+    public static WorldBounds Instance { get; private set; }
 
-    private Agent myAgent;
+    [Header("Map Limits (XZ Plane)")]
+    [SerializeField] private float minX = -25f;
+    [SerializeField] private float maxX = 25f;
+    [SerializeField] private float minZ = -25f;
+    [SerializeField] private float maxZ = 25f;
 
-    private void Start()
+    private void Awake()
     {
-        myAgent = GetComponent<Agent>();
+        if (Instance == null) Instance = this;
+        else Destroy(gameObject);
     }
 
-    private void Update()
+    // Método para restringir la posición de cualquier agente dentro del mapa
+    public Vector3 ClampPosition(Vector3 position)
     {
-        if (myAgent == null) return;
-
-        // Si el agente supera el radio del límite, aplica fuerza hacia el centro (0,0)
-        if (Vector2.Distance(transform.position, Vector2.zero) > limitRadius)
-        {
-            myAgent.AddForce(myAgent.Seek(Vector2.zero) * pushForce);
-        }
+        position.x = Mathf.Clamp(position.x, minX, maxX);
+        position.z = Mathf.Clamp(position.z, minZ, maxZ);
+        return position;
     }
 
-    // Dibuja el límite del mapa con un círculo blanco en la vista Scene
+    public bool IsOutOfBounds(Vector3 position)
+    {
+        return position.x < minX || position.x > maxX || position.z < minZ || position.z > maxZ;
+    }
+
     private void OnDrawGizmos()
     {
-        Gizmos.color = Color.white;
-        Gizmos.DrawWireSphere(Vector3.zero, limitRadius);
+        Gizmos.color = Color.cyan;
+        Vector3 center = new Vector3((minX + maxX) / 2f, 0f, (minZ + maxZ) / 2f);
+        Vector3 size = new Vector3(maxX - minX, 0.1f, maxZ - minZ);
+        Gizmos.DrawWireCube(center, size);
     }
 }

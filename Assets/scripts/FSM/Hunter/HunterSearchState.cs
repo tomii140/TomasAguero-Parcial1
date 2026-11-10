@@ -14,7 +14,7 @@ public class HunterSearchState : IState
 
     public void Enter()
     {
-        hunter.SetColorFeedback(Color.green); // Color para Patrulla
+        hunter.SetColorFeedback(Color.green); // Color verde para Patrulla
     }
 
     public void Update()
@@ -43,22 +43,34 @@ public class HunterSearchState : IState
             }
         }
 
-        // 4. Movimiento por Waypoints (Patrullaje)
+        // 4. Movimiento por Waypoints (Patrullaje en plano 3D XZ)
         Transform[] waypoints = hunter.Waypoints;
         if (waypoints == null || waypoints.Length == 0) return;
 
         Transform targetWaypoint = waypoints[currentWaypointIndex];
-        Vector3 force = hunter.Arrive(targetWaypoint.position, 2.0f);
+
+        // Forzamos la misma altura Y para evitar bloqueos por diferencias de terreno
+        Vector3 targetPos = targetWaypoint.position;
+        targetPos.y = hunter.transform.position.y;
+
+        Vector3 force = hunter.Arrive(targetPos, 2.0f);
         hunter.AddForce(force);
 
-        if (Vector3.Distance(hunter.transform.position, targetWaypoint.position) < hunter.WaypointThreshold)
+        // Validación de distancia en el plano horizontal XZ
+        float distanceXZ = Vector3.Distance(
+            new Vector3(hunter.transform.position.x, 0f, hunter.transform.position.z),
+            new Vector3(targetPos.x, 0f, targetPos.z)
+        );
+
+        if (distanceXZ < hunter.WaypointThreshold)
         {
             if (movingForward)
             {
                 currentWaypointIndex++;
                 if (currentWaypointIndex >= waypoints.Length)
                 {
-                    currentWaypointIndex = waypoints.Length - 2;
+                    // Si llega al final, invierte el sentido (rebote / ida y vuelta exigido por rúbrica)
+                    currentWaypointIndex = Mathf.Max(0, waypoints.Length - 2);
                     movingForward = false;
                 }
             }
@@ -67,7 +79,7 @@ public class HunterSearchState : IState
                 currentWaypointIndex--;
                 if (currentWaypointIndex < 0)
                 {
-                    currentWaypointIndex = 1;
+                    currentWaypointIndex = Mathf.Min(1, waypoints.Length - 1);
                     movingForward = true;
                 }
             }

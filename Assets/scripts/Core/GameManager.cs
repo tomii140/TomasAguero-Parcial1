@@ -16,12 +16,10 @@ public class GameManager : MonoBehaviour
     [SerializeField, Range(0.5f, 10f)] private float respawnDelay = 4f;
 
     [Header("Spawn Settings")]
-    [SerializeField] private Transform cotoCenter; // Referencia al centro del Coto de Caza
-    [SerializeField, Range(0.5f, 20f)] private float spawnRadius = 2.5f;
+    [SerializeField, Range(0.5f, 20f)] private float spawnRadius = 5f;
 
     public List<Boid> ActiveBoids { get; private set; } = new List<Boid>();
     public List<Fruit> ActiveFruits { get; private set; } = new List<Fruit>();
-    public List<GameObject> ActiveWolves { get; private set; } = new List<GameObject>();
 
     private void Awake()
     {
@@ -60,9 +58,8 @@ public class GameManager : MonoBehaviour
     {
         yield return new WaitForSeconds(respawnDelay);
 
-        Vector3 spawnOrigin = cotoCenter != null ? cotoCenter.position : Vector3.zero;
         Vector2 randomCircle = Random.insideUnitCircle * spawnRadius;
-        Vector3 newPos = spawnOrigin + new Vector3(randomCircle.x, 0f, randomCircle.y);
+        Vector3 newPos = new Vector3(randomCircle.x, 0f, randomCircle.y);
 
         boid.transform.position = newPos;
         boid.gameObject.SetActive(true);
@@ -71,9 +68,8 @@ public class GameManager : MonoBehaviour
 
     private void SpawnGroupedBoid()
     {
-        Vector3 spawnOrigin = cotoCenter != null ? cotoCenter.position : Vector3.zero;
         Vector2 randomCircle = Random.insideUnitCircle * spawnRadius;
-        Vector3 pos = spawnOrigin + new Vector3(randomCircle.x, 0f, randomCircle.y);
+        Vector3 pos = new Vector3(randomCircle.x, 0f, randomCircle.y);
 
         Instantiate(boidPrefab, pos, Quaternion.identity);
     }

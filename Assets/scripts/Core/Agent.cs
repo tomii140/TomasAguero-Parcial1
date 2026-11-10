@@ -37,26 +37,13 @@ public abstract class Agent : MonoBehaviour
         Vector3 displacement = Velocity * Time.deltaTime;
         Vector3 targetPos = transform.position + displacement;
 
-        // Radio aproximado del agente para las colisiones con el entorno
-        float agentRadius = 0.4f;
-        Vector3 rayOrigin = transform.position + Vector3.up * 0.5f;
-
-        // Comprobamos si el movimiento va a impactar contra un collider en la escena
-        if (Physics.SphereCast(rayOrigin, agentRadius, displacement.normalized, out RaycastHit hit, displacement.magnitude))
+        // Restricción por WorldBounds si existe
+        if (WorldBounds.Instance != null)
         {
-            // Si choca contra una valla o pared, detenemos/ajustamos la posición para que no la traspase
-            Vector3 safePosition = hit.point - displacement.normalized * agentRadius;
-            safePosition.y = transform.position.y;
-            transform.position = safePosition;
-
-            // Opcional: anulamos la velocidad en esa dirección para que no "patine" contra el muro
-            Velocity = Vector3.ProjectOnPlane(Velocity, hit.normal);
-        }
-        else
-        {
-            transform.position = targetPos;
+            targetPos = WorldBounds.Instance.ClampPosition(targetPos);
         }
 
+        transform.position = targetPos;
         acceleration = Vector3.zero;
 
         if (Velocity.sqrMagnitude > 0.001f)
