@@ -4,61 +4,33 @@ using TMPro;
 public class Boid : Agent
 {
     public bool isDead = false;
-    private Animator boarAnimator;
+    private int currentHealth = 2; // Muere al recibir 2 golpes
 
     [Header("Flocking Radii")]
-    [SerializeField, Range(0.5f, 10f)] private float separationRadius = 2.5f;
-    [SerializeField, Range(1f, 20f)] private float cohesionRadius = 8f;
-    [SerializeField, Range(1f, 20f)] private float alignmentRadius = 8f;
+    [SerializeField, Range(0.5f, 5f)] private float separationRadius = 2.0f;
+    [SerializeField, Range(2f, 15f)] private float alignmentRadius = 6.0f;
+    [SerializeField, Range(2f, 15f)] private float cohesionRadius = 6.0f;
 
     [Header("Flocking Weights")]
-    [SerializeField, Range(0f, 5f)] private float separationWeight = 1.5f;
-    [SerializeField, Range(0f, 5f)] private float cohesionWeight = 2.0f;
+    [SerializeField, Range(0f, 5f)] private float separationWeight = 2.0f;
     [SerializeField, Range(0f, 5f)] private float alignmentWeight = 1.0f;
+    [SerializeField, Range(0f, 5f)] private float cohesionWeight = 1.0f;
 
-    [Header("Evade Settings")]
-    [SerializeField, Range(0f, 2f)] private float sideEscapeWeight = 0.4f;
-    [SerializeField, Range(1f, 5f)] private float maxEvadeForceMultiplier = 2.0f;
-
-    [Header("Fruit Interaction Settings")]
-    [SerializeField, Range(1f, 30f)] private float fruitDetectionRadius = 15f;
-    [SerializeField, Range(0f, 5f)] private float fruitWeight = 2.5f;
-    [SerializeField, Range(0f, 1f)] private float eatingSeparationFactor = 0.3f;
-
-    [Header("Referencias Externas")]
-    [SerializeField] private CotoBounds cotoBounds;
+    [Header("Fruit Interaction")]
+    [SerializeField, Range(1f, 20f)] private float fruitPerceptionRadius = 10f;
+    [SerializeField, Range(0.5f, 5f)] private float fruitWeight = 2.0f;
 
     [Header("UI Feedback")]
     [SerializeField] private TextMeshPro stateTextUI;
 
-    [Header("Gizmos Debug Settings")]
-    [SerializeField] private bool showGizmos = true;
-
-    public string CurrentStateDebug { get; private set; } = "Flocking";
-
     protected override void Start()
     {
         base.Start();
-
-        if (stateTextUI == null)
-        {
-            stateTextUI = GetComponentInChildren<TextMeshPro>();
-        }
-
         if (GameManager.Instance != null)
         {
             GameManager.Instance.RegisterBoid(this);
         }
-
-        if (cotoBounds == null)
-        {
-            cotoBounds = CotoBounds.Instance;
-        }
-        boarAnimator = GetComponent<Animator>();
-        if (boarAnimator == null)
-        {
-            boarAnimator = GetComponentInChildren<Animator>();
-        }
+        currentHealth = 2;
     }
 
     private void OnDestroy()
@@ -72,105 +44,78 @@ public class Boid : Agent
     public void Revive()
     {
         isDead = false;
-        Vector2 randomCircle = Random.insideUnitCircle * 2f;
-        transform.position += new Vector3(randomCircle.x, 0f, randomCircle.y);
+        currentHealth = 2;
+    }
 
-        Vector2 randomVel = Random.insideUnitCircle * maxSpeed;
-        Velocity = new Vector3(randomVel.x, 0f, randomVel.y);
-        UpdateDebugText("FLOCKING");
+    public void ReceiveDamage(int damage)
+    {
+        currentHealth -= damage;
+        if (currentHealth <= 0)
+        {
+            isDead = true;
+            Velocity = Vector3.zero;
+        }
     }
 
     private void Update()
     {
-
-        if (boarAnimator != null)
-        {
-            float currentSpeed = Velocity.magnitude;
-            // Si la velocidad es baja pasa a Idle (0), si camina o corre manda la magnitud real o un valor fijo de transición
-            boarAnimator.SetFloat("Speed", currentSpeed > 0.1f ? currentSpeed : 0f);
-        }
         if (isDead)
         {
             Velocity = Vector3.zero;
             acceleration = Vector3.zero;
-            UpdateDebugText("DEAD");
+            UpdateDebugState("DEAD");
             return;
         }
 
         HunterAI hunter = GameManager.Instance != null ? GameManager.Instance.Hunter : null;
 
-        // 1. Huida prioritaria del Cazador
+        // 1. Evade (Prioridad máxima frente al Cazador)
         if (hunter != null)
         {
             float distToHunter = Vector3.Distance(transform.position, hunter.transform.position);
             if (distToHunter < hunter.VisionRadius)
             {
-                UpdateDebugText("EVADING");
+                UpdateDebugState("EVADE");
                 Vector3 evadeForce = Evade(hunter);
-
-                Vector3 sideEscape = new Vector3(-hunter.Velocity.z, 0f, hunter.Velocity.x).normalized;
-                evadeForce += sideEscape * maxForce * sideEscapeWeight;
-
-                Vector3 pureEvade = Vector3.ClampMagnitude(evadeForce, maxForce * maxEvadeForceMultiplier);
-
-                AddForce(pureEvade);
-                ApplyBoundaries();
+                Vector3 separationForce = GetSeparationForce() * separationWeight;
+                AddForce(evadeForce + separationForce);
                 ApplyPhysics();
                 return;
             }
         }
 
-        // 2. Comportamiento Estándar
-        Vector3 totalSteering = Vector3.zero;
+        // 2. Seek Object & Consume (Frutas / Objetos de Interés)
         Fruit targetFruit = FindNearestFruit();
-
         if (targetFruit != null)
         {
             float distToFruit = Vector3.Distance(transform.position, targetFruit.transform.position);
-
             if (distToFruit <= targetFruit.ConsumeRadius)
             {
-                UpdateDebugText("EAT");
+                UpdateDebugState("CONSUME");
                 Velocity = Vector3.zero;
                 acceleration = Vector3.zero;
                 targetFruit.Consume(targetFruit.DamagePerSecond * Time.deltaTime);
             }
             else
             {
-                UpdateDebugText("SEEK FRUIT");
-
-                Vector3 fruitSeek = Seek(targetFruit.transform.position) * fruitWeight;
-                Vector3 softSeparation = GetSeparationForce() * (separationWeight * eatingSeparationFactor);
-
-                totalSteering = fruitSeek + softSeparation;
+                UpdateDebugState("SEEK OBJECT");
+                Vector3 arriveForce = Arrive(targetFruit.transform.position, 3.0f) * fruitWeight;
+                Vector3 separationForce = GetSeparationForce() * separationWeight;
+                AddForce(arriveForce + separationForce);
             }
-        }
-        else
-        {
-            UpdateDebugText("FLOCKING");
-            totalSteering += CalculateFlocking();
+            ApplyPhysics();
+            return;
         }
 
-        AddForce(totalSteering);
-        ApplyBoundaries();
+        // 3. Flocking por defecto
+        UpdateDebugState("FLOCKING");
+        Vector3 flockingForce = CalculateFlocking();
+        AddForce(flockingForce);
         ApplyPhysics();
     }
 
-    private void ApplyBoundaries()
+    private void UpdateDebugState(string state)
     {
-        if (cotoBounds != null)
-        {
-            Vector3 correction = cotoBounds.GetBoundaryCorrection(transform.position);
-            if (correction != Vector3.zero)
-            {
-                AddForce(correction);
-            }
-        }
-    }
-
-    private void UpdateDebugText(string state)
-    {
-        CurrentStateDebug = state;
         if (stateTextUI != null)
         {
             stateTextUI.text = state;
@@ -182,121 +127,128 @@ public class Boid : Agent
         if (GameManager.Instance == null || GameManager.Instance.ActiveFruits == null) return null;
 
         Fruit nearest = null;
-        float minDistance = float.MaxValue; // Corregido: Empieza en float.MaxValue para evaluar correctamente la cercanía
+        float minDistance = float.MaxValue;
 
         foreach (var fruit in GameManager.Instance.ActiveFruits)
         {
             if (fruit == null) continue;
             float dist = Vector3.Distance(transform.position, fruit.transform.position);
-
-            // Validamos que esté dentro del radio de percepción y sea la más cercana
-            if (dist <= fruitDetectionRadius && dist < minDistance)
+            if (dist <= fruitPerceptionRadius && dist < minDistance)
             {
                 minDistance = dist;
                 nearest = fruit;
             }
         }
-
         return nearest;
     }
 
     private Vector3 CalculateFlocking()
     {
-        Vector3 force = Vector3.zero;
-        force += GetCohesionForce() * cohesionWeight;
-        force += GetAlignmentForce() * alignmentWeight;
-        force += GetSeparationForce() * separationWeight;
-        return force;
-    }
-
-    private Vector3 GetCohesionForce()
-    {
-        if (GameManager.Instance == null || GameManager.Instance.ActiveBoids == null) return Vector3.zero;
-
-        Vector3 centerOfMass = Vector3.zero;
-        int count = 0;
-
-        foreach (var other in GameManager.Instance.ActiveBoids)
-        {
-            if (other == this || other == null || other.isDead) continue;
-            float d = Vector3.Distance(transform.position, other.transform.position);
-            if (d < cohesionRadius && d > 0.01f)
-            {
-                centerOfMass += other.transform.position;
-                count++;
-            }
-        }
-
-        if (count == 0) return Vector3.zero;
-        centerOfMass /= count;
-        return Seek(centerOfMass);
-    }
-
-    private Vector3 GetAlignmentForce()
-    {
-        if (GameManager.Instance == null || GameManager.Instance.ActiveBoids == null) return Vector3.zero;
-
-        Vector3 avgVelocity = Vector3.zero;
-        int count = 0;
-
-        foreach (var other in GameManager.Instance.ActiveBoids)
-        {
-            if (other == this || other == null || other.isDead) continue;
-            float d = Vector3.Distance(transform.position, other.transform.position);
-            if (d < alignmentRadius && d > 0.01f)
-            {
-                avgVelocity += other.Velocity;
-                count++;
-            }
-        }
-
-        if (count == 0) return Vector3.zero;
-        avgVelocity /= count;
-        Vector3 desiredVelocity = avgVelocity.normalized * maxSpeed;
-        return Vector3.ClampMagnitude(desiredVelocity - Velocity, maxForce);
+        return (GetSeparationForce() * separationWeight) +
+               (GetAlignmentForce() * alignmentWeight) +
+               (GetCohesionForce() * cohesionWeight);
     }
 
     private Vector3 GetSeparationForce()
     {
         if (GameManager.Instance == null || GameManager.Instance.ActiveBoids == null) return Vector3.zero;
 
-        Vector3 separationVector = Vector3.zero;
+        Vector3 force = Vector3.zero;
         int count = 0;
 
         foreach (var other in GameManager.Instance.ActiveBoids)
         {
-            if (other == this || other == null || other.isDead) continue;
-            float d = Vector3.Distance(transform.position, other.transform.position);
-
-            if (d < separationRadius && d > 0.001f)
+            if (other != null && other != this && !other.isDead)
             {
-                Vector3 diff = transform.position - other.transform.position;
-                float safeDist = Mathf.Max(d, 0.1f);
-                separationVector += diff.normalized / safeDist;
-                count++;
+                float d = Vector3.Distance(transform.position, other.transform.position);
+                if (d > 0f && d < separationRadius)
+                {
+                    Vector3 diff = transform.position - other.transform.position;
+                    diff.Normalize();
+                    diff /= d; // Ponderación por distancia
+                    force += diff;
+                    count++;
+                }
             }
         }
 
-        if (count == 0) return Vector3.zero;
-        separationVector /= count;
-        Vector3 desiredVelocity = separationVector.normalized * maxSpeed;
-        return Vector3.ClampMagnitude(desiredVelocity - Velocity, maxForce);
+        if (count > 0)
+        {
+            force /= count;
+            force = force.normalized * maxSpeed;
+            force -= Velocity;
+            force = Vector3.ClampMagnitude(force, maxForce);
+        }
+        return force;
+    }
+
+    private Vector3 GetAlignmentForce()
+    {
+        if (GameManager.Instance == null || GameManager.Instance.ActiveBoids == null) return Vector3.zero;
+
+        Vector3 sumVel = Vector3.zero;
+        int count = 0;
+
+        foreach (var other in GameManager.Instance.ActiveBoids)
+        {
+            if (other != null && other != this && !other.isDead)
+            {
+                float d = Vector3.Distance(transform.position, other.transform.position);
+                if (d > 0f && d < alignmentRadius)
+                {
+                    sumVel += other.Velocity;
+                    count++;
+                }
+            }
+        }
+
+        if (count > 0)
+        {
+            sumVel /= count;
+            sumVel = sumVel.normalized * maxSpeed;
+            Vector3 steer = sumVel - Velocity;
+            return Vector3.ClampMagnitude(steer, maxForce);
+        }
+        return Vector3.zero;
+    }
+
+    private Vector3 GetCohesionForce()
+    {
+        if (GameManager.Instance == null || GameManager.Instance.ActiveBoids == null) return Vector3.zero;
+
+        Vector3 sumPos = Vector3.zero;
+        int count = 0;
+
+        foreach (var other in GameManager.Instance.ActiveBoids)
+        {
+            if (other != null && other != this && !other.isDead)
+            {
+                float d = Vector3.Distance(transform.position, other.transform.position);
+                if (d > 0f && d < cohesionRadius)
+                {
+                    sumPos += other.transform.position;
+                    count++;
+                }
+            }
+        }
+
+        if (count > 0)
+        {
+            sumPos /= count;
+            return Seek(sumPos);
+        }
+        return Vector3.zero;
     }
 
     private void OnDrawGizmosSelected()
     {
-        if (!showGizmos) return;
-
         Gizmos.color = Color.red;
         Gizmos.DrawWireSphere(transform.position, separationRadius);
 
         Gizmos.color = Color.green;
-        Gizmos.DrawWireSphere(transform.position, cohesionRadius);
-
-        Gizmos.color = Color.blue;
         Gizmos.DrawWireSphere(transform.position, alignmentRadius);
 
-        Gizmos.color = Color.yellow;
-        Gizmos.DrawWireSphere(transform.position, fruitDetectionRadius);
+        Gizmos.color = Color.blue;
+        Gizmos.DrawWireSphere(transform.position, fruitPerceptionRadius);
     }
 }

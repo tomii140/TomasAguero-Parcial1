@@ -11,13 +11,14 @@ public class HunterAttackState : IState
 
     public void Enter()
     {
-        hunter.SetColorFeedback(Color.red);
+        hunter.SetColorFeedback(Color.red); // Color para Ataque/Caza
     }
 
     public void Update()
     {
         Boid target = hunter.GetTargetBoid();
 
+        // Si la presa desaparece o muere, busca otro vivo o vuelve a Patrol
         if (target == null || target.isDead)
         {
             target = hunter.FindBoidInVision(lookForDead: false);
@@ -34,6 +35,7 @@ public class HunterAttackState : IState
 
         float distanceToTarget = Vector3.Distance(hunter.transform.position, target.transform.position);
 
+        // Si la presa sale del radio de visión, vuelve a Patrol sin reiniciar TBA
         if (distanceToTarget > hunter.VisionRadius)
         {
             hunter.SetTargetBoid(null);
@@ -41,26 +43,24 @@ public class HunterAttackState : IState
             return;
         }
 
-        // Si es un mapa grande, el ataque real (matar al boid) solo debe suceder 
-        // cuando esté lo suficientemente cerca para recolectarlo, o usa el rango configurado pero acércate.
-        // Aquí exigimos que esté dentro del rango de ataque pero validamos la transición limpia:
+        // Evaluación de radios de ataque (Melee vs Range)
         if (distanceToTarget <= hunter.MeleeAttackRadius || distanceToTarget <= hunter.RangeAttackRadius)
         {
-            // Solo marca como muerto si ya está a una distancia donde puede iniciar la recogida, 
-            // o si es ataque a distancia, disparamos pero nos acercamos a recoger.
-            target.isDead = true;
-            hunter.ResetAttackCooldown();
-            hunter.SetTargetBoid(target);
-            hunter.FSM.ChangeState(hunter.GatherState);
-            return;
+            if (hunter.TimerAttackCooldown <= 0)
+            {
+                // Aplica daño (1 golpe a distancia, 2 cuerpo a cuerpo según requerimiento)
+                int damage = (distanceToTarget <= hunter.MeleeAttackRadius) ? 2 : 1;
+                target.ReceiveDamage(damage);
+
+                hunter.ResetAttackCooldown();
+                hunter.FSM.ChangeState(hunter.SearchState); // Sale del estado Attack tras un ataque exitoso
+                return;
+            }
         }
 
-        // Persecución para mapas grandes
-        Vector3 attackForce = (distanceToTarget < hunter.MeleeAttackRadius * hunter.DirectSeekFactor)
-            ? hunter.Seek(target.transform.position)
-            : hunter.Pursuit(target);
-
-        hunter.AddForce(attackForce);
+        // Persecución mediante Pursuit si está fuera de rango
+        Vector3 pursuitForce = hunter.Pursuit(target);
+        hunter.AddForce(pursuitForce);
     }
 
     public void Exit() { }
