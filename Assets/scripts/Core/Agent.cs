@@ -37,10 +37,12 @@ public abstract class Agent : MonoBehaviour
         Vector3 displacement = Velocity * Time.deltaTime;
         Vector3 targetPos = transform.position + displacement;
 
-        // Restricción por WorldBounds si existe
+        // Aplicar límites y rebote de velocidad
         if (WorldBounds.Instance != null)
         {
-            targetPos = WorldBounds.Instance.ClampPosition(targetPos);
+            Vector3 currentVel = Velocity;
+            targetPos = WorldBounds.Instance.ClampPosition(ref targetPos, ref currentVel);
+            Velocity = currentVel;
         }
 
         transform.position = targetPos;
@@ -52,6 +54,7 @@ public abstract class Agent : MonoBehaviour
             transform.rotation = Quaternion.Slerp(transform.rotation, targetRotation, Time.deltaTime * 10f);
         }
     }
+
     public void AddForce(Vector3 forceVector) => acceleration += forceVector;
 
     public Vector3 Seek(Vector3 targetPosition)

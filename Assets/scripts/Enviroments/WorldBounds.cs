@@ -4,11 +4,11 @@ public class WorldBounds : MonoBehaviour
 {
     public static WorldBounds Instance { get; private set; }
 
-    [Header("Map Limits (XZ Plane)")]
-    [SerializeField] private float minX = -25f;
-    [SerializeField] private float maxX = 25f;
-    [SerializeField] private float minZ = -25f;
-    [SerializeField] private float maxZ = 25f;
+    [Header("Map Boundaries (XZ Plane)")]
+    [SerializeField] private float minX = -20f;
+    [SerializeField] private float maxX = 20f;
+    [SerializeField] private float minZ = -20f;
+    [SerializeField] private float maxZ = 20f;
 
     private void Awake()
     {
@@ -16,24 +16,24 @@ public class WorldBounds : MonoBehaviour
         else Destroy(gameObject);
     }
 
-    // Método para restringir la posición de cualquier agente dentro del mapa
-    public Vector3 ClampPosition(Vector3 position)
+    public Vector3 ClampPosition(ref Vector3 position, ref Vector3 velocity)
     {
-        position.x = Mathf.Clamp(position.x, minX, maxX);
-        position.z = Mathf.Clamp(position.z, minZ, maxZ);
-        return position;
-    }
+        bool clamped = false;
 
-    public bool IsOutOfBounds(Vector3 position)
-    {
-        return position.x < minX || position.x > maxX || position.z < minZ || position.z > maxZ;
+        if (position.x < minX) { position.x = minX; velocity.x = -velocity.x; clamped = true; }
+        else if (position.x > maxX) { position.x = maxX; velocity.x = -velocity.x; clamped = true; }
+
+        if (position.z < minZ) { position.z = minZ; velocity.z = -velocity.z; clamped = true; }
+        else if (position.z > maxZ) { position.z = maxZ; velocity.z = -velocity.z; clamped = true; }
+
+        return position;
     }
 
     private void OnDrawGizmos()
     {
         Gizmos.color = Color.cyan;
         Vector3 center = new Vector3((minX + maxX) / 2f, 0f, (minZ + maxZ) / 2f);
-        Vector3 size = new Vector3(maxX - minX, 0.1f, maxZ - minZ);
+        Vector3 size = new Vector3(maxX - minX, 1f, maxZ - minZ);
         Gizmos.DrawWireCube(center, size);
     }
 }

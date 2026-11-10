@@ -220,7 +220,7 @@ Transform:
   m_GameObject: {fileID: 227399993}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: -81.2, y: 0, z: -8.9}
+  m_LocalPosition: {x: -81.2, y: 0, z: 248.2}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
@@ -1007,7 +1007,7 @@ MonoBehaviour:
   boidPrefab: {fileID: 6333695701823207442, guid: f6a66b6da61a3d24da6be77094024f37, type: 3}
   initialAmount: 6
   respawnDelay: 4
-  spawnRadius: 8.6
+  spawnRadius: 0.5
 --- !u!4 &892302579
 Transform:
   m_ObjectHideFlags: 0
@@ -1045,15 +1045,15 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 5774166aec452224ca201ddc82a7d101, type: 3}
       propertyPath: m_LocalPosition.x
-      value: -127.4
+      value: -107
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 5774166aec452224ca201ddc82a7d101, type: 3}
       propertyPath: m_LocalPosition.y
-      value: 0
+      value: -0
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 5774166aec452224ca201ddc82a7d101, type: 3}
       propertyPath: m_LocalPosition.z
-      value: 361
+      value: 325
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 5774166aec452224ca201ddc82a7d101, type: 3}
       propertyPath: m_LocalRotation.w
@@ -1208,6 +1208,7 @@ Transform:
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 1200523135}
+  - {fileID: 1796381609}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1660574713
@@ -1316,7 +1317,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: bc851dd6b2949584aa1dd9be5c25b3bd, type: 3}
       propertyPath: m_LocalPosition.x
-      value: -119.7
+      value: -160
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: bc851dd6b2949584aa1dd9be5c25b3bd, type: 3}
       propertyPath: m_LocalPosition.y
@@ -1324,7 +1325,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: bc851dd6b2949584aa1dd9be5c25b3bd, type: 3}
       propertyPath: m_LocalPosition.z
-      value: -115.7
+      value: -151
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: bc851dd6b2949584aa1dd9be5c25b3bd, type: 3}
       propertyPath: m_LocalRotation.w
@@ -1367,6 +1368,54 @@ PrefabInstance:
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: bc851dd6b2949584aa1dd9be5c25b3bd, type: 3}
+--- !u!1 &1796381608
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1796381609}
+  - component: {fileID: 1796381610}
+  m_Layer: 0
+  m_Name: WorldBounds
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &1796381609
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1796381608}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 1539964466}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1796381610
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1796381608}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0ae7503c967293c40a5893cab536680c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::WorldBounds
+  minX: -100
+  maxX: 100
+  minZ: -100
+  maxZ: 300
 --- !u!4 &1936832975 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: -8679921383154817045, guid: f06d959ae081d2b4687e473b1996af7e, type: 3}

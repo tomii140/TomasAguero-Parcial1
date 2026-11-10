@@ -997,20 +997,16 @@ MonoBehaviour:
   maxForce: 5
   stopThreshold: 0.05
   isDead: 0
-  separationRadius: 3
-  cohesionRadius: 8
-  alignmentRadius: 8
+  separationRadius: 1.5
+  alignmentRadius: 5
+  cohesionRadius: 15
   separationWeight: 1.2
+  alignmentWeight: 4
   cohesionWeight: 2
-  alignmentWeight: 1
-  sideEscapeWeight: 0.4
-  maxEvadeForceMultiplier: 2
-  fruitDetectionRadius: 15
+  hunterPerceptionRadius: 29
+  fruitPerceptionRadius: 30
   fruitWeight: 2.5
-  eatingSeparationFactor: 0.3
-  cotoBounds: {fileID: 0}
   stateTextUI: {fileID: 2034143383176272650}
-  showGizmos: 1
 --- !u!1 &6739366547663335761
 GameObject:
   m_ObjectHideFlags: 0
