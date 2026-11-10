@@ -15,19 +15,19 @@ public class Boid : Agent
     private int currentHealth = 2;
 
     [Header("Flocking Radii & Weights")]
-    [SerializeField, Range(0.5f, 10f)] private float separationRadius = 2.0f;
-    [SerializeField, Range(2f, 20f)] private float alignmentRadius = 6.0f;
-    [SerializeField, Range(2f, 20f)] private float cohesionRadius = 6.0f;
-    [SerializeField, Range(0f, 10f)] private float separationWeight = 2.0f;
-    [SerializeField, Range(0f, 10f)] private float alignmentWeight = 1.0f;
-    [SerializeField, Range(0f, 10f)] private float cohesionWeight = 1.0f;
+    [SerializeField, Range(0.5f, 30f)] private float separationRadius = 2.0f;
+    [SerializeField, Range(2f, 30f)] private float alignmentRadius = 6.0f;
+    [SerializeField, Range(2f, 30f)] private float cohesionRadius = 6.0f;
+    [SerializeField, Range(0f, 30f)] private float separationWeight = 2.0f;
+    [SerializeField, Range(0f, 30f)] private float alignmentWeight = 1.0f;
+    [SerializeField, Range(0f, 30f)] private float cohesionWeight = 1.0f;
 
     public float SeparationWeight => separationWeight;
 
     [Header("Perception Sensors")]
     [SerializeField, Range(1f, 30f)] private float hunterPerceptionRadius = 10f; // Sensor propio para ver al Cazador
     [SerializeField, Range(1f, 30f)] private float fruitPerceptionRadius = 10f;  // Sensor propio para ver frutas
-    [SerializeField, Range(0.5f, 10f)] private float fruitWeight = 2.0f;
+    [SerializeField, Range(0.5f, 30f)] private float fruitWeight = 2.0f;
 
     public float HunterPerceptionRadius => hunterPerceptionRadius;
     public float FruitWeight => fruitWeight;

@@ -1,6 +1,5 @@
 using UnityEngine;
 using TMPro;
-using System.Collections.Generic;
 
 public class HunterAI : Agent
 {
@@ -21,8 +20,8 @@ public class HunterAI : Agent
 
     [Header("Energy & Rest Settings (Parcial 1)")]
     [SerializeField, Range(10f, 200f)] private float maxEnergy = 100f;
-    [SerializeField, Range(1f, 50f)] private float energyConsumptionRate = 15f; // Se consume en Hunt
-    [SerializeField, Range(1f, 50f)] private float energyRecoveryRate = 25f;   // Se recarga en Rest
+    [SerializeField, Range(1f, 50f)] private float energyConsumptionRate = 15f;
+    [SerializeField, Range(1f, 50f)] private float energyRecoveryRate = 25f;
     private float currentEnergy;
 
     [Header("Patrol Settings")]
@@ -36,9 +35,10 @@ public class HunterAI : Agent
     [SerializeField, Range(1f, 20f)] private float fruitSpawnRadius = 8f;
     [SerializeField, Range(1, 10)] private int maxFruitsInScene = 5;
 
-    [Header("UI & Feedback")]
+    [Header("UI & Gizmos Control")]
     [SerializeField] private TextMeshPro stateTextUI;
     [SerializeField] private MeshRenderer meshRenderer;
+    [SerializeField] private bool showGizmos = true;
 
     private Boid targetBoid;
     public float TimerAttackCooldown { get; private set; } = 0f;
@@ -80,6 +80,7 @@ public class HunterAI : Agent
 
         FSM.Update();
         ApplyPhysics();
+        UpdateUIFeedback();
     }
 
     public void ResetAttackCooldown()
@@ -98,6 +99,16 @@ public class HunterAI : Agent
     public Boid FindBoidInVision(bool lookForDead)
     {
         if (GameManager.Instance == null || GameManager.Instance.ActiveBoids == null) return null;
+
+        // Si buscamos vivos y ya tenemos un target asignado que sigue vivo, mantenemos el bloqueo de objetivo exigido por la rúbrica
+        if (!lookForDead && targetBoid != null && !targetBoid.isDead)
+        {
+            float distToCurrent = Vector3.Distance(transform.position, targetBoid.transform.position);
+            if (distToCurrent <= visionRadius)
+            {
+                return targetBoid;
+            }
+        }
 
         Boid nearest = null;
         float minDistance = float.MaxValue;
@@ -141,14 +152,21 @@ public class HunterAI : Agent
         {
             meshRenderer.material.color = color;
         }
-        if (stateTextUI != null)
+    }
+
+    private void UpdateUIFeedback()
+    {
+        if (stateTextUI != null && FSM.CurrentState != null)
         {
-            stateTextUI.text = FSM.CurrentState?.GetType().Name.Replace("Hunter", "").Replace("State", "");
+            string currentStateName = FSM.CurrentState.GetType().Name.Replace("Hunter", "").Replace("State", "");
+            stateTextUI.text = $"State: {currentStateName}\nEnergy: {Mathf.Round(currentEnergy)}/{maxEnergy}";
         }
     }
 
     private void OnDrawGizmos()
     {
+        if (!showGizmos) return;
+
         Gizmos.color = Color.yellow;
         Gizmos.DrawWireSphere(transform.position, visionRadius);
 
@@ -157,5 +175,8 @@ public class HunterAI : Agent
 
         Gizmos.color = Color.magenta;
         Gizmos.DrawWireSphere(transform.position, meleeAttackRadius);
+
+        Gizmos.color = Color.cyan;
+        Gizmos.DrawWireSphere(transform.position, captureRadius);
     }
 }

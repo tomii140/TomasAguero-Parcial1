@@ -997,10 +997,10 @@ MonoBehaviour:
   maxForce: 5
   stopThreshold: 0.05
   isDead: 0
-  separationRadius: 1.5
+  separationRadius: 4
   alignmentRadius: 5
-  cohesionRadius: 15
-  separationWeight: 1.2
+  cohesionRadius: 25
+  separationWeight: 2.5
   alignmentWeight: 4
   cohesionWeight: 2
   hunterPerceptionRadius: 29

@@ -10,11 +10,12 @@ public class HunterGatherState : IState
 
     public void Enter()
     {
-        _hunter.SetColorFeedback(Color.blue); // Color para Recolección
+        _hunter.SetColorFeedback(Color.blue);
         _targetBoid = _hunter.GetTargetBoid();
 
         if (_targetBoid == null || !_targetBoid.isDead)
         {
+            _hunter.SetTargetBoid(null);
             _hunter.FSM.ChangeState(_hunter.SearchState);
             return;
         }
@@ -25,18 +26,24 @@ public class HunterGatherState : IState
 
     public void Update()
     {
-        if (_targetBoid == null)
+        if (_targetBoid == null || !_targetBoid.isDead)
         {
             _hunter.SetTargetBoid(null);
             _hunter.FSM.ChangeState(_hunter.SearchState);
             return;
         }
 
-        float dist = Vector3.Distance(_hunter.transform.position, _targetBoid.transform.position);
+        float distXZ = Vector3.Distance(
+            new Vector3(_hunter.transform.position.x, 0f, _hunter.transform.position.z),
+            new Vector3(_targetBoid.transform.position.x, 0f, _targetBoid.transform.position.z)
+        );
 
-        if (dist > _hunter.CaptureRadius)
+        if (distXZ > _hunter.CaptureRadius)
         {
-            Vector3 force = _hunter.Seek(_targetBoid.transform.position);
+            Vector3 targetPos = _targetBoid.transform.position;
+            targetPos.y = _hunter.transform.position.y;
+
+            Vector3 force = _hunter.Seek(targetPos);
             _hunter.AddForce(force);
             _gatherTimer = 0f;
         }
