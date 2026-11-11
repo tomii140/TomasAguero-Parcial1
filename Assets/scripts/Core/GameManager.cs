@@ -50,18 +50,21 @@ public class GameManager : MonoBehaviour
 
     public void NotifyBoidDeath(Boid deadBoid)
     {
-        deadBoid.gameObject.SetActive(false);
-        StartCoroutine(RespawnBoidRoutine(deadBoid));
+        if (deadBoid != null)
+        {
+            deadBoid.TriggerRespawnFlow();
+            StartCoroutine(RespawnBoidRoutine(deadBoid, respawnDelay, spawnRadius));
+        }
     }
 
-    private IEnumerator RespawnBoidRoutine(Boid boid)
+    private IEnumerator RespawnBoidRoutine(Boid boid, float delay, float radius)
     {
-        yield return new WaitForSeconds(respawnDelay);
+        boid.gameObject.SetActive(false);
+        yield return new WaitForSeconds(delay);
 
-        Vector2 randomCircle = Random.insideUnitCircle * spawnRadius;
-        Vector3 newPos = new Vector3(randomCircle.x, 0f, randomCircle.y);
+        Vector2 randomCircle = Random.insideUnitCircle * radius;
+        boid.transform.position = new Vector3(randomCircle.x, 0f, randomCircle.y);
 
-        boid.transform.position = newPos;
         boid.gameObject.SetActive(true);
         boid.Revive();
     }

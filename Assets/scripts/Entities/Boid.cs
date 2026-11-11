@@ -10,23 +10,25 @@ public class Boid : Agent
     public BoidSeekObjectState SeekObjectState { get; private set; }
     public BoidConsumeState ConsumeState { get; private set; }
     public BoidDeadState DeadState { get; private set; }
+    public BoidRespawnState RespawnState { get; private set; }
 
     public bool isDead = false;
+    public bool isRespawning = false;
     private int currentHealth = 2;
 
     [Header("Flocking Radii & Weights")]
     [SerializeField, Range(0.5f, 30f)] private float separationRadius = 2.0f;
-    [SerializeField, Range(2f, 30f)] private float alignmentRadius = 6.0f;
-    [SerializeField, Range(2f, 30f)] private float cohesionRadius = 6.0f;
+    [SerializeField, Range(2f, 30f)] private float alignmentRadius = 12.0f;
+    [SerializeField, Range(2f, 30f)] private float cohesionRadius = 12.0f;
     [SerializeField, Range(0f, 30f)] private float separationWeight = 2.0f;
     [SerializeField, Range(0f, 30f)] private float alignmentWeight = 1.0f;
-    [SerializeField, Range(0f, 30f)] private float cohesionWeight = 1.0f;
+    [SerializeField, Range(0f, 30f)] private float cohesionWeight = 1.5f;
 
     public float SeparationWeight => separationWeight;
 
     [Header("Perception Sensors")]
-    [SerializeField, Range(1f, 30f)] private float hunterPerceptionRadius = 10f; // Sensor propio para ver al Cazador
-    [SerializeField, Range(1f, 30f)] private float fruitPerceptionRadius = 10f;  // Sensor propio para ver frutas
+    [SerializeField, Range(1f, 30f)] private float hunterPerceptionRadius = 10f;
+    [SerializeField, Range(1f, 30f)] private float fruitPerceptionRadius = 10f;
     [SerializeField, Range(0.5f, 30f)] private float fruitWeight = 2.0f;
 
     public float HunterPerceptionRadius => hunterPerceptionRadius;
@@ -48,6 +50,7 @@ public class Boid : Agent
         SeekObjectState = new BoidSeekObjectState(this);
         ConsumeState = new BoidConsumeState(this);
         DeadState = new BoidDeadState(this);
+        RespawnState = new BoidRespawnState(this);
 
         fsm.ChangeState(FlockingState);
         currentHealth = 2;
@@ -61,18 +64,28 @@ public class Boid : Agent
     public void Revive()
     {
         isDead = false;
+        isRespawning = false;
         currentHealth = 2;
+        SetColorFeedback(Color.green);
         fsm.ChangeState(FlockingState);
     }
 
     public void ReceiveDamage(int damage)
     {
+        if (isDead || isRespawning) return;
+
         currentHealth -= damage;
         if (currentHealth <= 0)
         {
             isDead = true;
             fsm.ChangeState(DeadState);
         }
+    }
+
+    public void TriggerRespawnFlow()
+    {
+        isRespawning = true;
+        fsm.ChangeState(RespawnState);
     }
 
     private void Update()
@@ -85,13 +98,19 @@ public class Boid : Agent
 
     private void EvaluateFSMTransitions()
     {
+        if (isRespawning)
+        {
+            if (fsm.CurrentState != RespawnState) fsm.ChangeState(RespawnState);
+            return;
+        }
+
         if (isDead)
         {
             if (fsm.CurrentState != DeadState) fsm.ChangeState(DeadState);
             return;
         }
 
-        // 1. Evade (Usa el sensor propio del Boid para detectar al Cazador)
+        // 1. Evade
         HunterAI hunter = GameManager.Instance != null ? GameManager.Instance.Hunter : null;
         if (hunter != null)
         {
@@ -103,7 +122,7 @@ public class Boid : Agent
             }
         }
 
-        // 2. Consume / Seek Object (Usa el sensor propio para frutas)
+        // 2. Consume / Seek Object
         Fruit targetFruit = FindNearestFruit();
         if (targetFruit != null)
         {
@@ -172,7 +191,7 @@ public class Boid : Agent
         int count = 0;
         foreach (var other in GameManager.Instance.ActiveBoids)
         {
-            if (other != null && other != this && !other.isDead)
+            if (other != null && other != this && !other.isDead && !other.isRespawning)
             {
                 float d = Vector3.Distance(transform.position, other.transform.position);
                 if (d > 0f && d < separationRadius)
@@ -202,7 +221,7 @@ public class Boid : Agent
         int count = 0;
         foreach (var other in GameManager.Instance.ActiveBoids)
         {
-            if (other != null && other != this && !other.isDead)
+            if (other != null && other != this && !other.isDead && !other.isRespawning)
             {
                 float d = Vector3.Distance(transform.position, other.transform.position);
                 if (d > 0f && d < alignmentRadius)
@@ -229,7 +248,7 @@ public class Boid : Agent
         int count = 0;
         foreach (var other in GameManager.Instance.ActiveBoids)
         {
-            if (other != null && other != this && !other.isDead)
+            if (other != null && other != this && !other.isDead && !other.isRespawning)
             {
                 float d = Vector3.Distance(transform.position, other.transform.position);
                 if (d > 0f && d < cohesionRadius)
@@ -242,23 +261,8 @@ public class Boid : Agent
         if (count > 0)
         {
             sumPos /= count;
-            return Seek(sumPos);
+            return Arrive(sumPos, cohesionRadius);
         }
         return Vector3.zero;
-    }
-
-    private void OnDrawGizmos()
-    {
-        // Gizmos obligatorios según rúbrica
-        Gizmos.color = Color.red;
-        Gizmos.DrawWireSphere(transform.position, separationRadius);
-        Gizmos.color = Color.green;
-        Gizmos.DrawWireSphere(transform.position, alignmentRadius);
-        Gizmos.color = Color.blue;
-        Gizmos.DrawWireSphere(transform.position, cohesionRadius);
-        Gizmos.color = Color.magenta;
-        Gizmos.DrawWireSphere(transform.position, hunterPerceptionRadius);
-        Gizmos.color = Color.yellow;
-        Gizmos.DrawWireSphere(transform.position, fruitPerceptionRadius);
     }
 }

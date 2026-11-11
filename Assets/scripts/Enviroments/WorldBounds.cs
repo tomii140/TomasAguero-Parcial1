@@ -4,7 +4,7 @@ public class WorldBounds : MonoBehaviour
 {
     public static WorldBounds Instance { get; private set; }
 
-    [Header("Map Boundaries (XZ Plane)")]
+    [Header("Map Boundaries XZ Plane")]
     [SerializeField] private float minX = -20f;
     [SerializeField] private float maxX = 20f;
     [SerializeField] private float minZ = -20f;
@@ -18,15 +18,14 @@ public class WorldBounds : MonoBehaviour
 
     public Vector3 ClampPosition(ref Vector3 position, ref Vector3 velocity)
     {
-        bool clamped = false;
+        if (position.x < minX) { position.x = minX; velocity.x = -velocity.x; }
+        else if (position.x > maxX) { position.x = maxX; velocity.x = -velocity.x; }
 
-        if (position.x < minX) { position.x = minX; velocity.x = -velocity.x; clamped = true; }
-        else if (position.x > maxX) { position.x = maxX; velocity.x = -velocity.x; clamped = true; }
-
-        if (position.z < minZ) { position.z = minZ; velocity.z = -velocity.z; clamped = true; }
-        else if (position.z > maxZ) { position.z = maxZ; velocity.z = -velocity.z; clamped = true; }
+        if (position.z < minZ) { position.z = minZ; velocity.z = -velocity.z; }
+        else if (position.z > maxZ) { position.z = maxZ; velocity.z = -velocity.z; }
 
         return position;
+
     }
 
     private void OnDrawGizmos()
