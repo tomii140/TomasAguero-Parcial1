@@ -34,14 +34,16 @@ public class Boid : Agent
     public float HunterPerceptionRadius => hunterPerceptionRadius;
     public float FruitWeight => fruitWeight;
 
-    [Header("UI Feedback")]
+    [Header("UI & Animation Feedback")]
     [SerializeField] private TextMeshPro stateTextUI;
     private MeshRenderer meshRenderer;
+    private Animator animator;
 
     protected override void Start()
     {
         base.Start();
         meshRenderer = GetComponent<MeshRenderer>();
+        animator = GetComponent<Animator>();
         if (GameManager.Instance != null) GameManager.Instance.RegisterBoid(this);
 
         fsm = new FiniteStateMachine();
@@ -67,6 +69,10 @@ public class Boid : Agent
         isRespawning = false;
         currentHealth = 2;
         SetColorFeedback(Color.green);
+
+        // Da un pequeño impulso inicial para que el flocking lo detecte y no se quede quieto
+        Velocity = transform.forward * (maxSpeed * 0.5f);
+
         fsm.ChangeState(FlockingState);
     }
 
@@ -94,6 +100,7 @@ public class Boid : Agent
         fsm.Update();
         ApplyPhysics();
         UpdateDebugText();
+        UpdateAnimator();
     }
 
     private void EvaluateFSMTransitions()
@@ -156,6 +163,17 @@ public class Boid : Agent
         {
             string stateName = fsm.CurrentState.GetType().Name.Replace("Boid", "").Replace("State", "");
             stateTextUI.text = stateName;
+        }
+    }
+
+    private void UpdateAnimator()
+    {
+        if (animator != null)
+        {
+            // Envía la magnitud de la velocidad actual al parámetro del Animator (ej. "Speed" o "Velocity")
+            float currentSpeed = Velocity.magnitude;
+            animator.SetFloat("Speed", currentSpeed);
+            animator.SetBool("IsDead", isDead || isRespawning);
         }
     }
 

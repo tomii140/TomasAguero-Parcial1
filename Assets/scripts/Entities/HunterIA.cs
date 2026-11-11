@@ -35,13 +35,16 @@ public class HunterAI : Agent
     [SerializeField, Range(1f, 20f)] private float fruitSpawnRadius = 8f;
     [SerializeField, Range(1, 10)] private int maxFruitsInScene = 5;
 
-    [Header("UI & Gizmos Control")]
+    [Header("UI & Animation Feedback")]
     [SerializeField] private TextMeshPro stateTextUI;
     [SerializeField] private MeshRenderer meshRenderer;
     [SerializeField] private bool showGizmos = true;
+    private Animator animator;
 
     private Boid targetBoid;
     public float TimerAttackCooldown { get; private set; } = 0f;
+
+    private Vector3 lastPosition;
 
     public float VisionRadius => visionRadius;
     public float RangeAttackRadius => rangeAttackRadius;
@@ -61,8 +64,10 @@ public class HunterAI : Agent
     {
         base.Start();
         if (meshRenderer == null) meshRenderer = GetComponent<MeshRenderer>();
+        animator = GetComponent<Animator>();
 
         currentEnergy = maxEnergy;
+        lastPosition = transform.position;
 
         SearchState = new HunterSearchState(this);
         AttackState = new HunterAttackState(this);
@@ -81,6 +86,7 @@ public class HunterAI : Agent
         FSM.Update();
         ApplyPhysics();
         UpdateUIFeedback();
+        UpdateAnimator();
     }
 
     public void ResetAttackCooldown()
@@ -100,7 +106,6 @@ public class HunterAI : Agent
     {
         if (GameManager.Instance == null || GameManager.Instance.ActiveBoids == null) return null;
 
-        // Si buscamos vivos y ya tenemos un target asignado que sigue vivo, mantenemos el bloqueo de objetivo exigido por la rúbrica
         if (!lookForDead && targetBoid != null && !targetBoid.isDead)
         {
             float distToCurrent = Vector3.Distance(transform.position, targetBoid.transform.position);
@@ -160,6 +165,21 @@ public class HunterAI : Agent
         {
             string currentStateName = FSM.CurrentState.GetType().Name.Replace("Hunter", "").Replace("State", "");
             stateTextUI.text = $"State: {currentStateName}\nEnergy: {Mathf.Round(currentEnergy)}/{maxEnergy}";
+        }
+    }
+
+    private void UpdateAnimator()
+    {
+        if (animator != null)
+        {
+            float speed = Vector3.Distance(new Vector3(transform.position.x, 0f, transform.position.z),
+                                           new Vector3(lastPosition.x, 0f, lastPosition.z)) / Time.deltaTime;
+            lastPosition = transform.position;
+
+            animator.SetFloat("Speed", speed);
+
+            bool isResting = (FSM.CurrentState == RestState);
+            animator.SetBool("IsResting", isResting);
         }
     }
 
