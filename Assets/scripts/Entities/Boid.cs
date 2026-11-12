@@ -12,11 +12,11 @@ public class Boid : Agent
     public BoidDeadState DeadState { get; private set; }
     public BoidRespawnState RespawnState { get; private set; }
 
-    public bool isDead = false;
-    public bool isRespawning = false;
+    public bool IsDead { get; private set; } = false;
+    public bool IsRespawning { get; private set; } = false;
     private int currentHealth = 2;
 
-    [Header("Flocking Radii & Weights")]
+    [Header("Flocking Configuration")]
     [SerializeField, Range(0.5f, 30f)] private float separationRadius = 2.0f;
     [SerializeField, Range(2f, 30f)] private float alignmentRadius = 12.0f;
     [SerializeField, Range(2f, 30f)] private float cohesionRadius = 12.0f;
@@ -34,7 +34,7 @@ public class Boid : Agent
     public float HunterPerceptionRadius => hunterPerceptionRadius;
     public float FruitWeight => fruitWeight;
 
-    [Header("UI & Animation Feedback")]
+    [Header("Feedback")]
     [SerializeField] private TextMeshPro stateTextUI;
     private MeshRenderer meshRenderer;
     private Animator animator;
@@ -44,8 +44,22 @@ public class Boid : Agent
         base.Start();
         meshRenderer = GetComponent<MeshRenderer>();
         animator = GetComponent<Animator>();
-        if (GameManager.Instance != null) GameManager.Instance.RegisterBoid(this);
 
+        if (GameManager.Instance != null)
+            GameManager.Instance.RegisterBoid(this);
+
+        InitializeFSM();
+        currentHealth = 2;
+    }
+
+    private void OnDestroy()
+    {
+        if (GameManager.Instance != null)
+            GameManager.Instance.UnregisterBoid(this);
+    }
+
+    private void InitializeFSM()
+    {
         fsm = new FiniteStateMachine();
         FlockingState = new BoidFlockingState(this);
         EvadeState = new BoidEvadeState(this);
@@ -55,42 +69,34 @@ public class Boid : Agent
         RespawnState = new BoidRespawnState(this);
 
         fsm.ChangeState(FlockingState);
-        currentHealth = 2;
-    }
-
-    private void OnDestroy()
-    {
-        if (GameManager.Instance != null) GameManager.Instance.UnregisterBoid(this);
     }
 
     public void Revive()
     {
-        isDead = false;
-        isRespawning = false;
+        IsDead = false;
+        IsRespawning = false;
         currentHealth = 2;
         SetColorFeedback(Color.green);
 
-        // Da un pequeño impulso inicial para que el flocking lo detecte y no se quede quieto
         Velocity = transform.forward * (maxSpeed * 0.5f);
-
         fsm.ChangeState(FlockingState);
     }
 
     public void ReceiveDamage(int damage)
     {
-        if (isDead || isRespawning) return;
+        if (IsDead || IsRespawning) return;
 
         currentHealth -= damage;
         if (currentHealth <= 0)
         {
-            isDead = true;
+            IsDead = true;
             fsm.ChangeState(DeadState);
         }
     }
 
     public void TriggerRespawnFlow()
     {
-        isRespawning = true;
+        IsRespawning = true;
         fsm.ChangeState(RespawnState);
     }
 
@@ -99,37 +105,32 @@ public class Boid : Agent
         EvaluateFSMTransitions();
         fsm.Update();
         ApplyPhysics();
-        UpdateDebugText();
+        UpdateUIFeedback();
         UpdateAnimator();
     }
 
+    // Evaluación estricta de prioridades de estados según rúbrica: Dead > Evade > Consume > Seek > Flocking
     private void EvaluateFSMTransitions()
     {
-        if (isRespawning)
+        if (IsRespawning)
         {
             if (fsm.CurrentState != RespawnState) fsm.ChangeState(RespawnState);
             return;
         }
 
-        if (isDead)
+        if (IsDead)
         {
             if (fsm.CurrentState != DeadState) fsm.ChangeState(DeadState);
             return;
         }
 
-        // 1. Evade
         HunterAI hunter = GameManager.Instance != null ? GameManager.Instance.Hunter : null;
-        if (hunter != null)
+        if (hunter != null && Vector3.Distance(transform.position, hunter.transform.position) < hunterPerceptionRadius)
         {
-            float distToHunter = Vector3.Distance(transform.position, hunter.transform.position);
-            if (distToHunter < hunterPerceptionRadius)
-            {
-                if (fsm.CurrentState != EvadeState) fsm.ChangeState(EvadeState);
-                return;
-            }
+            if (fsm.CurrentState != EvadeState) fsm.ChangeState(EvadeState);
+            return;
         }
 
-        // 2. Consume / Seek Object
         Fruit targetFruit = FindNearestFruit();
         if (targetFruit != null)
         {
@@ -145,7 +146,6 @@ public class Boid : Agent
             return;
         }
 
-        // 3. Flocking por defecto
         if (fsm.CurrentState != FlockingState)
         {
             fsm.ChangeState(FlockingState);
@@ -157,7 +157,7 @@ public class Boid : Agent
         if (meshRenderer != null) meshRenderer.material.color = color;
     }
 
-    private void UpdateDebugText()
+    private void UpdateUIFeedback()
     {
         if (stateTextUI != null && fsm.CurrentState != null)
         {
@@ -170,18 +170,18 @@ public class Boid : Agent
     {
         if (animator != null)
         {
-            // Envía la magnitud de la velocidad actual al parámetro del Animator (ej. "Speed" o "Velocity")
-            float currentSpeed = Velocity.magnitude;
-            animator.SetFloat("Speed", currentSpeed);
-            animator.SetBool("IsDead", isDead || isRespawning);
+            animator.SetFloat("Speed", Velocity.magnitude);
+            animator.SetBool("IsDead", IsDead || IsRespawning);
         }
     }
 
     public Fruit FindNearestFruit()
     {
-        if (GameManager.Instance == null || GameManager.Instance.ActiveFruits == null) return null;
+        if (GameManager.Instance?.ActiveFruits == null) return null;
+
         Fruit nearest = null;
         float minDistance = float.MaxValue;
+
         foreach (var fruit in GameManager.Instance.ActiveFruits)
         {
             if (fruit == null) continue;
@@ -204,82 +204,72 @@ public class Boid : Agent
 
     public Vector3 GetSeparationForce()
     {
-        if (GameManager.Instance == null || GameManager.Instance.ActiveBoids == null) return Vector3.zero;
+        if (GameManager.Instance?.ActiveBoids == null) return Vector3.zero;
+
         Vector3 force = Vector3.zero;
         int count = 0;
+
         foreach (var other in GameManager.Instance.ActiveBoids)
         {
-            if (other != null && other != this && !other.isDead && !other.isRespawning)
+            if (other == null || other == this || other.IsDead || other.IsRespawning) continue;
+            float dist = Vector3.Distance(transform.position, other.transform.position);
+            if (dist > 0f && dist < separationRadius)
             {
-                float d = Vector3.Distance(transform.position, other.transform.position);
-                if (d > 0f && d < separationRadius)
-                {
-                    Vector3 diff = transform.position - other.transform.position;
-                    diff.Normalize();
-                    diff /= d;
-                    force += diff;
-                    count++;
-                }
+                force += (transform.position - other.transform.position).normalized / dist;
+                count++;
             }
         }
-        if (count > 0)
-        {
-            force /= count;
-            force = force.normalized * maxSpeed;
-            force -= Velocity;
-            force = Vector3.ClampMagnitude(force, maxForce);
-        }
+        if (count > 0) force /= count;
         return force;
     }
 
-    private Vector3 GetAlignmentForce()
+    public Vector3 GetAlignmentForce()
     {
-        if (GameManager.Instance == null || GameManager.Instance.ActiveBoids == null) return Vector3.zero;
-        Vector3 sumVel = Vector3.zero;
+        if (GameManager.Instance?.ActiveBoids == null) return Vector3.zero;
+
+        Vector3 sumVelocity = Vector3.zero;
         int count = 0;
+
         foreach (var other in GameManager.Instance.ActiveBoids)
         {
-            if (other != null && other != this && !other.isDead && !other.isRespawning)
+            if (other == null || other == this || other.IsDead || other.IsRespawning) continue;
+            float dist = Vector3.Distance(transform.position, other.transform.position);
+            if (dist > 0f && dist < alignmentRadius)
             {
-                float d = Vector3.Distance(transform.position, other.transform.position);
-                if (d > 0f && d < alignmentRadius)
-                {
-                    sumVel += other.Velocity;
-                    count++;
-                }
+                sumVelocity += other.Velocity;
+                count++;
             }
         }
+
         if (count > 0)
         {
-            sumVel /= count;
-            sumVel = sumVel.normalized * maxSpeed;
-            Vector3 steer = sumVel - Velocity;
-            return Vector3.ClampMagnitude(steer, maxForce);
+            sumVelocity = (sumVelocity / count).normalized * maxSpeed;
+            return Vector3.ClampMagnitude(sumVelocity - Velocity, maxForce);
         }
         return Vector3.zero;
     }
 
-    private Vector3 GetCohesionForce()
+    public Vector3 GetCohesionForce()
     {
-        if (GameManager.Instance == null || GameManager.Instance.ActiveBoids == null) return Vector3.zero;
-        Vector3 sumPos = Vector3.zero;
+        if (GameManager.Instance?.ActiveBoids == null) return Vector3.zero;
+
+        Vector3 sumPosition = Vector3.zero;
         int count = 0;
+
         foreach (var other in GameManager.Instance.ActiveBoids)
         {
-            if (other != null && other != this && !other.isDead && !other.isRespawning)
+            if (other == null || other == this || other.IsDead || other.IsRespawning) continue;
+            float dist = Vector3.Distance(transform.position, other.transform.position);
+            if (dist > 0f && dist < cohesionRadius)
             {
-                float d = Vector3.Distance(transform.position, other.transform.position);
-                if (d > 0f && d < cohesionRadius)
-                {
-                    sumPos += other.transform.position;
-                    count++;
-                }
+                sumPosition += other.transform.position;
+                count++;
             }
         }
+
         if (count > 0)
         {
-            sumPos /= count;
-            return Arrive(sumPos, cohesionRadius);
+            return Seek(sumPosition / count);
         }
         return Vector3.zero;
     }

@@ -16,10 +16,8 @@ public class HunterAttackState : IState
 
     public void Update()
     {
-        // 1. Consumo continuo de energía en Hunt
         hunter.ConsumeOrRecoverEnergy(hunter.EnergyConsumptionRate * Time.deltaTime);
 
-        // Salida de Hunt por energía agotada -> Rest
         if (hunter.CurrentEnergy <= 0f)
         {
             hunter.FSM.ChangeState(hunter.RestState);
@@ -28,35 +26,30 @@ public class HunterAttackState : IState
 
         Boid target = hunter.GetTargetBoid();
 
-        // 2. Si la presa actual murió, evaluamos las reglas del parcial:
-        if (target != null && target.isDead)
+        if (target != null && target.IsDead)
         {
-            // ¿Hay un boid muerto en el radio de visión para recolectar? -> Transición a Gather
             Boid deadBoidInVision = hunter.FindBoidInVision(lookForDead: true);
-            if (deadBoidInVision != null && deadBoidInVision.isDead)
+            if (deadBoidInVision != null && deadBoidInVision.IsDead)
             {
                 hunter.SetTargetBoid(deadBoidInVision);
                 hunter.FSM.ChangeState(hunter.GatherState);
                 return;
             }
 
-            // Si no hay cadáver cerca, buscamos otro boid vivo para seguir en Hunt (según consigna)
             Boid nextLiveBoid = hunter.FindBoidInVision(lookForDead: false);
-            if (nextLiveBoid != null && !nextLiveBoid.isDead)
+            if (nextLiveBoid != null && !nextLiveBoid.IsDead)
             {
                 hunter.SetTargetBoid(nextLiveBoid);
                 target = nextLiveBoid;
             }
             else
             {
-                // Si no hay más vivos ni cadáveres cercanos, volvemos a Patrol (SearchState)
                 hunter.SetTargetBoid(null);
                 hunter.FSM.ChangeState(hunter.SearchState);
                 return;
             }
         }
 
-        // Si no hay objetivo inicial, intentamos capturar uno vivo
         if (target == null)
         {
             target = hunter.FindBoidInVision(lookForDead: false);
@@ -73,7 +66,6 @@ public class HunterAttackState : IState
 
         float distanceToTarget = Vector3.Distance(hunter.transform.position, target.transform.position);
 
-        // Salida de Hunt si la presa sale de los límites / visión
         if (distanceToTarget > hunter.VisionRadius)
         {
             hunter.SetTargetBoid(null);
@@ -81,7 +73,6 @@ public class HunterAttackState : IState
             return;
         }
 
-        // Ejecución de ataques (Melee vs Range) respetando el TBA
         if (distanceToTarget <= hunter.MeleeAttackRadius || distanceToTarget <= hunter.RangeAttackRadius)
         {
             if (hunter.TimerAttackCooldown <= 0)
@@ -92,7 +83,6 @@ public class HunterAttackState : IState
             }
         }
 
-        // Persecución mediante Pursuit
         Vector3 pursuitForce = hunter.Pursuit(target);
         hunter.AddForce(pursuitForce);
     }

@@ -10,7 +10,7 @@ public class HunterAI : Agent
     public HunterGatherState GatherState { get; private set; }
     public HunterRestState RestState { get; private set; }
 
-    [Header("Detection & Combat Settings (Parcial 1)")]
+    [Header("Detection & Combat")]
     [SerializeField, Range(1f, 80f)] private float visionRadius = 15f;
     [SerializeField, Range(1f, 50f)] private float rangeAttackRadius = 10f;
     [SerializeField, Range(0.5f, 25f)] private float meleeAttackRadius = 3f;
@@ -18,24 +18,24 @@ public class HunterAI : Agent
     [SerializeField, Range(0.5f, 10f)] private float gatheringTime = 2f;
     [SerializeField, Range(0.5f, 5f)] private float captureRadius = 1.5f;
 
-    [Header("Energy & Rest Settings (Parcial 1)")]
+    [Header("Energy & Rest")]
     [SerializeField, Range(10f, 200f)] private float maxEnergy = 100f;
     [SerializeField, Range(1f, 50f)] private float energyConsumptionRate = 15f;
     [SerializeField, Range(1f, 50f)] private float energyRecoveryRate = 25f;
     private float currentEnergy;
 
-    [Header("Patrol Settings")]
+    [Header("Patrol")]
     [SerializeField, Range(0.1f, 5f)] private float waypointThreshold = 1.0f;
     [SerializeField] private Transform[] waypoints;
     public Transform[] Waypoints => waypoints;
 
-    [Header("Fruit Spawning Settings")]
+    [Header("Fruit Spawning")]
     [SerializeField] private GameObject fruitPrefab;
     [SerializeField, Range(1f, 10f)] private float fruitSpawnInterval = 4f;
     [SerializeField, Range(1f, 20f)] private float fruitSpawnRadius = 8f;
     [SerializeField, Range(1, 10)] private int maxFruitsInScene = 5;
 
-    [Header("UI & Animation Feedback")]
+    [Header("Feedback")]
     [SerializeField] private TextMeshPro stateTextUI;
     [SerializeField] private MeshRenderer meshRenderer;
     [SerializeField] private bool showGizmos = true;
@@ -43,7 +43,6 @@ public class HunterAI : Agent
 
     private Boid targetBoid;
     public float TimerAttackCooldown { get; private set; } = 0f;
-
     private Vector3 lastPosition;
 
     public float VisionRadius => visionRadius;
@@ -54,7 +53,6 @@ public class HunterAI : Agent
     public float CaptureRadius => captureRadius;
     public float WaypointThreshold => waypointThreshold;
     public float FruitSpawnInterval => fruitSpawnInterval;
-
     public float MaxEnergy => maxEnergy;
     public float CurrentEnergy => currentEnergy;
     public float EnergyConsumptionRate => energyConsumptionRate;
@@ -80,13 +78,17 @@ public class HunterAI : Agent
 
     private void Update()
     {
-        if (TimerAttackCooldown > 0f)
-            TimerAttackCooldown -= Time.deltaTime;
-
+        UpdateCooldowns();
         FSM.Update();
         ApplyPhysics();
         UpdateUIFeedback();
         UpdateAnimator();
+    }
+
+    private void UpdateCooldowns()
+    {
+        if (TimerAttackCooldown > 0f)
+            TimerAttackCooldown -= Time.deltaTime;
     }
 
     public void ResetAttackCooldown()
@@ -104,12 +106,11 @@ public class HunterAI : Agent
 
     public Boid FindBoidInVision(bool lookForDead)
     {
-        if (GameManager.Instance == null || GameManager.Instance.ActiveBoids == null) return null;
+        if (GameManager.Instance?.ActiveBoids == null) return null;
 
-        if (!lookForDead && targetBoid != null && !targetBoid.isDead)
+        if (!lookForDead && targetBoid != null && !targetBoid.IsDead)
         {
-            float distToCurrent = Vector3.Distance(transform.position, targetBoid.transform.position);
-            if (distToCurrent <= visionRadius)
+            if (Vector3.Distance(transform.position, targetBoid.transform.position) <= visionRadius)
             {
                 return targetBoid;
             }
@@ -120,8 +121,7 @@ public class HunterAI : Agent
 
         foreach (var boid in GameManager.Instance.ActiveBoids)
         {
-            if (boid == null) continue;
-            if (boid.isDead != lookForDead) continue;
+            if (boid == null || boid.IsDead != lookForDead) continue;
 
             float dist = Vector3.Distance(transform.position, boid.transform.position);
             if (dist <= visionRadius && dist < minDistance)
@@ -145,10 +145,7 @@ public class HunterAI : Agent
 
     public void NotifyBoidCollected(Boid boid)
     {
-        if (GameManager.Instance != null)
-        {
-            GameManager.Instance.NotifyBoidDeath(boid);
-        }
+        GameManager.Instance?.NotifyBoidDeath(boid);
     }
 
     public void SetColorFeedback(Color color)
@@ -177,9 +174,7 @@ public class HunterAI : Agent
             lastPosition = transform.position;
 
             animator.SetFloat("Speed", speed);
-
-            bool isResting = (FSM.CurrentState == RestState);
-            animator.SetBool("IsResting", isResting);
+            animator.SetBool("IsResting", FSM.CurrentState == RestState);
         }
     }
 

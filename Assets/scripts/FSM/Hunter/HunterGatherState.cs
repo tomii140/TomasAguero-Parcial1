@@ -13,7 +13,7 @@ public class HunterGatherState : IState
         _hunter.SetColorFeedback(Color.blue);
         _targetBoid = _hunter.GetTargetBoid();
 
-        if (_targetBoid == null || !_targetBoid.isDead)
+        if (_targetBoid == null || !_targetBoid.IsDead)
         {
             _hunter.SetTargetBoid(null);
             _hunter.FSM.ChangeState(_hunter.SearchState);
@@ -26,7 +26,7 @@ public class HunterGatherState : IState
 
     public void Update()
     {
-        if (_targetBoid == null || !_targetBoid.isDead)
+        if (_targetBoid == null || !_targetBoid.IsDead)
         {
             _hunter.SetTargetBoid(null);
             _hunter.FSM.ChangeState(_hunter.SearchState);

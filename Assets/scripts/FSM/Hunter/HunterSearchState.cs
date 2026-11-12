@@ -21,9 +21,8 @@ public class HunterSearchState : IState
     {
         HandleFruitSpawning();
 
-        // Transición a Gather restringida a proximidad inmediata (evita buscar cadáveres lejanos)
         Boid deadBoid = hunter.FindBoidInVision(lookForDead: true);
-        if (deadBoid != null && deadBoid.isDead)
+        if (deadBoid != null && deadBoid.IsDead)
         {
             float distToDead = Vector3.Distance(hunter.transform.position, deadBoid.transform.position);
             if (distToDead <= hunter.CaptureRadius * 1.5f)
@@ -34,11 +33,10 @@ public class HunterSearchState : IState
             }
         }
 
-        // Transición a Attack si el TBA finalizó y detecta un Boid vivo
         if (hunter.TimerAttackCooldown <= 0)
         {
             Boid liveBoid = hunter.FindBoidInVision(lookForDead: false);
-            if (liveBoid != null && !liveBoid.isDead)
+            if (liveBoid != null && !liveBoid.IsDead)
             {
                 hunter.SetTargetBoid(liveBoid);
                 hunter.FSM.ChangeState(hunter.AttackState);
@@ -46,7 +44,6 @@ public class HunterSearchState : IState
             }
         }
 
-        // Movimiento por Waypoints (Patrullaje en plano 3D XZ)
         Transform[] waypoints = hunter.Waypoints;
         if (waypoints == null || waypoints.Length == 0) return;
 
