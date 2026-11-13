@@ -1,13 +1,13 @@
 using UnityEngine;
 
-public class HunterSearchState : IState
+public class HunterPatrolState : IState
 {
     private readonly HunterAI hunter;
     private int currentWaypointIndex = 0;
     private bool movingForward = true;
     private float fruitSpawnTimer = 0f;
 
-    public HunterSearchState(HunterAI hunter)
+    public HunterPatrolState(HunterAI hunter)
     {
         this.hunter = hunter;
     }

@@ -15,7 +15,7 @@ public class HunterGatherState : IState
 
         if (_targetBoid == null || !_targetBoid.IsDead)
         {
-            ReturnToSearch();
+            ReturnToPatrol();
             return;
         }
 
@@ -34,7 +34,7 @@ public class HunterGatherState : IState
     {
         if (_targetBoid == null || !_targetBoid.IsDead)
         {
-            ReturnToSearch();
+            ReturnToPatrol();
             return false;
         }
         return true;
@@ -64,15 +64,15 @@ public class HunterGatherState : IState
             if (_gatherTimer >= _hunter.GatheringTime)
             {
                 _hunter.NotifyBoidCollected(_targetBoid);
-                ReturnToSearch();
+                ReturnToPatrol();
             }
         }
     }
 
-    private void ReturnToSearch()
+    private void ReturnToPatrol()
     {
         _hunter.SetTargetBoid(null);
-        _hunter.FSM.ChangeState(_hunter.SearchState);
+        _hunter.FSM.ChangeState(_hunter.PatrolState);
     }
 
     public void Exit()

@@ -5,7 +5,7 @@ public class HunterAI : Agent
 {
     public FiniteStateMachine FSM { get; private set; }
 
-    public HunterSearchState SearchState { get; private set; }
+    public HunterPatrolState PatrolState { get; private set; }
     public HunterAttackState AttackState { get; private set; }
     public HunterGatherState GatherState { get; private set; }
     public HunterRestState RestState { get; private set; }
@@ -19,14 +19,16 @@ public class HunterAI : Agent
     [SerializeField, Range(0.5f, 5f)] private float captureRadius = 1.5f;
 
     [Header("Energy & Rest")]
-    [SerializeField, Range(10f, 200f)] private float maxEnergy = 100f;
-    [SerializeField, Range(1f, 50f)] private float energyConsumptionRate = 15f;
-    [SerializeField, Range(1f, 50f)] private float energyRecoveryRate = 25f;
-    private float currentEnergy;
+    [SerializeField, Range(0f, 500f)] private float maxEnergy = 100f;
+    [SerializeField, Range(0.1f, 500f)] private float energyConsumptionRate = 15f;
+    [SerializeField, Range(0.1f, 50f)] private float energyRecoveryRate = 25f;
+
+    [Header("Energy Status")]
+    [SerializeField] private float currentEnergy;
 
     [Header("Patrol")]
-    [SerializeField, Range(0.1f, 5f)] private float waypointThreshold = 1.0f;
-    [SerializeField, Range(0.5f, 5f)] private float waypointArriveSlowingRadius = 2.0f;
+    [SerializeField, Range(0.1f, 10f)] private float waypointThreshold = 1.0f;
+    [SerializeField, Range(0.5f, 10f)] private float waypointArriveSlowingRadius = 2.0f;
     [SerializeField] private Transform[] waypoints;
 
     [Header("Fruit Spawning")]
@@ -69,13 +71,13 @@ public class HunterAI : Agent
         currentEnergy = maxEnergy;
         lastPosition = transform.position;
 
-        SearchState = new HunterSearchState(this);
+        PatrolState = new HunterPatrolState(this);
         AttackState = new HunterAttackState(this);
         GatherState = new HunterGatherState(this);
         RestState = new HunterRestState(this);
 
         FSM = new FiniteStateMachine();
-        FSM.ChangeState(SearchState);
+        FSM.ChangeState(PatrolState);
     }
 
     private void Update()

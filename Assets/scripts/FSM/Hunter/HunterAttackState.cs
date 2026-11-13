@@ -16,7 +16,7 @@ public class HunterAttackState : IState
 
     public void Update()
     {
-        ProcessEnergyDrain();
+        if (!ProcessEnergyDrain()) return;
 
         if (!ValidateAndSwitchTarget()) return;
 
@@ -24,14 +24,17 @@ public class HunterAttackState : IState
         ApplyMovement();
     }
 
-    private void ProcessEnergyDrain()
+    private bool ProcessEnergyDrain()
     {
-        hunter.ConsumeOrRecoverEnergy(hunter.EnergyConsumptionRate * Time.deltaTime);
+        hunter.ConsumeOrRecoverEnergy(-hunter.EnergyConsumptionRate * Time.deltaTime);
 
         if (hunter.CurrentEnergy <= 0f)
         {
             hunter.FSM.ChangeState(hunter.RestState);
+            return false;
         }
+
+        return true;
     }
 
     private bool ValidateAndSwitchTarget()
@@ -40,34 +43,40 @@ public class HunterAttackState : IState
 
         if (target != null && target.IsDead)
         {
-            if (TrySwitchToGatherOrSearch()) return false;
+            if (TrySwitchToGatherOrPatrol()) return false;
         }
 
         if (target == null)
         {
             target = hunter.FindBoidInVision(lookForDead: false);
-            if (target != null) hunter.SetTargetBoid(target);
+
+            if (target != null)
+            {
+                hunter.SetTargetBoid(target);
+            }
             else
             {
-                hunter.FSM.ChangeState(hunter.SearchState);
+                hunter.FSM.ChangeState(hunter.PatrolState);
                 return false;
             }
         }
 
         float distanceToTarget = Vector3.Distance(hunter.transform.position, target.transform.position);
+
         if (distanceToTarget > hunter.VisionRadius)
         {
             hunter.SetTargetBoid(null);
-            hunter.FSM.ChangeState(hunter.SearchState);
+            hunter.FSM.ChangeState(hunter.PatrolState);
             return false;
         }
 
         return true;
     }
 
-    private bool TrySwitchToGatherOrSearch()
+    private bool TrySwitchToGatherOrPatrol()
     {
         Boid deadBoidInVision = hunter.FindBoidInVision(lookForDead: true);
+
         if (deadBoidInVision != null && deadBoidInVision.IsDead)
         {
             hunter.SetTargetBoid(deadBoidInVision);
@@ -76,6 +85,7 @@ public class HunterAttackState : IState
         }
 
         Boid nextLiveBoid = hunter.FindBoidInVision(lookForDead: false);
+
         if (nextLiveBoid != null && !nextLiveBoid.IsDead)
         {
             hunter.SetTargetBoid(nextLiveBoid);
@@ -83,20 +93,39 @@ public class HunterAttackState : IState
         }
 
         hunter.SetTargetBoid(null);
-        hunter.FSM.ChangeState(hunter.SearchState);
+        hunter.FSM.ChangeState(hunter.PatrolState);
         return true;
     }
 
     private void ProcessCombatAndAttack()
     {
         Boid target = hunter.GetTargetBoid();
+
         if (target == null) return;
 
         float distanceToTarget = Vector3.Distance(hunter.transform.position, target.transform.position);
 
-        if ((distanceToTarget <= hunter.MeleeAttackRadius || distanceToTarget <= hunter.RangeAttackRadius) && hunter.TimerAttackCooldown <= 0)
+        // Dibuja una línea persistente en la Scene View durante el rango de ataque
+        bool isMelee = distanceToTarget <= hunter.MeleeAttackRadius;
+        Color lineColor = isMelee ? Color.magenta : Color.red;
+        Debug.DrawLine(hunter.transform.position, target.transform.position, lineColor, 0.1f);
+
+        if (distanceToTarget <= hunter.RangeAttackRadius && hunter.TimerAttackCooldown <= 0f)
         {
-            int damage = (distanceToTarget <= hunter.MeleeAttackRadius) ? 2 : 1;
+            int damage = isMelee ? 2 : 1;
+
+            // Feedback en consola / depuración visual clara del tipo de ataque
+            if (isMelee)
+            {
+                Debug.Log("<color=magenta>[MELEE ATTACK]</color> Daño: 2 | Distancia: " + distanceToTarget.ToString("F2"));
+                hunter.SetColorFeedback(Color.magenta);
+            }
+            else
+            {
+                Debug.Log("<color=red>[RANGED ATTACK]</color> Daño: 1 | Distancia: " + distanceToTarget.ToString("F2"));
+                hunter.SetColorFeedback(Color.red);
+            }
+
             target.ReceiveDamage(damage);
             hunter.ResetAttackCooldown();
         }
@@ -105,6 +134,7 @@ public class HunterAttackState : IState
     private void ApplyMovement()
     {
         Boid target = hunter.GetTargetBoid();
+
         if (target != null)
         {
             Vector3 pursuitForce = hunter.Pursuit(target);

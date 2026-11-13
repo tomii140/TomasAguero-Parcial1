@@ -3,7 +3,7 @@ using TMPro;
 
 public class Boid : Agent
 {
-    private FiniteStateMachine fsm;
+    public FiniteStateMachine FSM { get; private set; }
 
     public BoidFlockingState FlockingState { get; private set; }
     public BoidEvadeState EvadeState { get; private set; }
@@ -14,7 +14,11 @@ public class Boid : Agent
 
     public bool IsDead { get; private set; } = false;
     public bool IsRespawning { get; private set; } = false;
-    private int currentHealth = 2;
+
+    [Header("Health Configuration")]
+    [SerializeField] private int maxHealth = 2;
+    private int currentHealth;
+    public int CurrentHealth => currentHealth;
 
     [Header("Flocking Configuration")]
     [SerializeField, Range(0.5f, 30f)] private float separationRadius = 2.0f;
@@ -45,6 +49,7 @@ public class Boid : Agent
 
     [Header("Feedback")]
     [SerializeField] private TextMeshPro stateTextUI;
+    [SerializeField] private bool showGizmos = true;
     private MeshRenderer meshRenderer;
     private Animator animator;
 
@@ -58,7 +63,7 @@ public class Boid : Agent
             GameManager.Instance.RegisterBoid(this);
 
         InitializeFSM();
-        currentHealth = 2;
+        currentHealth = maxHealth;
     }
 
     private void OnDestroy()
@@ -69,7 +74,7 @@ public class Boid : Agent
 
     private void InitializeFSM()
     {
-        fsm = new FiniteStateMachine();
+        FSM = new FiniteStateMachine();
         FlockingState = new BoidFlockingState(this);
         EvadeState = new BoidEvadeState(this);
         SeekObjectState = new BoidSeekObjectState(this);
@@ -77,18 +82,18 @@ public class Boid : Agent
         DeadState = new BoidDeadState(this);
         RespawnState = new BoidRespawnState(this);
 
-        fsm.ChangeState(FlockingState);
+        FSM.ChangeState(FlockingState);
     }
 
     public void Revive()
     {
         IsDead = false;
         IsRespawning = false;
-        currentHealth = 2;
+        currentHealth = maxHealth;
         SetColorFeedback(Color.green);
 
         Velocity = transform.forward * (maxSpeed * 0.5f);
-        fsm.ChangeState(FlockingState);
+        FSM.ChangeState(FlockingState);
     }
 
     public void ReceiveDamage(int damage)
@@ -98,22 +103,24 @@ public class Boid : Agent
         currentHealth -= damage;
         if (currentHealth <= 0)
         {
+            currentHealth = 0;
             IsDead = true;
-            fsm.ChangeState(DeadState);
+            FSM.ChangeState(DeadState);
         }
     }
 
     public void TriggerRespawnFlow()
     {
         IsRespawning = true;
-        fsm.ChangeState(RespawnState);
+        FSM.ChangeState(RespawnState);
     }
 
     private void Update()
     {
         EvaluateFSMTransitions();
-        fsm.Update();
+        FSM.Update();
         ApplyPhysics();
+        ApplyWorldBounds();
         UpdateUIFeedback();
         UpdateAnimator();
     }
@@ -122,20 +129,20 @@ public class Boid : Agent
     {
         if (IsRespawning)
         {
-            if (fsm.CurrentState != RespawnState) fsm.ChangeState(RespawnState);
+            if (FSM.CurrentState != RespawnState) FSM.ChangeState(RespawnState);
             return;
         }
 
         if (IsDead)
         {
-            if (fsm.CurrentState != DeadState) fsm.ChangeState(DeadState);
+            if (FSM.CurrentState != DeadState) FSM.ChangeState(DeadState);
             return;
         }
 
         HunterAI hunter = GameManager.Instance != null ? GameManager.Instance.Hunter : null;
         if (hunter != null && Vector3.Distance(transform.position, hunter.transform.position) < hunterPerceptionRadius)
         {
-            if (fsm.CurrentState != EvadeState) fsm.ChangeState(EvadeState);
+            if (FSM.CurrentState != EvadeState) FSM.ChangeState(EvadeState);
             return;
         }
 
@@ -145,18 +152,37 @@ public class Boid : Agent
             float distToFruit = Vector3.Distance(transform.position, targetFruit.transform.position);
             if (distToFruit <= targetFruit.ConsumeRadius)
             {
-                if (fsm.CurrentState != ConsumeState) fsm.ChangeState(ConsumeState);
+                if (FSM.CurrentState != ConsumeState) FSM.ChangeState(ConsumeState);
             }
             else
             {
-                if (fsm.CurrentState != SeekObjectState) fsm.ChangeState(SeekObjectState);
+                if (FSM.CurrentState != SeekObjectState) FSM.ChangeState(SeekObjectState);
             }
             return;
         }
 
-        if (fsm.CurrentState != FlockingState)
+        // Si termina de comer o no hay frutas, se asegura de volver a moverse aplicando velocidad
+        if (FSM.CurrentState == ConsumeState)
         {
-            fsm.ChangeState(FlockingState);
+            Velocity = transform.forward * (maxSpeed * 0.5f);
+        }
+
+        if (FSM.CurrentState != FlockingState)
+        {
+            FSM.ChangeState(FlockingState);
+        }
+    }
+
+    public void SetRespawnVisibility(bool visible)
+    {
+        foreach (Renderer renderer in GetComponentsInChildren<Renderer>(true))
+        {
+            renderer.enabled = visible;
+        }
+
+        foreach (Collider col in GetComponentsInChildren<Collider>(true))
+        {
+            col.enabled = visible;
         }
     }
 
@@ -167,10 +193,10 @@ public class Boid : Agent
 
     private void UpdateUIFeedback()
     {
-        if (stateTextUI != null && fsm.CurrentState != null)
+        if (stateTextUI != null && FSM.CurrentState != null)
         {
-            string stateName = fsm.CurrentState.GetType().Name.Replace("Boid", "").Replace("State", "");
-            stateTextUI.text = stateName;
+            string stateName = FSM.CurrentState.GetType().Name.Replace("Boid", "").Replace("State", "");
+            stateTextUI.text = $"{stateName}\nHP: {currentHealth}/{maxHealth}";
         }
     }
 
@@ -180,6 +206,14 @@ public class Boid : Agent
         {
             animator.SetFloat("Speed", Velocity.magnitude);
             animator.SetBool("IsDead", IsDead || IsRespawning);
+        }
+    }
+
+    private void ApplyWorldBounds()
+    {
+        if (WorldBounds.Instance != null && !IsDead && !IsRespawning)
+        {
+            transform.position = WorldBounds.Instance.WrapPosition(transform.position);
         }
     }
 
@@ -292,5 +326,22 @@ public class Boid : Agent
             return Seek(sumPosition);
         }
         return Vector3.zero;
+    }
+
+    private void OnDrawGizmosSelected()
+    {
+        if (!showGizmos) return;
+
+        // Radio de visión del Cazador
+        Gizmos.color = Color.red;
+        Gizmos.DrawWireSphere(transform.position, hunterPerceptionRadius);
+
+        // Radio de percepción de Frutas
+        Gizmos.color = Color.green;
+        Gizmos.DrawWireSphere(transform.position, fruitPerceptionRadius);
+
+        // Radio de separación
+        Gizmos.color = Color.blue;
+        Gizmos.DrawWireSphere(transform.position, separationRadius);
     }
 }

@@ -818,9 +818,11 @@ MonoBehaviour:
   gatheringTime: 2
   captureRadius: 1.5
   maxEnergy: 25
-  energyConsumptionRate: 15
-  energyRecoveryRate: 25
+  energyConsumptionRate: 2
+  energyRecoveryRate: 15
+  currentEnergy: 0
   waypointThreshold: 1
+  waypointArriveSlowingRadius: 2
   waypoints:
   - {fileID: 774881037}
   - {fileID: 2119905402}
@@ -998,7 +1000,6 @@ MonoBehaviour:
   hunter: {fileID: 551552548}
   boidPrefab: {fileID: 6333695701823207442, guid: f6a66b6da61a3d24da6be77094024f37, type: 3}
   initialAmount: 6
-  respawnDelay: 4
   spawnRadius: 1
 --- !u!4 &892302579
 Transform:
@@ -1607,7 +1608,7 @@ SceneRoots:
   - {fileID: 410087041}
   - {fileID: 832575519}
   - {fileID: 1660574716}
+  - {fileID: 1529704536}
   - {fileID: 798606377}
   - {fileID: 1539964466}
-  - {fileID: 1529704536}
   - {fileID: 227399994}

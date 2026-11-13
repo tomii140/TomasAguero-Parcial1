@@ -996,7 +996,6 @@ MonoBehaviour:
   maxSpeed: 15
   maxForce: 5
   stopThreshold: 0.05
-  isDead: 0
   separationRadius: 4
   alignmentRadius: 5
   cohesionRadius: 25
@@ -1006,6 +1005,9 @@ MonoBehaviour:
   hunterPerceptionRadius: 29
   fruitPerceptionRadius: 30
   fruitWeight: 2.5
+  fruitArriveSlowingRadius: 3
+  minRespawnTime: 3
+  maxRespawnTime: 6
   stateTextUI: {fileID: 2034143383176272650}
 --- !u!1 &6739366547663335761
 GameObject:
@@ -1145,7 +1147,7 @@ GameObject:
   - component: {fileID: 9211307885168584969}
   - component: {fileID: 2034143383176272650}
   m_Layer: 0
-  m_Name: Text (TMP)
+  m_Name: State_Text
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0

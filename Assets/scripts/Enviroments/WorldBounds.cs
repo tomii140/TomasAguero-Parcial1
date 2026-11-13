@@ -10,7 +10,6 @@ public class WorldBounds : MonoBehaviour
     [SerializeField] private float minZ = -20f;
     [SerializeField] private float maxZ = 20f;
 
-    
     public float MinX => minX;
     public float MaxX => maxX;
     public float MinZ => minZ;
@@ -29,6 +28,23 @@ public class WorldBounds : MonoBehaviour
 
         if (position.z < minZ) { position.z = minZ; velocity.z = -velocity.z; }
         else if (position.z > maxZ) { position.z = maxZ; velocity.z = -velocity.z; }
+
+        return position;
+    }
+
+    public Vector3 WrapPosition(Vector3 position)
+    {
+        float margin = 0.5f;
+
+        if (position.x < minX - margin)
+            position.x = maxX - margin;
+        else if (position.x > maxX + margin)
+            position.x = minX + margin;
+
+        if (position.z < minZ - margin)
+            position.z = maxZ - margin;
+        else if (position.z > maxZ + margin)
+            position.z = minZ + margin;
 
         return position;
     }
