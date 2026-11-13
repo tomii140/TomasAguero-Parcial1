@@ -10,12 +10,13 @@ public class BoidRespawnState : IState
 
     public void Enter()
     {
-        _boid.SetColorFeedback(Color.clear); // Invisible o desactivado durante el respawn
+        _boid.SetColorFeedback(Color.clear);
         _boid.ResetVelocity();
-        _boid.gameObject.SetActive(false); // Se oculta de la escena
+        _boid.gameObject.SetActive(false);
 
         _respawnTimer = 0f;
-        _targetRespawnTime = Random.Range(3f, 6f); // Tiempo configurable de reaparición
+        // Lee los valores configurados desde el Inspector en Boid.cs (Eliminando el hardcoding)
+        _targetRespawnTime = Random.Range(_boid.MinRespawnTime, _boid.MaxRespawnTime);
     }
 
     public void Update()
@@ -24,13 +25,31 @@ public class BoidRespawnState : IState
 
         if (_respawnTimer >= _targetRespawnTime)
         {
-            // Reposicionar aleatoriamente dentro de los límites del mapa (ajustar según tus bounds)
-            Vector3 randomPos = new Vector3(Random.Range(-15f, 15f), _boid.transform.position.y, Random.Range(-15f, 15f));
-            _boid.transform.position = randomPos;
-
-            _boid.gameObject.SetActive(true);
-            _boid.Revive(); // Restaura vida y vuelve a Flocking
+            ExecuteRespawn();
         }
+    }
+
+    private void ExecuteRespawn()
+    {
+        float posX = 0f;
+        float posZ = 0f;
+
+        if (WorldBounds.Instance != null)
+        {
+            posX = Random.Range(WorldBounds.Instance.MinX, WorldBounds.Instance.MaxX);
+            posZ = Random.Range(WorldBounds.Instance.MinZ, WorldBounds.Instance.MaxZ);
+        }
+        else
+        {
+            posX = Random.Range(-15f, 15f);
+            posZ = Random.Range(-15f, 15f);
+        }
+
+        Vector3 randomPos = new Vector3(posX, _boid.transform.position.y, posZ);
+        _boid.transform.position = randomPos;
+
+        _boid.gameObject.SetActive(true);
+        _boid.Revive();
     }
 
     public void Exit() { }

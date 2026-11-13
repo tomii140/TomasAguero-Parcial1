@@ -13,7 +13,7 @@ public class BoidSeekObjectState : IState
         Fruit targetFruit = _boid.FindNearestFruit();
         if (targetFruit != null)
         {
-            Vector3 arriveForce = _boid.Arrive(targetFruit.transform.position, 3.0f) * _boid.FruitWeight;
+            Vector3 arriveForce = _boid.Arrive(targetFruit.transform.position, _boid.FruitArriveSlowingRadius) * _boid.FruitWeight;
             Vector3 separationForce = _boid.GetSeparationForce() * _boid.SeparationWeight;
             _boid.AddForce(arriveForce + separationForce);
         }

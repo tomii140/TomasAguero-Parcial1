@@ -1,5 +1,4 @@
 using UnityEngine;
-using System.Collections;
 using System.Collections.Generic;
 
 public class GameManager : MonoBehaviour
@@ -13,7 +12,6 @@ public class GameManager : MonoBehaviour
     [Header("Boid Management")]
     [SerializeField] private GameObject boidPrefab;
     [SerializeField, Range(1, 50)] private int initialAmount = 6;
-    [SerializeField, Range(0.5f, 10f)] private float respawnDelay = 4f;
 
     [Header("Spawn Settings")]
     [SerializeField, Range(0.5f, 20f)] private float spawnRadius = 5f;
@@ -52,21 +50,9 @@ public class GameManager : MonoBehaviour
     {
         if (deadBoid != null)
         {
+           
             deadBoid.TriggerRespawnFlow();
-            StartCoroutine(RespawnBoidRoutine(deadBoid, respawnDelay, spawnRadius));
         }
-    }
-
-    private IEnumerator RespawnBoidRoutine(Boid boid, float delay, float radius)
-    {
-        boid.gameObject.SetActive(false);
-        yield return new WaitForSeconds(delay);
-
-        Vector2 randomCircle = Random.insideUnitCircle * radius;
-        boid.transform.position = new Vector3(randomCircle.x, 0f, randomCircle.y);
-
-        boid.gameObject.SetActive(true);
-        boid.Revive();
     }
 
     private void SpawnGroupedBoid()

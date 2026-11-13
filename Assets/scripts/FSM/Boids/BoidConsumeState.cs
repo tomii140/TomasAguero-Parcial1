@@ -14,6 +14,11 @@ public class BoidConsumeState : IState
 
     public void Update()
     {
+        ConsumeTargetFruit();
+    }
+
+    private void ConsumeTargetFruit()
+    {
         Fruit targetFruit = _boid.FindNearestFruit();
         if (targetFruit != null)
         {

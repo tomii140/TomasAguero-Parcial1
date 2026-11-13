@@ -30,9 +30,18 @@ public class Boid : Agent
     [SerializeField, Range(1f, 30f)] private float hunterPerceptionRadius = 10f;
     [SerializeField, Range(1f, 30f)] private float fruitPerceptionRadius = 10f;
     [SerializeField, Range(0.5f, 30f)] private float fruitWeight = 2.0f;
+    [SerializeField, Range(0.5f, 10f)] private float fruitArriveSlowingRadius = 3.0f;
 
     public float HunterPerceptionRadius => hunterPerceptionRadius;
     public float FruitWeight => fruitWeight;
+    public float FruitArriveSlowingRadius => fruitArriveSlowingRadius;
+
+    [Header("Respawn Configuration")]
+    [SerializeField, Range(1f, 10f)] private float minRespawnTime = 3f;
+    [SerializeField, Range(1f, 10f)] private float maxRespawnTime = 6f;
+
+    public float MinRespawnTime => minRespawnTime;
+    public float MaxRespawnTime => maxRespawnTime;
 
     [Header("Feedback")]
     [SerializeField] private TextMeshPro stateTextUI;
@@ -109,7 +118,6 @@ public class Boid : Agent
         UpdateAnimator();
     }
 
-    // Evaluación estricta de prioridades de estados según rúbrica: Dead > Evade > Consume > Seek > Flocking
     private void EvaluateFSMTransitions()
     {
         if (IsRespawning)
@@ -215,11 +223,20 @@ public class Boid : Agent
             float dist = Vector3.Distance(transform.position, other.transform.position);
             if (dist > 0f && dist < separationRadius)
             {
-                force += (transform.position - other.transform.position).normalized / dist;
+                Vector3 repulse = (transform.position - other.transform.position);
+                repulse /= (dist * dist);
+                force += repulse;
                 count++;
             }
         }
-        if (count > 0) force /= count;
+
+        if (count > 0)
+        {
+            force /= count;
+            force = force.normalized * maxSpeed;
+            force -= Velocity;
+            force = Vector3.ClampMagnitude(force, maxForce);
+        }
         return force;
     }
 
@@ -234,7 +251,7 @@ public class Boid : Agent
         {
             if (other == null || other == this || other.IsDead || other.IsRespawning) continue;
             float dist = Vector3.Distance(transform.position, other.transform.position);
-            if (dist > 0f && dist < alignmentRadius)
+            if (dist < alignmentRadius)
             {
                 sumVelocity += other.Velocity;
                 count++;
@@ -243,8 +260,10 @@ public class Boid : Agent
 
         if (count > 0)
         {
-            sumVelocity = (sumVelocity / count).normalized * maxSpeed;
-            return Vector3.ClampMagnitude(sumVelocity - Velocity, maxForce);
+            sumVelocity /= count;
+            sumVelocity = sumVelocity.normalized * maxSpeed;
+            Vector3 steer = sumVelocity - Velocity;
+            return Vector3.ClampMagnitude(steer, maxForce);
         }
         return Vector3.zero;
     }
@@ -260,7 +279,7 @@ public class Boid : Agent
         {
             if (other == null || other == this || other.IsDead || other.IsRespawning) continue;
             float dist = Vector3.Distance(transform.position, other.transform.position);
-            if (dist > 0f && dist < cohesionRadius)
+            if (dist < cohesionRadius)
             {
                 sumPosition += other.transform.position;
                 count++;
@@ -269,7 +288,8 @@ public class Boid : Agent
 
         if (count > 0)
         {
-            return Seek(sumPosition / count);
+            sumPosition /= count;
+            return Seek(sumPosition);
         }
         return Vector3.zero;
     }

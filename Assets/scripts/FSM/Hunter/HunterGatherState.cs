@@ -15,8 +15,7 @@ public class HunterGatherState : IState
 
         if (_targetBoid == null || !_targetBoid.IsDead)
         {
-            _hunter.SetTargetBoid(null);
-            _hunter.FSM.ChangeState(_hunter.SearchState);
+            ReturnToSearch();
             return;
         }
 
@@ -26,13 +25,23 @@ public class HunterGatherState : IState
 
     public void Update()
     {
+        if (!IsTargetValid()) return;
+
+        ProcessGatheringBehavior();
+    }
+
+    private bool IsTargetValid()
+    {
         if (_targetBoid == null || !_targetBoid.IsDead)
         {
-            _hunter.SetTargetBoid(null);
-            _hunter.FSM.ChangeState(_hunter.SearchState);
-            return;
+            ReturnToSearch();
+            return false;
         }
+        return true;
+    }
 
+    private void ProcessGatheringBehavior()
+    {
         float distXZ = Vector3.Distance(
             new Vector3(_hunter.transform.position.x, 0f, _hunter.transform.position.z),
             new Vector3(_targetBoid.transform.position.x, 0f, _targetBoid.transform.position.z)
@@ -55,10 +64,15 @@ public class HunterGatherState : IState
             if (_gatherTimer >= _hunter.GatheringTime)
             {
                 _hunter.NotifyBoidCollected(_targetBoid);
-                _hunter.SetTargetBoid(null);
-                _hunter.FSM.ChangeState(_hunter.SearchState);
+                ReturnToSearch();
             }
         }
+    }
+
+    private void ReturnToSearch()
+    {
+        _hunter.SetTargetBoid(null);
+        _hunter.FSM.ChangeState(_hunter.SearchState);
     }
 
     public void Exit()

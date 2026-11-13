@@ -21,6 +21,23 @@ public class HunterSearchState : IState
     {
         HandleFruitSpawning();
 
+        if (EvaluateTargetTransitions()) return;
+
+        ExecutePatrolMovement();
+    }
+
+    private void HandleFruitSpawning()
+    {
+        fruitSpawnTimer += Time.deltaTime;
+        if (fruitSpawnTimer >= hunter.FruitSpawnInterval)
+        {
+            fruitSpawnTimer = 0f;
+            hunter.SpawnFruitIfAllowed();
+        }
+    }
+
+    private bool EvaluateTargetTransitions()
+    {
         Boid deadBoid = hunter.FindBoidInVision(lookForDead: true);
         if (deadBoid != null && deadBoid.IsDead)
         {
@@ -29,7 +46,7 @@ public class HunterSearchState : IState
             {
                 hunter.SetTargetBoid(deadBoid);
                 hunter.FSM.ChangeState(hunter.GatherState);
-                return;
+                return true;
             }
         }
 
@@ -40,21 +57,30 @@ public class HunterSearchState : IState
             {
                 hunter.SetTargetBoid(liveBoid);
                 hunter.FSM.ChangeState(hunter.AttackState);
-                return;
+                return true;
             }
         }
 
+        return false;
+    }
+
+    private void ExecutePatrolMovement()
+    {
         Transform[] waypoints = hunter.Waypoints;
         if (waypoints == null || waypoints.Length == 0) return;
 
         Transform targetWaypoint = waypoints[currentWaypointIndex];
-
         Vector3 targetPos = targetWaypoint.position;
         targetPos.y = hunter.transform.position.y;
 
-        Vector3 force = hunter.Arrive(targetPos, 2.0f);
+        Vector3 force = hunter.Arrive(targetPos, hunter.WaypointArriveSlowingRadius);
         hunter.AddForce(force);
 
+        UpdateWaypointProgress(targetPos);
+    }
+
+    private void UpdateWaypointProgress(Vector3 targetPos)
+    {
         float distanceXZ = Vector3.Distance(
             new Vector3(hunter.transform.position.x, 0f, hunter.transform.position.z),
             new Vector3(targetPos.x, 0f, targetPos.z)
@@ -62,13 +88,13 @@ public class HunterSearchState : IState
 
         if (distanceXZ < hunter.WaypointThreshold)
         {
+            Transform[] waypoints = hunter.Waypoints;
             if (movingForward)
             {
                 currentWaypointIndex++;
                 if (currentWaypointIndex >= waypoints.Length)
                 {
-                    currentWaypointIndex = waypoints.Length - 2;
-                    if (currentWaypointIndex < 0) currentWaypointIndex = 0;
+                    currentWaypointIndex = Mathf.Max(0, waypoints.Length - 2);
                     movingForward = false;
                 }
             }
@@ -81,16 +107,6 @@ public class HunterSearchState : IState
                     movingForward = true;
                 }
             }
-        }
-    }
-
-    private void HandleFruitSpawning()
-    {
-        fruitSpawnTimer += Time.deltaTime;
-        if (fruitSpawnTimer >= hunter.FruitSpawnInterval)
-        {
-            fruitSpawnTimer = 0f;
-            hunter.SpawnFruitIfAllowed();
         }
     }
 

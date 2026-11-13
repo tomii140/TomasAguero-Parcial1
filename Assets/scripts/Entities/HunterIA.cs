@@ -26,8 +26,8 @@ public class HunterAI : Agent
 
     [Header("Patrol")]
     [SerializeField, Range(0.1f, 5f)] private float waypointThreshold = 1.0f;
+    [SerializeField, Range(0.5f, 5f)] private float waypointArriveSlowingRadius = 2.0f;
     [SerializeField] private Transform[] waypoints;
-    public Transform[] Waypoints => waypoints;
 
     [Header("Fruit Spawning")]
     [SerializeField] private GameObject fruitPrefab;
@@ -52,11 +52,13 @@ public class HunterAI : Agent
     public float GatheringTime => gatheringTime;
     public float CaptureRadius => captureRadius;
     public float WaypointThreshold => waypointThreshold;
+    public float WaypointArriveSlowingRadius => waypointArriveSlowingRadius;
     public float FruitSpawnInterval => fruitSpawnInterval;
     public float MaxEnergy => maxEnergy;
     public float CurrentEnergy => currentEnergy;
     public float EnergyConsumptionRate => energyConsumptionRate;
     public float EnergyRecoveryRate => energyRecoveryRate;
+    public Transform[] Waypoints => waypoints;
 
     protected override void Start()
     {

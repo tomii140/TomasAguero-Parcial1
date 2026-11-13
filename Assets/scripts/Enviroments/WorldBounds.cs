@@ -10,6 +10,12 @@ public class WorldBounds : MonoBehaviour
     [SerializeField] private float minZ = -20f;
     [SerializeField] private float maxZ = 20f;
 
+    
+    public float MinX => minX;
+    public float MaxX => maxX;
+    public float MinZ => minZ;
+    public float MaxZ => maxZ;
+
     private void Awake()
     {
         if (Instance == null) Instance = this;
@@ -25,7 +31,6 @@ public class WorldBounds : MonoBehaviour
         else if (position.z > maxZ) { position.z = maxZ; velocity.z = -velocity.z; }
 
         return position;
-
     }
 
     private void OnDrawGizmos()
