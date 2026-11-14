@@ -13,6 +13,7 @@ public class Boid : Agent
 
     public bool IsDead { get; private set; } = false;
     public bool IsRespawning { get; private set; } = false;
+    public bool ShouldRespawn { get; private set; } = false;
 
     [Header("Health Configuration")]
     [SerializeField] private int maxHealth = 2;
@@ -92,6 +93,7 @@ public class Boid : Agent
     {
         IsDead = false;
         IsRespawning = false;
+        ShouldRespawn = false;
         currentHealth = maxHealth;
         SetColorFeedback(Color.green);
 
@@ -111,10 +113,11 @@ public class Boid : Agent
         }
     }
 
+    
     public void TriggerRespawnFlow()
     {
         IsRespawning = true;
-        FSM.ChangeState(RespawnState);
+        ShouldRespawn = true;
     }
 
     private void Update()
@@ -250,7 +253,7 @@ public class Boid : Agent
             if (other != null && other != this && !other.IsDead && !other.IsRespawning)
             {
                 float dist = Vector3.Distance(transform.position, other.transform.position);
-                if (dist > alignmentRadius) continue; // Validación estricta de radio
+                if (dist > alignmentRadius) continue;
 
                 sumVelocity += other.Velocity;
                 count++;
@@ -279,7 +282,7 @@ public class Boid : Agent
             if (other != null && other != this && !other.IsDead && !other.IsRespawning)
             {
                 float dist = Vector3.Distance(transform.position, other.transform.position);
-                if (dist > cohesionRadius) continue; // Validación estricta de radio
+                if (dist > cohesionRadius) continue;
 
                 sumPosition += other.transform.position;
                 count++;
