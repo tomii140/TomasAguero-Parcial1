@@ -14,6 +14,12 @@ public class BoidDeadState : IState
 
     public void Update()
     {
+        if (_boid.ShouldRespawn)
+        {
+            _boid.FSM.ChangeState(_boid.RespawnState);
+            return;
+        }
+
         _boid.ResetVelocity();
     }
 
