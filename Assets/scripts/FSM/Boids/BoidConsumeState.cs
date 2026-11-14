@@ -6,13 +6,13 @@ public class BoidConsumeState : IState
     private AudioSource _audioSource;
     private AudioClip _eatSound;
     private float _audioTimer;
-    private float _audioInterval = 0.5f;//intervalo cuando mastica el boid.
+    private float _audioInterval = 0.5f;
 
     public BoidConsumeState(Boid boid)
     {
         _boid = boid;
         _audioSource = _boid.GetComponent<AudioSource>();
-        _eatSound = _boid.EatAudioClip; 
+        _eatSound = _boid.EatAudioClip;
     }
 
     public void Enter()
@@ -26,35 +26,47 @@ public class BoidConsumeState : IState
 
     public void Update()
     {
-        Fruit targetFruit = _boid.FindNearestFruit();
-        if (targetFruit != null)
+    
+        if (_boid.DetectHunterInRange() != null)
         {
-            targetFruit.Consume(targetFruit.DamagePerSecond * Time.deltaTime);
+            _boid.FSM.ChangeState(_boid.EvadeState);
+            return;
+        }
 
-            // Reproducir sonido de forma ritmica mientras mastica
-            _audioTimer += Time.deltaTime;
-            if (_audioTimer >= _audioInterval)
-            {
-                PlayEatSound();
-                _audioTimer = 0f;
-            }
+        Fruit targetFruit = _boid.FindNearestFruit();
+        if (targetFruit == null)
+        {
+            _boid.RestoreForwardMomentum();
+            _boid.FSM.ChangeState(_boid.FlockingState);
+            return;
+        }
+
+        float distToFruit = Vector3.Distance(_boid.transform.position, targetFruit.transform.position);
+        if (distToFruit > targetFruit.ConsumeRadius)
+        {
+            _boid.FSM.ChangeState(_boid.SeekObjectState);
+            return;
+        }
+
+        targetFruit.Consume(targetFruit.DamagePerSecond * Time.deltaTime);
+
+        _audioTimer += Time.deltaTime;
+        if (_audioTimer >= _audioInterval)
+        {
+            PlayEatSound();
+            _audioTimer = 0f;
         }
     }
 
     public void Exit()
     {
-        // Se corta el sonido inmediatamente cuando al salir del estado de consumo
         if (_audioSource != null && _audioSource.isPlaying)
-        {
             _audioSource.Stop();
-        }
     }
 
     private void PlayEatSound()
     {
         if (_audioSource != null && _eatSound != null)
-        {
             _audioSource.PlayOneShot(_eatSound);
-        }
     }
 }

@@ -120,72 +120,35 @@ public class Boid : Agent
 
     private void Update()
     {
-        EvaluateFSMTransitions();
         FSM.Update();
         ApplyPhysics();
         UpdateUIFeedback();
         UpdateAnimator();
     }
 
-    private void EvaluateFSMTransitions()
+    // Sensor local para detectar al cazador dentro del radio de percepción
+    public HunterAI DetectHunterInRange()
     {
-        if (IsRespawning)
-        {
-            if (FSM.CurrentState != RespawnState) FSM.ChangeState(RespawnState);
-            return;
-        }
-
-        if (IsDead)
-        {
-            if (FSM.CurrentState != DeadState) FSM.ChangeState(DeadState);
-            return;
-        }
-
         HunterAI hunter = GameManager.Instance != null ? GameManager.Instance.Hunter : null;
         if (hunter != null && Vector3.Distance(transform.position, hunter.transform.position) < hunterPerceptionRadius)
         {
-            if (FSM.CurrentState != EvadeState) FSM.ChangeState(EvadeState);
-            return;
+            return hunter;
         }
+        return null;
+    }
 
-        Fruit targetFruit = FindNearestFruit();
-        if (targetFruit != null)
-        {
-            float distToFruit = Vector3.Distance(transform.position, targetFruit.transform.position);
-            if (distToFruit <= targetFruit.ConsumeRadius)
-            {
-                if (FSM.CurrentState != ConsumeState) FSM.ChangeState(ConsumeState);
-            }
-            else
-            {
-                if (FSM.CurrentState != SeekObjectState) FSM.ChangeState(SeekObjectState);
-            }
-            return;
-        }
-
-        // Si sale de comer o no hay frutas, recupera velocidad para no estancarse en solitario
-        if (FSM.CurrentState == ConsumeState)
-        {
-            Velocity = transform.forward * (maxSpeed * 0.5f);
-        }
-
-        if (FSM.CurrentState != FlockingState)
-        {
-            FSM.ChangeState(FlockingState);
-        }
+    public void RestoreForwardMomentum()
+    {
+        Velocity = transform.forward * (maxSpeed * 0.5f);
     }
 
     public void SetRespawnVisibility(bool visible)
     {
         foreach (Renderer renderer in GetComponentsInChildren<Renderer>(true))
-        {
             renderer.enabled = visible;
-        }
 
         foreach (Collider col in GetComponentsInChildren<Collider>(true))
-        {
             col.enabled = visible;
-        }
     }
 
     public void SetColorFeedback(Color color)
@@ -334,5 +297,11 @@ public class Boid : Agent
 
         Gizmos.color = Color.blue;
         Gizmos.DrawWireSphere(transform.position, separationRadius);
+
+        Gizmos.color = Color.yellow;
+        Gizmos.DrawWireSphere(transform.position, alignmentRadius);
+
+        Gizmos.color = Color.cyan;
+        Gizmos.DrawWireSphere(transform.position, cohesionRadius);
     }
 }

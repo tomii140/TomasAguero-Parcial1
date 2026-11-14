@@ -3,6 +3,8 @@ using UnityEngine;
 public class HunterAttackState : IState
 {
     private readonly HunterAI hunter;
+    private Vector3 lastKnownTargetPosition;
+    private bool hasLastKnownPosition = false;
 
     public HunterAttackState(HunterAI hunter)
     {
@@ -11,17 +13,37 @@ public class HunterAttackState : IState
 
     public void Enter()
     {
-        // se ejecuta una sola vez al entrar en ataque (al detectar/fijar al boid)
         hunter.PlaySound(hunter.DetectBoidSound);
+
+        Boid initialTarget = hunter.GetTargetBoid();
+        if (initialTarget != null)
+        {
+            lastKnownTargetPosition = initialTarget.transform.position;
+            hasLastKnownPosition = true;
+        }
     }
 
     public void Update()
     {
+        // 1. Verificar agotamiento de energía
         if (!ProcessEnergyDrain()) return;
 
-        if (!ValidateAndSwitchTarget()) return;
+        // 2. Prioridad de recolección: si aparece CUALQUIER Boid muerto en VisionRadius, pasa a Gather
+        Boid deadBoidInVision = hunter.FindBoidInVision(lookForDead: true);
+        if (deadBoidInVision != null && deadBoidInVision.IsDead)
+        {
+            hunter.SetTargetBoid(deadBoidInVision);
+            hunter.FSM.ChangeState(hunter.GatherState);
+            return;
+        }
 
+        // 3. Evaluar objetivo actual o búsqueda en última posición conocida (sin abandonar Hunt ni volver a Patrol)
+        EvaluateTargetAndSearch();
+
+        // 4. Ejecutar combate si el objetivo sigue vivo y en rango de ataque
         ProcessCombatAndAttack();
+
+        // 5. Perseguir objetivo o avanzar hacia última posición conocida
         ApplyMovement();
     }
 
@@ -38,93 +60,53 @@ public class HunterAttackState : IState
         return true;
     }
 
-    private bool ValidateAndSwitchTarget()
+    private void EvaluateTargetAndSearch()
     {
         Boid target = hunter.GetTargetBoid();
 
-        if (target != null && target.IsDead)
+        // Si el objetivo actual murió (y no se disparó Gather arriba por alguna razón) o se perdió referencia
+        if (target != null && (target.IsDead || target.IsRespawning))
         {
-            if (TrySwitchToGatherOrPatrol()) return false;
+            lastKnownTargetPosition = target.transform.position;
+            hasLastKnownPosition = true;
+            hunter.SetTargetBoid(null);
+            target = null;
         }
 
+        // Si no tiene objetivo activo, intenta detectar una nueva presa viva dentro de VisionRadius
         if (target == null)
         {
-            target = hunter.FindBoidInVision(lookForDead: false);
-
-            if (target != null)
+            Boid nextLiveBoid = hunter.FindBoidInVision(lookForDead: false);
+            if (nextLiveBoid != null && !nextLiveBoid.IsDead)
             {
-                hunter.SetTargetBoid(target);
-            }
-            else
-            {
-                hunter.FSM.ChangeState(hunter.PatrolState);
-                return false;
+                hunter.SetTargetBoid(nextLiveBoid);
+                lastKnownTargetPosition = nextLiveBoid.transform.position;
+                hasLastKnownPosition = true;
             }
         }
-
-        float distanceToTarget = Vector3.Distance(hunter.transform.position, target.transform.position);
-
-        if (distanceToTarget > hunter.VisionRadius)
+        else
         {
-            hunter.SetTargetBoid(null);
-            hunter.FSM.ChangeState(hunter.PatrolState);
-            return false;
+            // Regla clave: NO abandona la presa aunque salga de VisionRadius; actualiza su posición conocida
+            lastKnownTargetPosition = target.transform.position;
+            hasLastKnownPosition = true;
         }
-
-        return true;
-    }
-
-    private bool TrySwitchToGatherOrPatrol()
-    {
-        Boid deadBoidInVision = hunter.FindBoidInVision(lookForDead: true);
-
-        if (deadBoidInVision != null && deadBoidInVision.IsDead)
-        {
-            hunter.SetTargetBoid(deadBoidInVision);
-            hunter.FSM.ChangeState(hunter.GatherState);
-            return true;
-        }
-
-        Boid nextLiveBoid = hunter.FindBoidInVision(lookForDead: false);
-
-        if (nextLiveBoid != null && !nextLiveBoid.IsDead)
-        {
-            hunter.SetTargetBoid(nextLiveBoid);
-            return false;
-        }
-
-        hunter.SetTargetBoid(null);
-        hunter.FSM.ChangeState(hunter.PatrolState);
-        return true;
     }
 
     private void ProcessCombatAndAttack()
     {
         Boid target = hunter.GetTargetBoid();
-
-        if (target == null) return;
+        if (target == null || target.IsDead) return;
 
         float distanceToTarget = Vector3.Distance(hunter.transform.position, target.transform.position);
-
         bool isMelee = distanceToTarget <= hunter.MeleeAttackRadius;
+
         Color lineColor = isMelee ? Color.magenta : Color.red;
         Debug.DrawLine(hunter.transform.position, target.transform.position, lineColor, 0.1f);
 
         if (distanceToTarget <= hunter.RangeAttackRadius && hunter.TimerAttackCooldown <= 0f)
         {
             int damage = isMelee ? 2 : 1;
-
-            if (isMelee)
-            {
-                Debug.Log("<color=magenta>[MELEE ATTACK]</color> Daño: 2 | Distancia: " + distanceToTarget.ToString("F2"));
-            }
-            else
-            {
-                Debug.Log("<color=red>[RANGED ATTACK]</color> Daño: 1 | Distancia: " + distanceToTarget.ToString("F2"));
-            }
-
             hunter.PlayAttackSound(isMelee);
-
             target.ReceiveDamage(damage);
             hunter.ResetAttackCooldown();
         }
@@ -134,12 +116,22 @@ public class HunterAttackState : IState
     {
         Boid target = hunter.GetTargetBoid();
 
-        if (target != null)
+        if (target != null && !target.IsDead)
         {
+            // Persecución continua (Pursuit) incluso si sale de VisionRadius
             Vector3 pursuitForce = hunter.Pursuit(target);
             hunter.AddForce(pursuitForce);
         }
+        else if (hasLastKnownPosition)
+        {
+            // Si la presa murió y no hay otra visible, permanece en Hunt desplazándose a la última posición conocida
+            Vector3 seekLastPos = hunter.Seek(lastKnownTargetPosition);
+            hunter.AddForce(seekLastPos);
+        }
     }
 
-    public void Exit() { }
+    public void Exit()
+    {
+        hasLastKnownPosition = false;
+    }
 }

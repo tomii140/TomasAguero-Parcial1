@@ -38,18 +38,16 @@ public class HunterPatrolState : IState
 
     private bool EvaluateTargetTransitions()
     {
+        // Pasa a Gather con CUALQUIER Boid muerto detectado dentro de VisionRadius (sin restricción extra de distancia)
         Boid deadBoid = hunter.FindBoidInVision(lookForDead: true);
         if (deadBoid != null && deadBoid.IsDead)
         {
-            float distToDead = Vector3.Distance(hunter.transform.position, deadBoid.transform.position);
-            if (distToDead <= hunter.CaptureRadius * 1.5f)
-            {
-                hunter.SetTargetBoid(deadBoid);
-                hunter.FSM.ChangeState(hunter.GatherState);
-                return true;
-            }
+            hunter.SetTargetBoid(deadBoid);
+            hunter.FSM.ChangeState(hunter.GatherState);
+            return true;
         }
 
+        // Pasa a Attack si detecta un Boid vivo dentro de VisionRadius
         if (hunter.TimerAttackCooldown <= 0)
         {
             Boid liveBoid = hunter.FindBoidInVision(lookForDead: false);

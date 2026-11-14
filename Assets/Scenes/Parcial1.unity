@@ -824,8 +824,8 @@ MonoBehaviour:
   maxForce: 10
   stopThreshold: 0.05
   visionRadius: 40
-  rangeAttackRadius: 16
-  meleeAttackRadius: 8
+  rangeAttackRadius: 25
+  meleeAttackRadius: 15
   timeBetweenAttacks: 2
   gatheringTime: 2
   captureRadius: 1.5

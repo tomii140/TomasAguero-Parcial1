@@ -10,13 +10,30 @@ public class BoidSeekObjectState : IState
 
     public void Update()
     {
-        Fruit targetFruit = _boid.FindNearestFruit();
-        if (targetFruit != null)
+        
+        if (_boid.DetectHunterInRange() != null)
         {
-            Vector3 arriveForce = _boid.Arrive(targetFruit.transform.position, _boid.FruitArriveSlowingRadius) * _boid.FruitWeight;
-            Vector3 separationForce = _boid.GetSeparationForce() * _boid.SeparationWeight;
-            _boid.AddForce(arriveForce + separationForce);
+            _boid.FSM.ChangeState(_boid.EvadeState);
+            return;
         }
+
+        Fruit targetFruit = _boid.FindNearestFruit();
+        if (targetFruit == null)
+        {
+            _boid.FSM.ChangeState(_boid.FlockingState);
+            return;
+        }
+
+        float distToFruit = Vector3.Distance(_boid.transform.position, targetFruit.transform.position);
+        if (distToFruit <= targetFruit.ConsumeRadius)
+        {
+            _boid.FSM.ChangeState(_boid.ConsumeState);
+            return;
+        }
+
+        Vector3 arriveForce = _boid.Arrive(targetFruit.transform.position, _boid.FruitArriveSlowingRadius) * _boid.FruitWeight;
+        Vector3 separationForce = _boid.GetSeparationForce() * _boid.SeparationWeight;
+        _boid.AddForce(arriveForce + separationForce);
     }
 
     public void Exit() { }

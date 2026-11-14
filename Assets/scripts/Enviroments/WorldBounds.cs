@@ -72,7 +72,7 @@ public class WorldBounds : MonoBehaviour
     {
         Gizmos.color = Color.cyan;
         Vector3 center = new Vector3((minX + maxX) / 2f, 0f, (minZ + maxZ) / 2f);
-        Vector3 size = new Vector3(maxX - minX, 1f, maxZ - minX);
+        Vector3 size = new Vector3(maxX - minX, 1f, maxZ - minZ);
         Gizmos.DrawWireCube(center, size);
     }
 }
