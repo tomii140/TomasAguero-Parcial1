@@ -10,7 +10,12 @@ public class BoidFlockingState : IState
 
     public void Update()
     {
-        
+        if (_boid.IsDead)
+        {
+            _boid.FSM.ChangeState(_boid.DeadState);
+            return;
+        }
+
         if (_boid.DetectHunterInRange() != null)
         {
             _boid.FSM.ChangeState(_boid.EvadeState);
@@ -31,5 +36,6 @@ public class BoidFlockingState : IState
         Vector3 flockingForce = _boid.CalculateFlocking();
         _boid.AddForce(flockingForce);
     }
+
     public void Exit() { }
 }

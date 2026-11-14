@@ -108,7 +108,7 @@ public class Boid : Agent
         {
             currentHealth = 0;
             IsDead = true;
-            FSM.ChangeState(DeadState);
+            // La transición a DeadState la evalúan y ejecutan los estados dentro de la FSM
         }
     }
 
@@ -126,10 +126,9 @@ public class Boid : Agent
         UpdateAnimator();
     }
 
-    // Sensor local mediante físicas (sin listas globales)
     public HunterAI DetectHunterInRange()
     {
-        Collider[] hits = Physics.OverlapSphere(transform.position, hunterPerceptionRadius);
+        Collider[] hits = Physics.OverlapSphere(transform.position, hunterPerceptionRadius, Physics.DefaultRaycastLayers, QueryTriggerInteraction.Collide);
         foreach (var hit in hits)
         {
             HunterAI hunter = hit.GetComponent<HunterAI>();
@@ -175,10 +174,9 @@ public class Boid : Agent
         }
     }
 
-    // Sensor local de frutas mediante físicas (sin listas globales)
     public Fruit FindNearestFruit()
     {
-        Collider[] hits = Physics.OverlapSphere(transform.position, fruitPerceptionRadius);
+        Collider[] hits = Physics.OverlapSphere(transform.position, fruitPerceptionRadius, Physics.DefaultRaycastLayers, QueryTriggerInteraction.Collide);
         Fruit nearest = null;
         float minDistance = float.MaxValue;
 
@@ -207,7 +205,7 @@ public class Boid : Agent
 
     public Vector3 GetSeparationForce()
     {
-        Collider[] hits = Physics.OverlapSphere(transform.position, separationRadius);
+        Collider[] hits = Physics.OverlapSphere(transform.position, separationRadius, Physics.DefaultRaycastLayers, QueryTriggerInteraction.Collide);
         Vector3 force = Vector3.zero;
         int count = 0;
 
@@ -239,7 +237,7 @@ public class Boid : Agent
 
     public Vector3 GetAlignmentForce()
     {
-        Collider[] hits = Physics.OverlapSphere(transform.position, alignmentRadius);
+        Collider[] hits = Physics.OverlapSphere(transform.position, alignmentRadius, Physics.DefaultRaycastLayers, QueryTriggerInteraction.Collide);
         Vector3 sumVelocity = Vector3.zero;
         int count = 0;
 
@@ -265,7 +263,7 @@ public class Boid : Agent
 
     public Vector3 GetCohesionForce()
     {
-        Collider[] hits = Physics.OverlapSphere(transform.position, cohesionRadius);
+        Collider[] hits = Physics.OverlapSphere(transform.position, cohesionRadius, Physics.DefaultRaycastLayers, QueryTriggerInteraction.Collide);
         Vector3 sumPosition = Vector3.zero;
         int count = 0;
 

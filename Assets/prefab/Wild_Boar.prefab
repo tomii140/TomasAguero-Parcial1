@@ -935,6 +935,7 @@ GameObject:
   - component: {fileID: 742586887182137554}
   - component: {fileID: 6548866421771543067}
   - component: {fileID: 8839783805554305459}
+  - component: {fileID: 5274696340503513126}
   m_Layer: 0
   m_Name: Wild_Boar
   m_TagString: Untagged
@@ -1110,6 +1111,29 @@ AudioSource:
     m_PreInfinity: 2
     m_PostInfinity: 2
     m_RotationOrder: 4
+--- !u!136 &5274696340503513126
+CapsuleCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6333695701823207442}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 1
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 2
+  m_Radius: 0.8181136
+  m_Height: 1.7777226
+  m_Direction: 1
+  m_Center: {x: -0.056307793, y: 0.3888617, z: -0.01264925}
 --- !u!1 &6739366547663335761
 GameObject:
   m_ObjectHideFlags: 0

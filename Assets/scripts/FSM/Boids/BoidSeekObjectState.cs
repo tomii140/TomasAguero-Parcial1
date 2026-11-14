@@ -10,7 +10,12 @@ public class BoidSeekObjectState : IState
 
     public void Update()
     {
-        
+        if (_boid.IsDead)
+        {
+            _boid.FSM.ChangeState(_boid.DeadState);
+            return;
+        }
+
         if (_boid.DetectHunterInRange() != null)
         {
             _boid.FSM.ChangeState(_boid.EvadeState);

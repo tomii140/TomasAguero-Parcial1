@@ -141,10 +141,9 @@ public class HunterAI : Agent
         currentEnergy = Mathf.Clamp(currentEnergy + amount, 0f, maxEnergy);
     }
 
+    // Sensor espacial local mediante físicas (sin consultar listas globales)
     public Boid FindBoidInVision(bool lookForDead)
     {
-        if (GameManager.Instance?.ActiveBoids == null) return null;
-
         if (!lookForDead && targetBoid != null && !targetBoid.IsDead && !targetBoid.IsRespawning)
         {
             if (Vector3.Distance(transform.position, targetBoid.transform.position) <= visionRadius)
@@ -153,16 +152,17 @@ public class HunterAI : Agent
             }
         }
 
+        Collider[] hits = Physics.OverlapSphere(transform.position, visionRadius, Physics.DefaultRaycastLayers, QueryTriggerInteraction.Collide);
         Boid nearest = null;
         float minDistance = float.MaxValue;
 
-        foreach (var boid in GameManager.Instance.ActiveBoids)
+        foreach (var hit in hits)
         {
-            // Corrección: se excluyen estrictamente los boids que estén en proceso de Respawn
+            Boid boid = hit.GetComponent<Boid>();
             if (boid == null || boid.IsRespawning || boid.IsDead != lookForDead) continue;
 
             float dist = Vector3.Distance(transform.position, boid.transform.position);
-            if (dist <= visionRadius && dist < minDistance)
+            if (dist < minDistance)
             {
                 minDistance = dist;
                 nearest = boid;

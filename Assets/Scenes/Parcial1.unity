@@ -209,6 +209,9 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 100020, guid: 3ce16b0c2ae4ac84fa450432c1f64f35, type: 3}
       insertIndex: -1
       addedObject: {fileID: 551552552}
+    - targetCorrespondingSourceObject: {fileID: 100020, guid: 3ce16b0c2ae4ac84fa450432c1f64f35, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 551552554}
   m_SourcePrefab: {fileID: 100100000, guid: 3ce16b0c2ae4ac84fa450432c1f64f35, type: 3}
 --- !u!1 &227399993
 GameObject:
@@ -1238,6 +1241,29 @@ AudioSource:
     m_PreInfinity: 2
     m_PostInfinity: 2
     m_RotationOrder: 4
+--- !u!136 &551552554
+CapsuleCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 551552546}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 1
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 2
+  m_Radius: 0.5
+  m_Height: 2
+  m_Direction: 1
+  m_Center: {x: 0, y: 1, z: 0}
 --- !u!1 &567910450
 GameObject:
   m_ObjectHideFlags: 0
@@ -1403,7 +1429,7 @@ MonoBehaviour:
   hunter: {fileID: 551552548}
   boidPrefab: {fileID: 6333695701823207442, guid: f6a66b6da61a3d24da6be77094024f37, type: 3}
   initialAmount: 6
-  spawnRadius: 1
+  spawnRadius: 5
 --- !u!4 &892302579
 Transform:
   m_ObjectHideFlags: 0
