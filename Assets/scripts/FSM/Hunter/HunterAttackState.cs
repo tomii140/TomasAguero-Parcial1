@@ -105,16 +105,15 @@ public class HunterAttackState : IState
 
         float distanceToTarget = Vector3.Distance(hunter.transform.position, target.transform.position);
 
-        // Dibuja una línea persistente en la Scene View durante el rango de ataque
         bool isMelee = distanceToTarget <= hunter.MeleeAttackRadius;
         Color lineColor = isMelee ? Color.magenta : Color.red;
         Debug.DrawLine(hunter.transform.position, target.transform.position, lineColor, 0.1f);
 
+        // Dispara el ataque respetando estrictamente el cooldown para evitar spam
         if (distanceToTarget <= hunter.RangeAttackRadius && hunter.TimerAttackCooldown <= 0f)
         {
             int damage = isMelee ? 2 : 1;
 
-            // Feedback en consola / depuración visual clara del tipo de ataque
             if (isMelee)
             {
                 Debug.Log("<color=magenta>[MELEE ATTACK]</color> Daño: 2 | Distancia: " + distanceToTarget.ToString("F2"));
@@ -125,6 +124,9 @@ public class HunterAttackState : IState
                 Debug.Log("<color=red>[RANGED ATTACK]</color> Daño: 1 | Distancia: " + distanceToTarget.ToString("F2"));
                 hunter.SetColorFeedback(Color.red);
             }
+
+            // Reproduce el sonido correspondiente al tipo de ataque
+            hunter.PlayAttackSound(isMelee);
 
             target.ReceiveDamage(damage);
             hunter.ResetAttackCooldown();

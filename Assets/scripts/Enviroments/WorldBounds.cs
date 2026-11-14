@@ -34,17 +34,36 @@ public class WorldBounds : MonoBehaviour
 
     public Vector3 WrapPosition(Vector3 position)
     {
-        float margin = 0.5f;
+        float offset = 0.5f;
+        bool wrapped = false;
+        Vector3 oldPos = position;
 
-        if (position.x < minX - margin)
-            position.x = maxX - margin;
-        else if (position.x > maxX + margin)
-            position.x = minX + margin;
+        if (position.x < minX)
+        {
+            position.x = maxX - offset;
+            wrapped = true;
+        }
+        else if (position.x > maxX)
+        {
+            position.x = minX + offset;
+            wrapped = true;
+        }
 
-        if (position.z < minZ - margin)
-            position.z = maxZ - margin;
-        else if (position.z > maxZ + margin)
-            position.z = minZ + margin;
+        if (position.z < minZ)
+        {
+            position.z = maxZ - offset;
+            wrapped = true;
+        }
+        else if (position.z > maxZ)
+        {
+            position.z = minZ + offset;
+            wrapped = true;
+        }
+
+        if (wrapped)
+        {
+            Debug.Log($"<color=green>[WRAP EXITOSO]</color> De {oldPos} a nueva pos: {position}");
+        }
 
         return position;
     }
@@ -53,7 +72,7 @@ public class WorldBounds : MonoBehaviour
     {
         Gizmos.color = Color.cyan;
         Vector3 center = new Vector3((minX + maxX) / 2f, 0f, (minZ + maxZ) / 2f);
-        Vector3 size = new Vector3(maxX - minX, 1f, maxZ - minZ);
+        Vector3 size = new Vector3(maxX - minX, 1f, maxZ - minX);
         Gizmos.DrawWireCube(center, size);
     }
 }

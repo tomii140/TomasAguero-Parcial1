@@ -37,6 +37,11 @@ public class HunterAI : Agent
     [SerializeField, Range(1f, 20f)] private float fruitSpawnRadius = 8f;
     [SerializeField, Range(1, 10)] private int maxFruitsInScene = 5;
 
+    [Header("Audio Feedback")]
+    [SerializeField] private AudioClip rangedAttackSound;
+    [SerializeField] private AudioClip meleeAttackSound;
+    private AudioSource audioSource;
+
     [Header("Feedback")]
     [SerializeField] private TextMeshPro stateTextUI;
     [SerializeField] private MeshRenderer meshRenderer;
@@ -68,6 +73,14 @@ public class HunterAI : Agent
         if (meshRenderer == null) meshRenderer = GetComponent<MeshRenderer>();
         animator = GetComponent<Animator>();
 
+        // Configuración automática del AudioSource para el cazador
+        audioSource = GetComponent<AudioSource>();
+        if (audioSource == null)
+        {
+            audioSource = gameObject.AddComponent<AudioSource>();
+            audioSource.spatialBlend = 1f; // Sonido 3D
+        }
+
         currentEnergy = maxEnergy;
         lastPosition = transform.position;
 
@@ -98,6 +111,17 @@ public class HunterAI : Agent
     public void ResetAttackCooldown()
     {
         TimerAttackCooldown = timeBetweenAttacks;
+    }
+
+    public void PlayAttackSound(bool isMelee)
+    {
+        if (audioSource == null) return;
+
+        AudioClip clipToPlay = isMelee ? meleeAttackSound : rangedAttackSound;
+        if (clipToPlay != null)
+        {
+            audioSource.PlayOneShot(clipToPlay);
+        }
     }
 
     public Boid GetTargetBoid() => targetBoid;

@@ -29,7 +29,7 @@ public abstract class Agent : MonoBehaviour
         acceleration = Vector3.zero;
     }
 
-    protected void ApplyPhysics()
+    protected virtual void ApplyPhysics()
     {
         Velocity += acceleration * Time.deltaTime;
         Velocity = Vector3.ClampMagnitude(Velocity, maxSpeed);
@@ -37,12 +37,26 @@ public abstract class Agent : MonoBehaviour
         Vector3 displacement = Velocity * Time.deltaTime;
         Vector3 targetPos = transform.position + displacement;
 
-        // Aplicar límites y rebote de velocidad
+        // Aplicar límites según el tipo de agente
         if (WorldBounds.Instance != null)
         {
-            Vector3 currentVel = Velocity;
-            targetPos = WorldBounds.Instance.ClampPosition(ref targetPos, ref currentVel);
-            Velocity = currentVel;
+            if (this is Boid)
+            {
+                // Verificamos si la posición futura sale de los límites antes de hacer el wrap
+                if (targetPos.x < WorldBounds.Instance.MinX || targetPos.x > WorldBounds.Instance.MaxX ||
+                    targetPos.z < WorldBounds.Instance.MinZ || targetPos.z > WorldBounds.Instance.MaxZ)
+                {
+                    Debug.Log($"<color=cyan>[BOID AL LÍMITE]</color> {gameObject.name} intentó salir en pos: {targetPos}");
+                }
+
+                targetPos = WorldBounds.Instance.WrapPosition(targetPos);
+            }
+            else
+            {
+                Vector3 currentVel = Velocity;
+                targetPos = WorldBounds.Instance.ClampPosition(ref targetPos, ref currentVel);
+                Velocity = currentVel;
+            }
         }
 
         transform.position = targetPos;

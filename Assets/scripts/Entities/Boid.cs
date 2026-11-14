@@ -4,7 +4,6 @@ using TMPro;
 public class Boid : Agent
 {
     public FiniteStateMachine FSM { get; private set; }
-
     public BoidFlockingState FlockingState { get; private set; }
     public BoidEvadeState EvadeState { get; private set; }
     public BoidSeekObjectState SeekObjectState { get; private set; }
@@ -46,6 +45,10 @@ public class Boid : Agent
 
     public float MinRespawnTime => minRespawnTime;
     public float MaxRespawnTime => maxRespawnTime;
+
+    [Header("Audio Feedback")]
+    [SerializeField] private AudioClip eatAudioClip;
+    public AudioClip EatAudioClip => eatAudioClip;
 
     [Header("Feedback")]
     [SerializeField] private TextMeshPro stateTextUI;
@@ -120,7 +123,6 @@ public class Boid : Agent
         EvaluateFSMTransitions();
         FSM.Update();
         ApplyPhysics();
-        ApplyWorldBounds();
         UpdateUIFeedback();
         UpdateAnimator();
     }
@@ -161,7 +163,7 @@ public class Boid : Agent
             return;
         }
 
-        // Si termina de comer o no hay frutas, se asegura de volver a moverse aplicando velocidad
+        // Si sale de comer o no hay frutas, recupera velocidad para no estancarse en solitario
         if (FSM.CurrentState == ConsumeState)
         {
             Velocity = transform.forward * (maxSpeed * 0.5f);
@@ -206,14 +208,6 @@ public class Boid : Agent
         {
             animator.SetFloat("Speed", Velocity.magnitude);
             animator.SetBool("IsDead", IsDead || IsRespawning);
-        }
-    }
-
-    private void ApplyWorldBounds()
-    {
-        if (WorldBounds.Instance != null && !IsDead && !IsRespawning)
-        {
-            transform.position = WorldBounds.Instance.WrapPosition(transform.position);
         }
     }
 
@@ -332,15 +326,12 @@ public class Boid : Agent
     {
         if (!showGizmos) return;
 
-        // Radio de visión del Cazador
         Gizmos.color = Color.red;
         Gizmos.DrawWireSphere(transform.position, hunterPerceptionRadius);
 
-        // Radio de percepción de Frutas
         Gizmos.color = Color.green;
         Gizmos.DrawWireSphere(transform.position, fruitPerceptionRadius);
 
-        // Radio de separación
         Gizmos.color = Color.blue;
         Gizmos.DrawWireSphere(transform.position, separationRadius);
     }
