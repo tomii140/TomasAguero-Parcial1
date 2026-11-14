@@ -11,8 +11,9 @@ public class HunterRestState : IState
 
     public void Enter()
     {
-        _hunter.SetColorFeedback(Color.black);
         _hunter.ResetVelocity();
+        //reproduce el sonido de recarga/descanso una sola vez al entrar en Rest
+        _hunter.PlaySound(_hunter.RestSound);
     }
 
     public void Update()

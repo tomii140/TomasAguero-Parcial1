@@ -11,7 +11,8 @@ public class HunterAttackState : IState
 
     public void Enter()
     {
-        hunter.SetColorFeedback(Color.red);
+        // se ejecuta una sola vez al entrar en ataque (al detectar/fijar al boid)
+        hunter.PlaySound(hunter.DetectBoidSound);
     }
 
     public void Update()
@@ -109,7 +110,6 @@ public class HunterAttackState : IState
         Color lineColor = isMelee ? Color.magenta : Color.red;
         Debug.DrawLine(hunter.transform.position, target.transform.position, lineColor, 0.1f);
 
-        // Dispara el ataque respetando estrictamente el cooldown para evitar spam
         if (distanceToTarget <= hunter.RangeAttackRadius && hunter.TimerAttackCooldown <= 0f)
         {
             int damage = isMelee ? 2 : 1;
@@ -117,15 +117,12 @@ public class HunterAttackState : IState
             if (isMelee)
             {
                 Debug.Log("<color=magenta>[MELEE ATTACK]</color> Daño: 2 | Distancia: " + distanceToTarget.ToString("F2"));
-                hunter.SetColorFeedback(Color.magenta);
             }
             else
             {
                 Debug.Log("<color=red>[RANGED ATTACK]</color> Daño: 1 | Distancia: " + distanceToTarget.ToString("F2"));
-                hunter.SetColorFeedback(Color.red);
             }
 
-            // Reproduce el sonido correspondiente al tipo de ataque
             hunter.PlayAttackSound(isMelee);
 
             target.ReceiveDamage(damage);

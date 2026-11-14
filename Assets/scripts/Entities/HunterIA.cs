@@ -40,11 +40,12 @@ public class HunterAI : Agent
     [Header("Audio Feedback")]
     [SerializeField] private AudioClip rangedAttackSound;
     [SerializeField] private AudioClip meleeAttackSound;
+    [SerializeField] private AudioClip detectBoidSound;
+    [SerializeField] private AudioClip restSound;
     private AudioSource audioSource;
 
     [Header("Feedback")]
     [SerializeField] private TextMeshPro stateTextUI;
-    [SerializeField] private MeshRenderer meshRenderer;
     [SerializeField] private bool showGizmos = true;
     private Animator animator;
 
@@ -66,14 +67,14 @@ public class HunterAI : Agent
     public float EnergyConsumptionRate => energyConsumptionRate;
     public float EnergyRecoveryRate => energyRecoveryRate;
     public Transform[] Waypoints => waypoints;
+    public AudioClip DetectBoidSound => detectBoidSound;
+    public AudioClip RestSound => restSound;
 
     protected override void Start()
     {
         base.Start();
-        if (meshRenderer == null) meshRenderer = GetComponent<MeshRenderer>();
         animator = GetComponent<Animator>();
 
-        // Configuración automática del AudioSource para el cazador
         audioSource = GetComponent<AudioSource>();
         if (audioSource == null)
         {
@@ -121,6 +122,14 @@ public class HunterAI : Agent
         if (clipToPlay != null)
         {
             audioSource.PlayOneShot(clipToPlay);
+        }
+    }
+
+    public void PlaySound(AudioClip clip)
+    {
+        if (audioSource != null && clip != null)
+        {
+            audioSource.PlayOneShot(clip);
         }
     }
 
@@ -176,13 +185,7 @@ public class HunterAI : Agent
         GameManager.Instance?.NotifyBoidDeath(boid);
     }
 
-    public void SetColorFeedback(Color color)
-    {
-        if (meshRenderer != null)
-        {
-            meshRenderer.material.color = color;
-        }
-    }
+    public void SetColorFeedback(Color color) { }
 
     private void UpdateUIFeedback()
     {
