@@ -141,7 +141,6 @@ public class HunterAI : Agent
         currentEnergy = Mathf.Clamp(currentEnergy + amount, 0f, maxEnergy);
     }
 
-    // Sensor espacial local mediante físicas (sin consultar listas globales)
     public Boid FindBoidInVision(bool lookForDead)
     {
         if (!lookForDead && targetBoid != null && !targetBoid.IsDead && !targetBoid.IsRespawning)
@@ -162,7 +161,7 @@ public class HunterAI : Agent
             if (boid == null || boid.IsRespawning || boid.IsDead != lookForDead) continue;
 
             float dist = Vector3.Distance(transform.position, boid.transform.position);
-            if (dist < minDistance)
+            if (dist <= visionRadius && dist < minDistance)
             {
                 minDistance = dist;
                 nearest = boid;

@@ -108,7 +108,6 @@ public class Boid : Agent
         {
             currentHealth = 0;
             IsDead = true;
-            // La transición a DeadState la evalúan y ejecutan los estados dentro de la FSM
         }
     }
 
@@ -132,7 +131,11 @@ public class Boid : Agent
         foreach (var hit in hits)
         {
             HunterAI hunter = hit.GetComponent<HunterAI>();
-            if (hunter != null) return hunter;
+            if (hunter != null)
+            {
+                float dist = Vector3.Distance(transform.position, hunter.transform.position);
+                if (dist <= hunterPerceptionRadius) return hunter;
+            }
         }
         return null;
     }
@@ -186,7 +189,7 @@ public class Boid : Agent
             if (fruit != null)
             {
                 float dist = Vector3.Distance(transform.position, fruit.transform.position);
-                if (dist < minDistance)
+                if (dist <= fruitPerceptionRadius && dist < minDistance)
                 {
                     minDistance = dist;
                     nearest = fruit;
@@ -215,7 +218,7 @@ public class Boid : Agent
             if (other != null && other != this && !other.IsDead && !other.IsRespawning)
             {
                 float dist = Vector3.Distance(transform.position, other.transform.position);
-                if (dist > 0f)
+                if (dist <= separationRadius && dist > 0f)
                 {
                     Vector3 repulse = (transform.position - other.transform.position);
                     repulse /= (dist * dist);
@@ -246,6 +249,9 @@ public class Boid : Agent
             Boid other = hit.GetComponent<Boid>();
             if (other != null && other != this && !other.IsDead && !other.IsRespawning)
             {
+                float dist = Vector3.Distance(transform.position, other.transform.position);
+                if (dist > alignmentRadius) continue; // Validación estricta de radio
+
                 sumVelocity += other.Velocity;
                 count++;
             }
@@ -272,6 +278,9 @@ public class Boid : Agent
             Boid other = hit.GetComponent<Boid>();
             if (other != null && other != this && !other.IsDead && !other.IsRespawning)
             {
+                float dist = Vector3.Distance(transform.position, other.transform.position);
+                if (dist > cohesionRadius) continue; // Validación estricta de radio
+
                 sumPosition += other.transform.position;
                 count++;
             }
