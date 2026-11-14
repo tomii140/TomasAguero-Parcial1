@@ -79,7 +79,7 @@ public class HunterAI : Agent
         if (audioSource == null)
         {
             audioSource = gameObject.AddComponent<AudioSource>();
-            audioSource.spatialBlend = 1f; // Sonido 3D
+            audioSource.spatialBlend = 1f;
         }
 
         currentEnergy = maxEnergy;
@@ -145,7 +145,7 @@ public class HunterAI : Agent
     {
         if (GameManager.Instance?.ActiveBoids == null) return null;
 
-        if (!lookForDead && targetBoid != null && !targetBoid.IsDead)
+        if (!lookForDead && targetBoid != null && !targetBoid.IsDead && !targetBoid.IsRespawning)
         {
             if (Vector3.Distance(transform.position, targetBoid.transform.position) <= visionRadius)
             {
@@ -158,7 +158,8 @@ public class HunterAI : Agent
 
         foreach (var boid in GameManager.Instance.ActiveBoids)
         {
-            if (boid == null || boid.IsDead != lookForDead) continue;
+            // Corrección: se excluyen estrictamente los boids que estén en proceso de Respawn
+            if (boid == null || boid.IsRespawning || boid.IsDead != lookForDead) continue;
 
             float dist = Vector3.Distance(transform.position, boid.transform.position);
             if (dist <= visionRadius && dist < minDistance)

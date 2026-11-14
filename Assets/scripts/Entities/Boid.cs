@@ -126,13 +126,14 @@ public class Boid : Agent
         UpdateAnimator();
     }
 
-    // Sensor local para detectar al cazador dentro del radio de percepción
+    // Sensor local mediante físicas (sin listas globales)
     public HunterAI DetectHunterInRange()
     {
-        HunterAI hunter = GameManager.Instance != null ? GameManager.Instance.Hunter : null;
-        if (hunter != null && Vector3.Distance(transform.position, hunter.transform.position) < hunterPerceptionRadius)
+        Collider[] hits = Physics.OverlapSphere(transform.position, hunterPerceptionRadius);
+        foreach (var hit in hits)
         {
-            return hunter;
+            HunterAI hunter = hit.GetComponent<HunterAI>();
+            if (hunter != null) return hunter;
         }
         return null;
     }
@@ -174,21 +175,24 @@ public class Boid : Agent
         }
     }
 
+    // Sensor local de frutas mediante físicas (sin listas globales)
     public Fruit FindNearestFruit()
     {
-        if (GameManager.Instance?.ActiveFruits == null) return null;
-
+        Collider[] hits = Physics.OverlapSphere(transform.position, fruitPerceptionRadius);
         Fruit nearest = null;
         float minDistance = float.MaxValue;
 
-        foreach (var fruit in GameManager.Instance.ActiveFruits)
+        foreach (var hit in hits)
         {
-            if (fruit == null) continue;
-            float dist = Vector3.Distance(transform.position, fruit.transform.position);
-            if (dist <= fruitPerceptionRadius && dist < minDistance)
+            Fruit fruit = hit.GetComponent<Fruit>();
+            if (fruit != null)
             {
-                minDistance = dist;
-                nearest = fruit;
+                float dist = Vector3.Distance(transform.position, fruit.transform.position);
+                if (dist < minDistance)
+                {
+                    minDistance = dist;
+                    nearest = fruit;
+                }
             }
         }
         return nearest;
@@ -203,21 +207,23 @@ public class Boid : Agent
 
     public Vector3 GetSeparationForce()
     {
-        if (GameManager.Instance?.ActiveBoids == null) return Vector3.zero;
-
+        Collider[] hits = Physics.OverlapSphere(transform.position, separationRadius);
         Vector3 force = Vector3.zero;
         int count = 0;
 
-        foreach (var other in GameManager.Instance.ActiveBoids)
+        foreach (var hit in hits)
         {
-            if (other == null || other == this || other.IsDead || other.IsRespawning) continue;
-            float dist = Vector3.Distance(transform.position, other.transform.position);
-            if (dist > 0f && dist < separationRadius)
+            Boid other = hit.GetComponent<Boid>();
+            if (other != null && other != this && !other.IsDead && !other.IsRespawning)
             {
-                Vector3 repulse = (transform.position - other.transform.position);
-                repulse /= (dist * dist);
-                force += repulse;
-                count++;
+                float dist = Vector3.Distance(transform.position, other.transform.position);
+                if (dist > 0f)
+                {
+                    Vector3 repulse = (transform.position - other.transform.position);
+                    repulse /= (dist * dist);
+                    force += repulse;
+                    count++;
+                }
             }
         }
 
@@ -233,16 +239,14 @@ public class Boid : Agent
 
     public Vector3 GetAlignmentForce()
     {
-        if (GameManager.Instance?.ActiveBoids == null) return Vector3.zero;
-
+        Collider[] hits = Physics.OverlapSphere(transform.position, alignmentRadius);
         Vector3 sumVelocity = Vector3.zero;
         int count = 0;
 
-        foreach (var other in GameManager.Instance.ActiveBoids)
+        foreach (var hit in hits)
         {
-            if (other == null || other == this || other.IsDead || other.IsRespawning) continue;
-            float dist = Vector3.Distance(transform.position, other.transform.position);
-            if (dist < alignmentRadius)
+            Boid other = hit.GetComponent<Boid>();
+            if (other != null && other != this && !other.IsDead && !other.IsRespawning)
             {
                 sumVelocity += other.Velocity;
                 count++;
@@ -261,16 +265,14 @@ public class Boid : Agent
 
     public Vector3 GetCohesionForce()
     {
-        if (GameManager.Instance?.ActiveBoids == null) return Vector3.zero;
-
+        Collider[] hits = Physics.OverlapSphere(transform.position, cohesionRadius);
         Vector3 sumPosition = Vector3.zero;
         int count = 0;
 
-        foreach (var other in GameManager.Instance.ActiveBoids)
+        foreach (var hit in hits)
         {
-            if (other == null || other == this || other.IsDead || other.IsRespawning) continue;
-            float dist = Vector3.Distance(transform.position, other.transform.position);
-            if (dist < cohesionRadius)
+            Boid other = hit.GetComponent<Boid>();
+            if (other != null && other != this && !other.IsDead && !other.IsRespawning)
             {
                 sumPosition += other.transform.position;
                 count++;

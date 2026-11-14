@@ -25,6 +25,22 @@ public class HunterAttackState : IState
 
     public void Update()
     {
+        // 0. Condición estricta: Si la presa o el cazador salen de los límites del mundo, abandona Hunt y vuelve a Patrol
+        if (IsOutOfBounds(hunter.transform.position))
+        {
+            hunter.SetTargetBoid(null);
+            hunter.FSM.ChangeState(hunter.PatrolState);
+            return;
+        }
+
+        Boid currentTarget = hunter.GetTargetBoid();
+        if (currentTarget != null && IsOutOfBounds(currentTarget.transform.position))
+        {
+            hunter.SetTargetBoid(null);
+            hunter.FSM.ChangeState(hunter.PatrolState);
+            return;
+        }
+
         // 1. Verificar agotamiento de energía
         if (!ProcessEnergyDrain()) return;
 
@@ -37,7 +53,7 @@ public class HunterAttackState : IState
             return;
         }
 
-        // 3. Evaluar objetivo actual o búsqueda en última posición conocida (sin abandonar Hunt ni volver a Patrol)
+        // 3. Evaluar objetivo actual o búsqueda en última posición conocida
         EvaluateTargetAndSearch();
 
         // 4. Ejecutar combate si el objetivo sigue vivo y en rango de ataque
@@ -45,6 +61,13 @@ public class HunterAttackState : IState
 
         // 5. Perseguir objetivo o avanzar hacia última posición conocida
         ApplyMovement();
+    }
+
+    private bool IsOutOfBounds(Vector3 pos)
+    {
+        if (WorldBounds.Instance == null) return false;
+        return pos.x < WorldBounds.Instance.MinX || pos.x > WorldBounds.Instance.MaxX ||
+               pos.z < WorldBounds.Instance.MinZ || pos.z > WorldBounds.Instance.MaxZ;
     }
 
     private bool ProcessEnergyDrain()
@@ -64,7 +87,6 @@ public class HunterAttackState : IState
     {
         Boid target = hunter.GetTargetBoid();
 
-        // Si el objetivo actual murió (y no se disparó Gather arriba por alguna razón) o se perdió referencia
         if (target != null && (target.IsDead || target.IsRespawning))
         {
             lastKnownTargetPosition = target.transform.position;
@@ -73,7 +95,6 @@ public class HunterAttackState : IState
             target = null;
         }
 
-        // Si no tiene objetivo activo, intenta detectar una nueva presa viva dentro de VisionRadius
         if (target == null)
         {
             Boid nextLiveBoid = hunter.FindBoidInVision(lookForDead: false);
@@ -86,7 +107,6 @@ public class HunterAttackState : IState
         }
         else
         {
-            // Regla clave: NO abandona la presa aunque salga de VisionRadius; actualiza su posición conocida
             lastKnownTargetPosition = target.transform.position;
             hasLastKnownPosition = true;
         }
@@ -118,13 +138,11 @@ public class HunterAttackState : IState
 
         if (target != null && !target.IsDead)
         {
-            // Persecución continua (Pursuit) incluso si sale de VisionRadius
             Vector3 pursuitForce = hunter.Pursuit(target);
             hunter.AddForce(pursuitForce);
         }
         else if (hasLastKnownPosition)
         {
-            // Si la presa murió y no hay otra visible, permanece en Hunt desplazándose a la última posición conocida
             Vector3 seekLastPos = hunter.Seek(lastKnownTargetPosition);
             hunter.AddForce(seekLastPos);
         }

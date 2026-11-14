@@ -13,7 +13,7 @@ public class HunterGatherState : IState
         _hunter.SetColorFeedback(Color.blue);
         _targetBoid = _hunter.GetTargetBoid();
 
-        if (_targetBoid == null || !_targetBoid.IsDead)
+        if (_targetBoid == null || !_targetBoid.IsDead || _targetBoid.IsRespawning)
         {
             ReturnToPatrol();
             return;
@@ -32,7 +32,8 @@ public class HunterGatherState : IState
 
     private bool IsTargetValid()
     {
-        if (_targetBoid == null || !_targetBoid.IsDead)
+        // Validación rigurosa: si el boid ya no es válido, murió pero entró en respawn, retorna a patrulla
+        if (_targetBoid == null || !_targetBoid.IsDead || _targetBoid.IsRespawning)
         {
             ReturnToPatrol();
             return false;

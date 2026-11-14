@@ -14,7 +14,7 @@ public class GameManager : MonoBehaviour
     [SerializeField, Range(1, 50)] private int initialAmount = 6;
 
     [Header("Spawn Settings")]
-    [SerializeField, Range(0.5f, 20f)] private float spawnRadius = 5f;
+    [SerializeField, Range(0.5f, 25f)] private float spawnRadius = 8f; // Aumentado a 8 para evitar superposiciones iniciales
 
     public List<Boid> ActiveBoids { get; private set; } = new List<Boid>();
     public List<Fruit> ActiveFruits { get; private set; } = new List<Fruit>();
@@ -50,7 +50,6 @@ public class GameManager : MonoBehaviour
     {
         if (deadBoid != null)
         {
-           
             deadBoid.TriggerRespawnFlow();
         }
     }
