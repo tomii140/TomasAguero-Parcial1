@@ -15,30 +15,26 @@ public class Fruit : MonoBehaviour
     {
         CurrentHealth = maxHealth;
         if (GameManager.Instance != null)
-        {
             GameManager.Instance.RegisterFruit(this);
-        }
     }
 
     private void OnDestroy()
     {
         if (GameManager.Instance != null)
-        {
             GameManager.Instance.UnregisterFruit(this);
-        }
     }
 
     public void Consume(float amount)
     {
         CurrentHealth -= amount;
+        // Reduzco visualmente la escala de la fruta conforme va siendo consumida por los boids.
         transform.localScale = Vector3.one * Mathf.Clamp01(CurrentHealth / maxHealth);
 
         if (CurrentHealth <= 0f)
         {
             if (UIManager.Instance != null)
-            {
                 UIManager.Instance.AddFruit();
-            }
+
             Destroy(gameObject);
         }
     }

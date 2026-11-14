@@ -14,32 +14,27 @@ public class GameManager : MonoBehaviour
     [SerializeField, Range(1, 50)] private int initialAmount = 6;
 
     [Header("Spawn Settings")]
-    [SerializeField, Range(0.5f, 25f)] private float spawnRadius = 8f; // Aumentado a 8 para evitar superposiciones iniciales
+    [SerializeField, Range(0.5f, 25f)] private float spawnRadius = 8f;
 
     public List<Boid> ActiveBoids { get; private set; } = new List<Boid>();
     public List<Fruit> ActiveFruits { get; private set; } = new List<Fruit>();
 
     private void Awake()
     {
-        if (Instance == null)
-        {
-            Instance = this;
-        }
-        else
-        {
-            Destroy(gameObject);
-            return;
-        }
+        if (Instance == null) Instance = this;
+        else { Destroy(gameObject); return; }
     }
 
     private void Start()
     {
+        // Genero la cantidad inicial de Boids requerida por la consigna (mínimo 6).
         for (int i = 0; i < initialAmount; i++)
         {
             SpawnGroupedBoid();
         }
     }
 
+    // Registro dinámico de agentes para evitar consultas globales costosas en escena.
     public void RegisterBoid(Boid boid) => ActiveBoids.Add(boid);
     public void UnregisterBoid(Boid boid) => ActiveBoids.Remove(boid);
 
@@ -58,7 +53,6 @@ public class GameManager : MonoBehaviour
     {
         Vector2 randomCircle = Random.insideUnitCircle * spawnRadius;
         Vector3 pos = new Vector3(randomCircle.x, 0f, randomCircle.y);
-
         Instantiate(boidPrefab, pos, Quaternion.identity);
     }
 }

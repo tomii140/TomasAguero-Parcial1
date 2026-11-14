@@ -999,12 +999,12 @@ MonoBehaviour:
   maxForce: 5
   stopThreshold: 0.05
   maxHealth: 2
-  separationRadius: 4
-  alignmentRadius: 5
-  cohesionRadius: 25
-  separationWeight: 2.5
-  alignmentWeight: 4
-  cohesionWeight: 2
+  separationRadius: 15
+  alignmentRadius: 30
+  cohesionRadius: 40
+  separationWeight: 6
+  alignmentWeight: 5
+  cohesionWeight: 5
   hunterPerceptionRadius: 29
   fruitPerceptionRadius: 30
   fruitWeight: 2.5

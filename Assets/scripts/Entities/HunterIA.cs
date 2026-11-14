@@ -109,28 +109,19 @@ public class HunterAI : Agent
             TimerAttackCooldown -= Time.deltaTime;
     }
 
-    public void ResetAttackCooldown()
-    {
-        TimerAttackCooldown = timeBetweenAttacks;
-    }
+    public void ResetAttackCooldown() => TimerAttackCooldown = timeBetweenAttacks;
 
     public void PlayAttackSound(bool isMelee)
     {
         if (audioSource == null) return;
-
         AudioClip clipToPlay = isMelee ? meleeAttackSound : rangedAttackSound;
-        if (clipToPlay != null)
-        {
-            audioSource.PlayOneShot(clipToPlay);
-        }
+        if (clipToPlay != null) audioSource.PlayOneShot(clipToPlay);
     }
 
     public void PlaySound(AudioClip clip)
     {
         if (audioSource != null && clip != null)
-        {
             audioSource.PlayOneShot(clip);
-        }
     }
 
     public Boid GetTargetBoid() => targetBoid;
@@ -140,6 +131,8 @@ public class HunterAI : Agent
     {
         currentEnergy = Mathf.Clamp(currentEnergy + amount, 0f, maxEnergy);
     }
+
+    // --- DETECCIÓN LOCAL DE BOIDS VIVOS O ELIMINADOS ---
 
     public Boid FindBoidInVision(bool lookForDead)
     {

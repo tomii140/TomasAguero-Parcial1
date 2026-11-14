@@ -21,20 +21,20 @@ public class Boid : Agent
     public int CurrentHealth => currentHealth;
 
     [Header("Flocking Configuration")]
-    [SerializeField, Range(0.5f, 30f)] private float separationRadius = 2.0f;
-    [SerializeField, Range(2f, 30f)] private float alignmentRadius = 12.0f;
-    [SerializeField, Range(2f, 30f)] private float cohesionRadius = 12.0f;
-    [SerializeField, Range(0f, 30f)] private float separationWeight = 2.0f;
-    [SerializeField, Range(0f, 30f)] private float alignmentWeight = 1.0f;
-    [SerializeField, Range(0f, 30f)] private float cohesionWeight = 1.5f;
+    [SerializeField, Range(0.5f, 50f)] private float separationRadius = 2.0f;
+    [SerializeField, Range(2f, 50f)] private float alignmentRadius = 12.0f;
+    [SerializeField, Range(2f, 50f)] private float cohesionRadius = 12.0f;
+    [SerializeField, Range(0f, 50f)] private float separationWeight = 2.0f;
+    [SerializeField, Range(0f, 50f)] private float alignmentWeight = 1.0f;
+    [SerializeField, Range(0f, 50f)] private float cohesionWeight = 1.5f;
 
     public float SeparationWeight => separationWeight;
 
     [Header("Perception Sensors")]
-    [SerializeField, Range(1f, 30f)] private float hunterPerceptionRadius = 10f;
-    [SerializeField, Range(1f, 30f)] private float fruitPerceptionRadius = 10f;
-    [SerializeField, Range(0.5f, 30f)] private float fruitWeight = 2.0f;
-    [SerializeField, Range(0.5f, 10f)] private float fruitArriveSlowingRadius = 3.0f;
+    [SerializeField, Range(1f, 50f)] private float hunterPerceptionRadius = 10f;
+    [SerializeField, Range(1f, 50f)] private float fruitPerceptionRadius = 10f;
+    [SerializeField, Range(0.5f, 50f)] private float fruitWeight = 2.0f;
+    [SerializeField, Range(0.5f, 50f)] private float fruitArriveSlowingRadius = 3.0f;
 
     public float HunterPerceptionRadius => hunterPerceptionRadius;
     public float FruitWeight => fruitWeight;
@@ -113,7 +113,6 @@ public class Boid : Agent
         }
     }
 
-    
     public void TriggerRespawnFlow()
     {
         IsRespawning = true;
@@ -128,6 +127,8 @@ public class Boid : Agent
         UpdateAnimator();
     }
 
+    //SENSORES LOCALES POR OVERLAPSPHERE
+
     public HunterAI DetectHunterInRange()
     {
         Collider[] hits = Physics.OverlapSphere(transform.position, hunterPerceptionRadius, Physics.DefaultRaycastLayers, QueryTriggerInteraction.Collide);
@@ -141,43 +142,6 @@ public class Boid : Agent
             }
         }
         return null;
-    }
-
-    public void RestoreForwardMomentum()
-    {
-        Velocity = transform.forward * (maxSpeed * 0.5f);
-    }
-
-    public void SetRespawnVisibility(bool visible)
-    {
-        foreach (Renderer renderer in GetComponentsInChildren<Renderer>(true))
-            renderer.enabled = visible;
-
-        foreach (Collider col in GetComponentsInChildren<Collider>(true))
-            col.enabled = visible;
-    }
-
-    public void SetColorFeedback(Color color)
-    {
-        if (meshRenderer != null) meshRenderer.material.color = color;
-    }
-
-    private void UpdateUIFeedback()
-    {
-        if (stateTextUI != null && FSM.CurrentState != null)
-        {
-            string stateName = FSM.CurrentState.GetType().Name.Replace("Boid", "").Replace("State", "");
-            stateTextUI.text = $"{stateName}\nHP: {currentHealth}/{maxHealth}";
-        }
-    }
-
-    private void UpdateAnimator()
-    {
-        if (animator != null)
-        {
-            animator.SetFloat("Speed", Velocity.magnitude);
-            animator.SetBool("IsDead", IsDead || IsRespawning);
-        }
     }
 
     public Fruit FindNearestFruit()
@@ -202,6 +166,8 @@ public class Boid : Agent
         return nearest;
     }
 
+    //CÁLCULOS DE FLOCKING (SEPARATION, ALIGNMENT, COHESION)
+
     public Vector3 CalculateFlocking()
     {
         return (GetSeparationForce() * separationWeight) +
@@ -223,6 +189,7 @@ public class Boid : Agent
                 float dist = Vector3.Distance(transform.position, other.transform.position);
                 if (dist <= separationRadius && dist > 0f)
                 {
+                    // Fuerza inversamente proporcional al cuadrado de la distancia para evitar superposiciones.
                     Vector3 repulse = (transform.position - other.transform.position);
                     repulse /= (dist * dist);
                     force += repulse;
@@ -295,6 +262,40 @@ public class Boid : Agent
             return Seek(sumPosition);
         }
         return Vector3.zero;
+    }
+
+    public void RestoreForwardMomentum() => Velocity = transform.forward * (maxSpeed * 0.5f);
+
+    public void SetRespawnVisibility(bool visible)
+    {
+        foreach (Renderer renderer in GetComponentsInChildren<Renderer>(true))
+            renderer.enabled = visible;
+
+        foreach (Collider col in GetComponentsInChildren<Collider>(true))
+            col.enabled = visible;
+    }
+
+    public void SetColorFeedback(Color color)
+    {
+        if (meshRenderer != null) meshRenderer.material.color = color;
+    }
+
+    private void UpdateUIFeedback()
+    {
+        if (stateTextUI != null && FSM.CurrentState != null)
+        {
+            string stateName = FSM.CurrentState.GetType().Name.Replace("Boid", "").Replace("State", "");
+            stateTextUI.text = $"{stateName}\nHP: {currentHealth}/{maxHealth}";
+        }
+    }
+
+    private void UpdateAnimator()
+    {
+        if (animator != null)
+        {
+            animator.SetFloat("Speed", Velocity.magnitude);
+            animator.SetBool("IsDead", IsDead || IsRespawning);
+        }
     }
 
     private void OnDrawGizmosSelected()

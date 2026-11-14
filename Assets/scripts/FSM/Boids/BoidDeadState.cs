@@ -14,6 +14,7 @@ public class BoidDeadState : IState
 
     public void Update()
     {
+        // Estado estático de espera hasta que el cazador complete la recolección y ordene el respawn.
         if (_boid.ShouldRespawn)
         {
             _boid.FSM.ChangeState(_boid.RespawnState);

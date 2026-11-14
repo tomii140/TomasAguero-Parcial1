@@ -1,4 +1,3 @@
-
 using UnityEngine;
 
 public class BoidRespawnState : IState
@@ -15,11 +14,7 @@ public class BoidRespawnState : IState
         _boid.SetRespawnVisibility(false);
 
         _respawnTimer = 0f;
-
-        _targetRespawnTime = Random.Range(
-            _boid.MinRespawnTime,
-            _boid.MaxRespawnTime
-        );
+        _targetRespawnTime = Random.Range(_boid.MinRespawnTime, _boid.MaxRespawnTime);
     }
 
     public void Update()
@@ -28,43 +23,25 @@ public class BoidRespawnState : IState
 
         if (_respawnTimer >= _targetRespawnTime)
         {
-            ExecuteRespawn();
+            ExecuteRandomRespawn();
         }
     }
 
-    private void ExecuteRespawn()
+    private void ExecuteRandomRespawn()
     {
-        float posX;
-        float posZ;
+        Vector3 randomSpawnPosition = CalculateRandomPosition();
 
-        if (WorldBounds.Instance != null)
-        {
-            posX = Random.Range(
-                WorldBounds.Instance.MinX,
-                WorldBounds.Instance.MaxX
-            );
-
-            posZ = Random.Range(
-                WorldBounds.Instance.MinZ,
-                WorldBounds.Instance.MaxZ
-            );
-        }
-        else
-        {
-            posX = Random.Range(-15f, 15f);
-            posZ = Random.Range(-15f, 15f);
-        }
-
-        Vector3 randomPos = new Vector3(
-            posX,
-            _boid.transform.position.y,
-            posZ
-        );
-
-        _boid.transform.position = randomPos;
-
+        _boid.transform.position = randomSpawnPosition;
         _boid.SetRespawnVisibility(true);
         _boid.Revive();
+    }
+
+    private Vector3 CalculateRandomPosition()
+    {
+        float posX = WorldBounds.Instance != null ? Random.Range(WorldBounds.Instance.MinX, WorldBounds.Instance.MaxX) : Random.Range(-15f, 15f);
+        float posZ = WorldBounds.Instance != null ? Random.Range(WorldBounds.Instance.MinZ, WorldBounds.Instance.MaxZ) : Random.Range(-15f, 15f);
+
+        return new Vector3(posX, _boid.transform.position.y, posZ);
     }
 
     public void Exit() { }

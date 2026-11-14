@@ -28,6 +28,7 @@ public class HunterPatrolState : IState
 
     private void HandleFruitSpawning()
     {
+        // Generación periódica de frutas en el escenario según el intervalo configurado.
         fruitSpawnTimer += Time.deltaTime;
         if (fruitSpawnTimer >= hunter.FruitSpawnInterval)
         {
@@ -38,7 +39,7 @@ public class HunterPatrolState : IState
 
     private bool EvaluateTargetTransitions()
     {
-        // Pasa a Gather con CUALQUIER Boid muerto detectado dentro de VisionRadius (sin restricción extra de distancia)
+        // Transición prioritaria a Gather si detecta un Boid muerto.
         Boid deadBoid = hunter.FindBoidInVision(lookForDead: true);
         if (deadBoid != null && deadBoid.IsDead)
         {
@@ -47,7 +48,7 @@ public class HunterPatrolState : IState
             return true;
         }
 
-        // Pasa a Attack si detecta un Boid vivo dentro de VisionRadius
+        // Transición a Attack si detecta un Boid vivo y el cooldown de ataque está listo.
         if (hunter.TimerAttackCooldown <= 0)
         {
             Boid liveBoid = hunter.FindBoidInVision(lookForDead: false);
@@ -71,6 +72,7 @@ public class HunterPatrolState : IState
         Vector3 targetPos = targetWaypoint.position;
         targetPos.y = hunter.transform.position.y;
 
+        // Movimiento de patrulla usando Arrive para frenar suavemente al llegar a cada waypoint.
         Vector3 force = hunter.Arrive(targetPos, hunter.WaypointArriveSlowingRadius);
         hunter.AddForce(force);
 

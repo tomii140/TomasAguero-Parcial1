@@ -4,20 +4,22 @@ public class HunterRestState : IState
 {
     private readonly HunterAI _hunter;
 
-    public HunterRestState(HunterAI hunter)
-    {
-        _hunter = hunter;
-    }
+    public HunterRestState(HunterAI hunter) => _hunter = hunter;
 
     public void Enter()
     {
         _hunter.ResetVelocity();
-        //reproduce el sonido de recarga/descanso una sola vez al entrar en Rest
         _hunter.PlaySound(_hunter.RestSound);
     }
 
     public void Update()
     {
+        RecoverEnergyContinuously();
+    }
+
+    private void RecoverEnergyContinuously()
+    {
+        // Regeneración de energía progresiva hasta el tope máximo para reanudar tareas.
         _hunter.ConsumeOrRecoverEnergy(_hunter.EnergyRecoveryRate * Time.deltaTime);
 
         if (_hunter.CurrentEnergy >= _hunter.MaxEnergy)

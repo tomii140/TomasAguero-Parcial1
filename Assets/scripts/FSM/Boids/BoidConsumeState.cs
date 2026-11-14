@@ -20,7 +20,6 @@ public class BoidConsumeState : IState
         _boid.SetColorFeedback(new Color(1f, 0.5f, 0f));
         _boid.ResetVelocity();
         _audioTimer = 0f;
-
         PlayEatSound();
     }
 
@@ -39,21 +38,33 @@ public class BoidConsumeState : IState
         }
 
         Fruit targetFruit = _boid.FindNearestFruit();
-        if (targetFruit == null)
+        if (!IsFruitValid(targetFruit)) return;
+
+        ProcessConsumption(targetFruit);
+    }
+
+    private bool IsFruitValid(Fruit fruit)
+    {
+        if (fruit == null)
         {
             _boid.RestoreForwardMomentum();
             _boid.FSM.ChangeState(_boid.FlockingState);
-            return;
+            return false;
         }
 
-        float distToFruit = Vector3.Distance(_boid.transform.position, targetFruit.transform.position);
-        if (distToFruit > targetFruit.ConsumeRadius)
+        float distToFruit = Vector3.Distance(_boid.transform.position, fruit.transform.position);
+        if (distToFruit > fruit.ConsumeRadius)
         {
             _boid.FSM.ChangeState(_boid.SeekObjectState);
-            return;
+            return false;
         }
+        return true;
+    }
 
-        targetFruit.Consume(targetFruit.DamagePerSecond * Time.deltaTime);
+    private void ProcessConsumption(Fruit fruit)
+    {
+        // Reducción continua de la vida de la fruta basada en el tiempo transcurrido.
+        fruit.Consume(fruit.DamagePerSecond * Time.deltaTime);
 
         _audioTimer += Time.deltaTime;
         if (_audioTimer >= _audioInterval)

@@ -23,54 +23,46 @@ public class HunterAttackState : IState
         }
     }
 
+  
     public void Update()
     {
-        // 0. Condición estricta: Si la presa o el cazador salen de los límites del mundo, abandona Hunt y vuelve a Patrol
-        if (IsOutOfBounds(hunter.transform.position))
-        {
-            hunter.SetTargetBoid(null);
-            hunter.FSM.ChangeState(hunter.PatrolState);
-            return;
-        }
+        if (HasExceededWorldBounds()) return;
 
-        Boid currentTarget = hunter.GetTargetBoid();
-        if (currentTarget != null && IsOutOfBounds(currentTarget.transform.position))
-        {
-            hunter.SetTargetBoid(null);
-            hunter.FSM.ChangeState(hunter.PatrolState);
-            return;
-        }
+        if (!ProcessEnergyManagement()) return;
 
-        // 1. Verificar agotamiento de energía
-        if (!ProcessEnergyDrain()) return;
+        if (TryPrioritizeGathering()) return;
 
-        // 2. Prioridad de recolección: si aparece CUALQUIER Boid muerto en VisionRadius, pasa a Gather
-        Boid deadBoidInVision = hunter.FindBoidInVision(lookForDead: true);
-        if (deadBoidInVision != null && deadBoidInVision.IsDead)
-        {
-            hunter.SetTargetBoid(deadBoidInVision);
-            hunter.FSM.ChangeState(hunter.GatherState);
-            return;
-        }
-
-        // 3. Evaluar objetivo actual o búsqueda en última posición conocida
         EvaluateTargetAndSearch();
-
-        // 4. Ejecutar combate si el objetivo sigue vivo y en rango de ataque
         ProcessCombatAndAttack();
-
-        // 5. Perseguir objetivo o avanzar hacia última posición conocida
         ApplyMovement();
+    }
+
+    
+
+    private bool HasExceededWorldBounds()
+    {
+        if (WorldBounds.Instance == null) return false;
+
+        bool hunterOutOfBounds = IsOutOfBounds(hunter.transform.position);
+        Boid currentTarget = hunter.GetTargetBoid();
+        bool targetOutOfBounds = currentTarget != null && IsOutOfBounds(currentTarget.transform.position);
+
+        if (hunterOutOfBounds || targetOutOfBounds)
+        {
+            hunter.SetTargetBoid(null);
+            hunter.FSM.ChangeState(hunter.PatrolState);
+            return true;
+        }
+        return false;
     }
 
     private bool IsOutOfBounds(Vector3 pos)
     {
-        if (WorldBounds.Instance == null) return false;
         return pos.x < WorldBounds.Instance.MinX || pos.x > WorldBounds.Instance.MaxX ||
                pos.z < WorldBounds.Instance.MinZ || pos.z > WorldBounds.Instance.MaxZ;
     }
 
-    private bool ProcessEnergyDrain()
+    private bool ProcessEnergyManagement()
     {
         hunter.ConsumeOrRecoverEnergy(-hunter.EnergyConsumptionRate * Time.deltaTime);
 
@@ -79,8 +71,19 @@ public class HunterAttackState : IState
             hunter.FSM.ChangeState(hunter.RestState);
             return false;
         }
-
         return true;
+    }
+
+    private bool TryPrioritizeGathering()
+    {
+        Boid deadBoidInVision = hunter.FindBoidInVision(lookForDead: true);
+        if (deadBoidInVision != null && deadBoidInVision.IsDead)
+        {
+            hunter.SetTargetBoid(deadBoidInVision);
+            hunter.FSM.ChangeState(hunter.GatherState);
+            return true;
+        }
+        return false;
     }
 
     private void EvaluateTargetAndSearch()
@@ -89,8 +92,7 @@ public class HunterAttackState : IState
 
         if (target != null && (target.IsDead || target.IsRespawning))
         {
-            lastKnownTargetPosition = target.transform.position;
-            hasLastKnownPosition = true;
+            StoreLastKnownPosition(target.transform.position);
             hunter.SetTargetBoid(null);
             target = null;
         }
@@ -101,15 +103,19 @@ public class HunterAttackState : IState
             if (nextLiveBoid != null && !nextLiveBoid.IsDead)
             {
                 hunter.SetTargetBoid(nextLiveBoid);
-                lastKnownTargetPosition = nextLiveBoid.transform.position;
-                hasLastKnownPosition = true;
+                StoreLastKnownPosition(nextLiveBoid.transform.position);
             }
         }
         else
         {
-            lastKnownTargetPosition = target.transform.position;
-            hasLastKnownPosition = true;
+            StoreLastKnownPosition(target.transform.position);
         }
+    }
+
+    private void StoreLastKnownPosition(Vector3 pos)
+    {
+        lastKnownTargetPosition = pos;
+        hasLastKnownPosition = true;
     }
 
     private void ProcessCombatAndAttack()
@@ -120,16 +126,26 @@ public class HunterAttackState : IState
         float distanceToTarget = Vector3.Distance(hunter.transform.position, target.transform.position);
         bool isMelee = distanceToTarget <= hunter.MeleeAttackRadius;
 
-        Color lineColor = isMelee ? Color.magenta : Color.red;
-        Debug.DrawLine(hunter.transform.position, target.transform.position, lineColor, 0.1f);
+        DrawCombatDebugLines(target.transform.position, isMelee);
 
         if (distanceToTarget <= hunter.RangeAttackRadius && hunter.TimerAttackCooldown <= 0f)
         {
-            int damage = isMelee ? 2 : 1;
-            hunter.PlayAttackSound(isMelee);
-            target.ReceiveDamage(damage);
-            hunter.ResetAttackCooldown();
+            ExecuteAttack(isMelee, target);
         }
+    }
+
+    private void DrawCombatDebugLines(Vector3 targetPos, bool isMelee)
+    {
+        Color lineColor = isMelee ? Color.magenta : Color.red;
+        Debug.DrawLine(hunter.transform.position, targetPos, lineColor, 0.1f);
+    }
+
+    private void ExecuteAttack(bool isMelee, Boid target)
+    {
+        int damage = isMelee ? 2 : 1;
+        hunter.PlayAttackSound(isMelee);
+        target.ReceiveDamage(damage);
+        hunter.ResetAttackCooldown();
     }
 
     private void ApplyMovement()

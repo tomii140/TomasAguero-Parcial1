@@ -32,7 +32,7 @@ public class HunterGatherState : IState
 
     private bool IsTargetValid()
     {
-        // Validación rigurosa: si el boid ya no es válido, murió pero entró en respawn, retorna a patrulla
+        // Valido que el boid realmente esté muerto y disponible para recolección.
         if (_targetBoid == null || !_targetBoid.IsDead || _targetBoid.IsRespawning)
         {
             ReturnToPatrol();
@@ -50,6 +50,7 @@ public class HunterGatherState : IState
 
         if (distXZ > _hunter.CaptureRadius)
         {
+            // Me acerco al boid caído usando Seek plano.
             Vector3 targetPos = _targetBoid.transform.position;
             targetPos.y = _hunter.transform.position.y;
 
@@ -59,6 +60,7 @@ public class HunterGatherState : IState
         }
         else
         {
+            // Una vez en rango de captura, detengo al cazador y cuento el tiempo necesario para recolectarlo.
             _hunter.ResetVelocity();
             _gatherTimer += Time.deltaTime;
 

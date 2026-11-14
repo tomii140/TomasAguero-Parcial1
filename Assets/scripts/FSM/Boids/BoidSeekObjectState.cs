@@ -36,6 +36,12 @@ public class BoidSeekObjectState : IState
             return;
         }
 
+        ApplyApproachForces(targetFruit);
+    }
+
+    private void ApplyApproachForces(Fruit targetFruit)
+    {
+        // Comportamiento de Arrive hacia la fruta combinado con separación para no solaparse con otros boids.
         Vector3 arriveForce = _boid.Arrive(targetFruit.transform.position, _boid.FruitArriveSlowingRadius) * _boid.FruitWeight;
         Vector3 separationForce = _boid.GetSeparationForce() * _boid.SeparationWeight;
         _boid.AddForce(arriveForce + separationForce);

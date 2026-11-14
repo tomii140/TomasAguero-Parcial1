@@ -21,6 +21,7 @@ public class WorldBounds : MonoBehaviour
         else Destroy(gameObject);
     }
 
+    // Restricción dura con inversión de velocidad de Clamp + Rebote para el Cazador.
     public Vector3 ClampPosition(ref Vector3 position, ref Vector3 velocity)
     {
         if (position.x < minX) { position.x = minX; velocity.x = -velocity.x; }
@@ -32,6 +33,7 @@ public class WorldBounds : MonoBehaviour
         return position;
     }
 
+    // Teletransporte fluido(Wrap) para que los Boids reaparezcan al otro lado del mapa.
     public Vector3 WrapPosition(Vector3 position)
     {
         float offset = 0.5f;

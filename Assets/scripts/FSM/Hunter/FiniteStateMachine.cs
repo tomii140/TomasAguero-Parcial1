@@ -10,6 +10,7 @@ public class FiniteStateMachine
     {
         if (newState == null || _currentState == newState) return;
 
+        
         _currentState?.Exit();
         _currentState = newState;
         _currentState.Enter();
