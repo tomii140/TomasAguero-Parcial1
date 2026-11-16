@@ -1,3 +1,4 @@
+
 using UnityEngine;
 using TMPro;
 
@@ -53,6 +54,8 @@ public class HunterAI : Agent
     public float TimerAttackCooldown { get; private set; } = 0f;
     private Vector3 lastPosition;
 
+    private int lastDisplayedEnergy;
+
     public float VisionRadius => visionRadius;
     public float RangeAttackRadius => rangeAttackRadius;
     public float MeleeAttackRadius => meleeAttackRadius;
@@ -73,9 +76,11 @@ public class HunterAI : Agent
     protected override void Start()
     {
         base.Start();
+
         animator = GetComponent<Animator>();
 
         audioSource = GetComponent<AudioSource>();
+
         if (audioSource == null)
         {
             audioSource = gameObject.AddComponent<AudioSource>();
@@ -91,15 +96,28 @@ public class HunterAI : Agent
         RestState = new HunterRestState(this);
 
         FSM = new FiniteStateMachine();
+
+        FSM.OnStateChanged += HandleStateChanged;
+
         FSM.ChangeState(PatrolState);
+
+        RefreshUIFeedback();
+    }
+
+    private void OnDestroy()
+    {
+        if (FSM != null)
+            FSM.OnStateChanged -= HandleStateChanged;
     }
 
     private void Update()
     {
         UpdateCooldowns();
+
         FSM.Update();
+
         ApplyPhysics();
-        UpdateUIFeedback();
+
         UpdateAnimator();
     }
 
@@ -114,8 +132,11 @@ public class HunterAI : Agent
     public void PlayAttackSound(bool isMelee)
     {
         if (audioSource == null) return;
+
         AudioClip clipToPlay = isMelee ? meleeAttackSound : rangedAttackSound;
-        if (clipToPlay != null) audioSource.PlayOneShot(clipToPlay);
+
+        if (clipToPlay != null)
+            audioSource.PlayOneShot(clipToPlay);
     }
 
     public void PlaySound(AudioClip clip)
@@ -125,11 +146,22 @@ public class HunterAI : Agent
     }
 
     public Boid GetTargetBoid() => targetBoid;
+
     public void SetTargetBoid(Boid boid) => targetBoid = boid;
 
     public void ConsumeOrRecoverEnergy(float amount)
     {
+        int previousDisplayedEnergy = Mathf.RoundToInt(currentEnergy);
+
         currentEnergy = Mathf.Clamp(currentEnergy + amount, 0f, maxEnergy);
+
+        int newDisplayedEnergy = Mathf.RoundToInt(currentEnergy);
+
+        if (newDisplayedEnergy != previousDisplayedEnergy)
+        {
+            RefreshUIFeedback();
+            lastDisplayedEnergy = newDisplayedEnergy;
+        }
     }
 
     // --- DETECCIÓN LOCAL DE BOIDS VIVOS O ELIMINADOS ---
@@ -144,32 +176,45 @@ public class HunterAI : Agent
             }
         }
 
-        Collider[] hits = Physics.OverlapSphere(transform.position, visionRadius, Physics.DefaultRaycastLayers, QueryTriggerInteraction.Collide);
+        Collider[] hits = Physics.OverlapSphere(
+            transform.position,
+            visionRadius,
+            Physics.DefaultRaycastLayers,
+            QueryTriggerInteraction.Collide
+        );
+
         Boid nearest = null;
         float minDistance = float.MaxValue;
 
         foreach (var hit in hits)
         {
             Boid boid = hit.GetComponent<Boid>();
-            if (boid == null || boid.IsRespawning || boid.IsDead != lookForDead) continue;
+
+            if (boid == null || boid.IsRespawning || boid.IsDead != lookForDead)
+                continue;
 
             float dist = Vector3.Distance(transform.position, boid.transform.position);
+
             if (dist <= visionRadius && dist < minDistance)
             {
                 minDistance = dist;
                 nearest = boid;
             }
         }
+
         return nearest;
     }
 
     public void SpawnFruitIfAllowed()
     {
         if (fruitPrefab == null || GameManager.Instance == null) return;
+
         if (GameManager.Instance.ActiveFruits.Count >= maxFruitsInScene) return;
 
         Vector2 randomCircle = Random.insideUnitCircle * fruitSpawnRadius;
+
         Vector3 spawnPos = transform.position + new Vector3(randomCircle.x, 0f, randomCircle.y);
+
         Instantiate(fruitPrefab, spawnPos, Quaternion.identity);
     }
 
@@ -180,21 +225,36 @@ public class HunterAI : Agent
 
     public void SetColorFeedback(Color color) { }
 
-    private void UpdateUIFeedback()
+    private void HandleStateChanged(IState newState)
     {
-        if (stateTextUI != null && FSM.CurrentState != null)
-        {
-            string currentStateName = FSM.CurrentState.GetType().Name.Replace("Hunter", "").Replace("State", "");
-            stateTextUI.text = $"State: {currentStateName}\nEnergy: {Mathf.Round(currentEnergy)}/{maxEnergy}";
-        }
+        RefreshUIFeedback();
+    }
+
+    private void RefreshUIFeedback()
+    {
+        if (stateTextUI == null || FSM == null || FSM.CurrentState == null)
+            return;
+
+        string currentStateName = FSM.CurrentState.GetType().Name
+            .Replace("Hunter", "")
+            .Replace("State", "");
+
+        int displayedEnergy = Mathf.RoundToInt(currentEnergy);
+
+        stateTextUI.text = $"State: {currentStateName}\nEnergy: {displayedEnergy}/{maxEnergy}";
+
+        lastDisplayedEnergy = displayedEnergy;
     }
 
     private void UpdateAnimator()
     {
         if (animator != null)
         {
-            float speed = Vector3.Distance(new Vector3(transform.position.x, 0f, transform.position.z),
-                                           new Vector3(lastPosition.x, 0f, lastPosition.z)) / Time.deltaTime;
+            float speed = Vector3.Distance(
+                new Vector3(transform.position.x, 0f, transform.position.z),
+                new Vector3(lastPosition.x, 0f, lastPosition.z)
+            ) / Time.deltaTime;
+
             lastPosition = transform.position;
 
             animator.SetFloat("Speed", speed);

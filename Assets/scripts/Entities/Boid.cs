@@ -1,9 +1,11 @@
+
 using UnityEngine;
 using TMPro;
 
 public class Boid : Agent
 {
     public FiniteStateMachine FSM { get; private set; }
+
     public BoidFlockingState FlockingState { get; private set; }
     public BoidEvadeState EvadeState { get; private set; }
     public BoidSeekObjectState SeekObjectState { get; private set; }
@@ -54,24 +56,32 @@ public class Boid : Agent
     [Header("Feedback")]
     [SerializeField] private TextMeshPro stateTextUI;
     [SerializeField] private bool showGizmos = true;
+
     private MeshRenderer meshRenderer;
     private Animator animator;
 
     protected override void Start()
     {
         base.Start();
+
         meshRenderer = GetComponent<MeshRenderer>();
         animator = GetComponent<Animator>();
 
         if (GameManager.Instance != null)
             GameManager.Instance.RegisterBoid(this);
 
-        InitializeFSM();
         currentHealth = maxHealth;
+
+        InitializeFSM();
+
+        RefreshUIFeedback();
     }
 
     private void OnDestroy()
     {
+        if (FSM != null)
+            FSM.OnStateChanged -= HandleStateChanged;
+
         if (GameManager.Instance != null)
             GameManager.Instance.UnregisterBoid(this);
     }
@@ -79,12 +89,15 @@ public class Boid : Agent
     private void InitializeFSM()
     {
         FSM = new FiniteStateMachine();
+
         FlockingState = new BoidFlockingState(this);
         EvadeState = new BoidEvadeState(this);
         SeekObjectState = new BoidSeekObjectState(this);
         ConsumeState = new BoidConsumeState(this);
         DeadState = new BoidDeadState(this);
         RespawnState = new BoidRespawnState(this);
+
+        FSM.OnStateChanged += HandleStateChanged;
 
         FSM.ChangeState(FlockingState);
     }
@@ -94,11 +107,16 @@ public class Boid : Agent
         IsDead = false;
         IsRespawning = false;
         ShouldRespawn = false;
+
         currentHealth = maxHealth;
+
         SetColorFeedback(Color.green);
 
         Velocity = transform.forward * (maxSpeed * 0.5f);
+
         FSM.ChangeState(FlockingState);
+
+        RefreshUIFeedback();
     }
 
     public void ReceiveDamage(int damage)
@@ -106,11 +124,14 @@ public class Boid : Agent
         if (IsDead || IsRespawning) return;
 
         currentHealth -= damage;
+
         if (currentHealth <= 0)
         {
             currentHealth = 0;
             IsDead = true;
         }
+
+        RefreshUIFeedback();
     }
 
     public void TriggerRespawnFlow()
@@ -122,40 +143,59 @@ public class Boid : Agent
     private void Update()
     {
         FSM.Update();
+
         ApplyPhysics();
-        UpdateUIFeedback();
+
         UpdateAnimator();
     }
 
-    //SENSORES LOCALES POR OVERLAPSPHERE
+    // SENSORES LOCALES POR OVERLAPSPHERE
 
     public HunterAI DetectHunterInRange()
     {
-        Collider[] hits = Physics.OverlapSphere(transform.position, hunterPerceptionRadius, Physics.DefaultRaycastLayers, QueryTriggerInteraction.Collide);
+        Collider[] hits = Physics.OverlapSphere(
+            transform.position,
+            hunterPerceptionRadius,
+            Physics.DefaultRaycastLayers,
+            QueryTriggerInteraction.Collide
+        );
+
         foreach (var hit in hits)
         {
             HunterAI hunter = hit.GetComponent<HunterAI>();
+
             if (hunter != null)
             {
                 float dist = Vector3.Distance(transform.position, hunter.transform.position);
-                if (dist <= hunterPerceptionRadius) return hunter;
+
+                if (dist <= hunterPerceptionRadius)
+                    return hunter;
             }
         }
+
         return null;
     }
 
     public Fruit FindNearestFruit()
     {
-        Collider[] hits = Physics.OverlapSphere(transform.position, fruitPerceptionRadius, Physics.DefaultRaycastLayers, QueryTriggerInteraction.Collide);
+        Collider[] hits = Physics.OverlapSphere(
+            transform.position,
+            fruitPerceptionRadius,
+            Physics.DefaultRaycastLayers,
+            QueryTriggerInteraction.Collide
+        );
+
         Fruit nearest = null;
         float minDistance = float.MaxValue;
 
         foreach (var hit in hits)
         {
             Fruit fruit = hit.GetComponent<Fruit>();
+
             if (fruit != null)
             {
                 float dist = Vector3.Distance(transform.position, fruit.transform.position);
+
                 if (dist <= fruitPerceptionRadius && dist < minDistance)
                 {
                     minDistance = dist;
@@ -163,10 +203,11 @@ public class Boid : Agent
                 }
             }
         }
+
         return nearest;
     }
 
-    //CÁLCULOS DE FLOCKING (SEPARATION, ALIGNMENT, COHESION)
+    // CÁLCULOS DE FLOCKING (SEPARATION, ALIGNMENT, COHESION)
 
     public Vector3 CalculateFlocking()
     {
@@ -177,21 +218,31 @@ public class Boid : Agent
 
     public Vector3 GetSeparationForce()
     {
-        Collider[] hits = Physics.OverlapSphere(transform.position, separationRadius, Physics.DefaultRaycastLayers, QueryTriggerInteraction.Collide);
+        Collider[] hits = Physics.OverlapSphere(
+            transform.position,
+            separationRadius,
+            Physics.DefaultRaycastLayers,
+            QueryTriggerInteraction.Collide
+        );
+
         Vector3 force = Vector3.zero;
         int count = 0;
 
         foreach (var hit in hits)
         {
             Boid other = hit.GetComponent<Boid>();
+
             if (other != null && other != this && !other.IsDead && !other.IsRespawning)
             {
                 float dist = Vector3.Distance(transform.position, other.transform.position);
+
                 if (dist <= separationRadius && dist > 0f)
                 {
                     // Fuerza inversamente proporcional al cuadrado de la distancia para evitar superposiciones.
-                    Vector3 repulse = (transform.position - other.transform.position);
+                    Vector3 repulse = transform.position - other.transform.position;
+
                     repulse /= (dist * dist);
+
                     force += repulse;
                     count++;
                 }
@@ -205,22 +256,32 @@ public class Boid : Agent
             force -= Velocity;
             force = Vector3.ClampMagnitude(force, maxForce);
         }
+
         return force;
     }
 
     public Vector3 GetAlignmentForce()
     {
-        Collider[] hits = Physics.OverlapSphere(transform.position, alignmentRadius, Physics.DefaultRaycastLayers, QueryTriggerInteraction.Collide);
+        Collider[] hits = Physics.OverlapSphere(
+            transform.position,
+            alignmentRadius,
+            Physics.DefaultRaycastLayers,
+            QueryTriggerInteraction.Collide
+        );
+
         Vector3 sumVelocity = Vector3.zero;
         int count = 0;
 
         foreach (var hit in hits)
         {
             Boid other = hit.GetComponent<Boid>();
+
             if (other != null && other != this && !other.IsDead && !other.IsRespawning)
             {
                 float dist = Vector3.Distance(transform.position, other.transform.position);
-                if (dist > alignmentRadius) continue;
+
+                if (dist > alignmentRadius)
+                    continue;
 
                 sumVelocity += other.Velocity;
                 count++;
@@ -231,25 +292,37 @@ public class Boid : Agent
         {
             sumVelocity /= count;
             sumVelocity = sumVelocity.normalized * maxSpeed;
+
             Vector3 steer = sumVelocity - Velocity;
+
             return Vector3.ClampMagnitude(steer, maxForce);
         }
+
         return Vector3.zero;
     }
 
     public Vector3 GetCohesionForce()
     {
-        Collider[] hits = Physics.OverlapSphere(transform.position, cohesionRadius, Physics.DefaultRaycastLayers, QueryTriggerInteraction.Collide);
+        Collider[] hits = Physics.OverlapSphere(
+            transform.position,
+            cohesionRadius,
+            Physics.DefaultRaycastLayers,
+            QueryTriggerInteraction.Collide
+        );
+
         Vector3 sumPosition = Vector3.zero;
         int count = 0;
 
         foreach (var hit in hits)
         {
             Boid other = hit.GetComponent<Boid>();
+
             if (other != null && other != this && !other.IsDead && !other.IsRespawning)
             {
                 float dist = Vector3.Distance(transform.position, other.transform.position);
-                if (dist > cohesionRadius) continue;
+
+                if (dist > cohesionRadius)
+                    continue;
 
                 sumPosition += other.transform.position;
                 count++;
@@ -259,12 +332,17 @@ public class Boid : Agent
         if (count > 0)
         {
             sumPosition /= count;
+
             return Seek(sumPosition);
         }
+
         return Vector3.zero;
     }
 
-    public void RestoreForwardMomentum() => Velocity = transform.forward * (maxSpeed * 0.5f);
+    public void RestoreForwardMomentum()
+    {
+        Velocity = transform.forward * (maxSpeed * 0.5f);
+    }
 
     public void SetRespawnVisibility(bool visible)
     {
@@ -277,16 +355,25 @@ public class Boid : Agent
 
     public void SetColorFeedback(Color color)
     {
-        if (meshRenderer != null) meshRenderer.material.color = color;
+        if (meshRenderer != null)
+            meshRenderer.material.color = color;
     }
 
-    private void UpdateUIFeedback()
+    private void HandleStateChanged(IState newState)
     {
-        if (stateTextUI != null && FSM.CurrentState != null)
-        {
-            string stateName = FSM.CurrentState.GetType().Name.Replace("Boid", "").Replace("State", "");
-            stateTextUI.text = $"{stateName}\nHP: {currentHealth}/{maxHealth}";
-        }
+        RefreshUIFeedback();
+    }
+
+    private void RefreshUIFeedback()
+    {
+        if (stateTextUI == null || FSM == null || FSM.CurrentState == null)
+            return;
+
+        string stateName = FSM.CurrentState.GetType().Name
+            .Replace("Boid", "")
+            .Replace("State", "");
+
+        stateTextUI.text = $"{stateName}\nHP: {currentHealth}/{maxHealth}";
     }
 
     private void UpdateAnimator()
