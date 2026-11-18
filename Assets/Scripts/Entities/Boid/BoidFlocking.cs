@@ -23,11 +23,13 @@ public class BoidFlocking
         List<Boid> nearbyBoids = boid.GetNearbyBoids();
 
         Vector3 separationDirection = Vector3.zero;
-        int neighborCount = 0;
+        float totalProximityWeight = 0f;
 
         foreach (Boid otherBoid in nearbyBoids)
         {
-            if (otherBoid == null || otherBoid.IsRespawning)
+            if (otherBoid == null ||
+                otherBoid.IsDead ||
+                otherBoid.IsRespawning)
                 continue;
 
             Vector3 offset =
@@ -44,7 +46,6 @@ public class BoidFlocking
 
             if (distance <= boid.DistanceEpsilon)
             {
-                // Evita que dos Boids superpuestos queden sin repulsión.
                 direction = GetFallbackSeparationDirection(otherBoid);
                 distance = boid.DistanceEpsilon;
             }
@@ -57,13 +58,13 @@ public class BoidFlocking
                 1f - Mathf.Clamp01(distance / boid.SeparationRadius);
 
             separationDirection += direction * proximityWeight;
-            neighborCount++;
+            totalProximityWeight += proximityWeight;
         }
 
-        if (neighborCount == 0)
+        if (totalProximityWeight <= boid.DirectionEpsilon)
             return Vector3.zero;
 
-        separationDirection /= neighborCount;
+        separationDirection /= totalProximityWeight;
 
         if (separationDirection.sqrMagnitude <= boid.DirectionEpsilon)
             return Vector3.zero;
@@ -78,12 +79,12 @@ public class BoidFlocking
 
     private Vector3 GetFallbackSeparationDirection(Boid otherBoid)
     {
-        Vector3 direction = boid.transform.position - otherBoid.transform.position;
+        Vector3 direction =
+            boid.transform.position - otherBoid.transform.position;
 
         if (direction.sqrMagnitude > 0f)
             return direction.normalized;
 
-        // Genera direcciones opuestas y reproducibles para pares superpuestos.
         int firstId = boid.GetInstanceID();
         int secondId = otherBoid.GetInstanceID();
 
@@ -94,7 +95,8 @@ public class BoidFlocking
             (lowerId * 0.754877666f + higherId * 0.569840296f) * 360f
         );
 
-        Vector3 fallbackDirection = Quaternion.Euler(0f, angle, 0f) * Vector3.forward;
+        Vector3 fallbackDirection =
+            Quaternion.Euler(0f, angle, 0f) * Vector3.forward;
 
         return firstId < secondId
             ? fallbackDirection

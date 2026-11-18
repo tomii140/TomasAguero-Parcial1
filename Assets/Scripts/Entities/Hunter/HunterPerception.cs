@@ -4,7 +4,7 @@ using UnityEngine;
 public class HunterPerception
 {
     private readonly HunterAI hunter;
-    private readonly Collider[] overlapResults;
+    private Collider[] overlapResults;
 
     private readonly float updateInterval;
 
@@ -32,13 +32,7 @@ public class HunterPerception
         nearestLiveBoid = null;
         nearestDeadBoid = null;
 
-        int hitCount = Physics.OverlapSphereNonAlloc(
-            hunter.transform.position,
-            hunter.VisionRadius,
-            overlapResults,
-            Physics.DefaultRaycastLayers,
-            QueryTriggerInteraction.Collide
-        );
+        int hitCount = GetOverlapResults();
 
         float nearestLiveDistance = float.MaxValue;
         float nearestDeadDistance = float.MaxValue;
@@ -50,7 +44,8 @@ public class HunterPerception
             if (detectedCollider == null)
                 continue;
 
-            Boid detectedBoid = detectedCollider.GetComponentInParent<Boid>();
+            Boid detectedBoid =
+                detectedCollider.GetComponentInParent<Boid>();
 
             if (detectedBoid == null || detectedBoid.IsRespawning)
                 continue;
@@ -77,6 +72,31 @@ public class HunterPerception
                 nearestLiveBoid = detectedBoid;
             }
         }
+    }
+
+    private int GetOverlapResults()
+    {
+        int hitCount;
+
+        do
+        {
+            hitCount = Physics.OverlapSphereNonAlloc(
+                hunter.transform.position,
+                hunter.VisionRadius,
+                overlapResults,
+                Physics.DefaultRaycastLayers,
+                QueryTriggerInteraction.Collide
+            );
+
+            if (hitCount < overlapResults.Length)
+                return hitCount;
+
+            System.Array.Resize(
+                ref overlapResults,
+                overlapResults.Length * 2
+            );
+
+        } while (true);
     }
 
     public void Update(float deltaTime)

@@ -1701,6 +1701,7 @@ MonoBehaviour:
   maxSpeed: 15
   maxForce: 10
   rotationSpeed: 10
+  minimumVelocitySqrMagnitude: 0.001
   stopThreshold: 0.05
   visionRadius: 40
   rangeAttackRadius: 25
@@ -1736,6 +1737,7 @@ MonoBehaviour:
   showGizmos: 1
   gatheringProgressSlider: {fileID: 1719192864}
   gatheringProgressCanvas: {fileID: 948686612}
+  attackDebugLineDuration: 0.1
 --- !u!82 &551552550
 AudioSource:
   m_ObjectHideFlags: 0
@@ -4990,6 +4992,11 @@ MonoBehaviour:
   minZ: -100
   maxZ: 100
   wrapOffset: 0.5
+  spawnClearanceRadius: 4
+  spawnPositionAttempts: 30
+  spawnOverlapBufferCapacity: 64
+  spawnRetryInterval: 0.25
+  showWrapDebugLogs: 1
 --- !u!1001 &1846325577
 PrefabInstance:
   m_ObjectHideFlags: 0

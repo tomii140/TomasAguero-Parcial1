@@ -6,7 +6,7 @@ public class BoidPerception
 {
     private readonly Boid boid;
     private readonly float updateInterval;
-    private readonly Collider[] overlapResults;
+    private Collider[] overlapResults;
 
     private float updateTimer;
 
@@ -59,13 +59,7 @@ public class BoidPerception
             boid.CohesionRadius
         );
 
-        int hitCount = Physics.OverlapSphereNonAlloc(
-            boid.transform.position,
-            maxRadius,
-            overlapResults,
-            Physics.DefaultRaycastLayers,
-            QueryTriggerInteraction.Collide
-        );
+        int hitCount = GetOverlapResults(maxRadius);
 
         float nearestHunterDistance = float.MaxValue;
         float nearestFruitDistance = float.MaxValue;
@@ -81,6 +75,31 @@ public class BoidPerception
             DetectFruit(hit, ref nearestFruitDistance);
             DetectBoid(hit, maxRadius);
         }
+    }
+
+    private int GetOverlapResults(float radius)
+    {
+        int hitCount;
+
+        do
+        {
+            hitCount = Physics.OverlapSphereNonAlloc(
+                boid.transform.position,
+                radius,
+                overlapResults,
+                Physics.DefaultRaycastLayers,
+                QueryTriggerInteraction.Collide
+            );
+
+            if (hitCount < overlapResults.Length)
+                return hitCount;
+
+            System.Array.Resize(
+                ref overlapResults,
+                overlapResults.Length * 2
+            );
+
+        } while (true);
     }
 
     private void DetectHunter(Collider hit, ref float nearestDistance)
@@ -135,6 +154,7 @@ public class BoidPerception
 
         if (otherBoid == null ||
             otherBoid == boid ||
+            otherBoid.IsDead ||
             otherBoid.IsRespawning ||
             nearbyBoids.Contains(otherBoid))
             return;
