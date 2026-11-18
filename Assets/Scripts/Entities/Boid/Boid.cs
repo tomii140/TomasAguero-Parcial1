@@ -1,6 +1,7 @@
 
 using UnityEngine;
 using TMPro;
+using System.Collections.Generic;
 
 public class Boid : Agent
 {
@@ -20,17 +21,25 @@ public class Boid : Agent
     [Header("Health Configuration")]
     [SerializeField] private int maxHealth = 2;
     private int currentHealth;
+
     public int CurrentHealth => currentHealth;
 
     [Header("Flocking Configuration")]
     [SerializeField, Range(0.5f, 50f)] private float separationRadius = 2.0f;
     [SerializeField, Range(2f, 50f)] private float alignmentRadius = 12.0f;
     [SerializeField, Range(2f, 50f)] private float cohesionRadius = 12.0f;
+
     [SerializeField, Range(0f, 50f)] private float separationWeight = 2.0f;
     [SerializeField, Range(0f, 50f)] private float alignmentWeight = 1.0f;
     [SerializeField, Range(0f, 50f)] private float cohesionWeight = 1.5f;
 
+    public float SeparationRadius => separationRadius;
+    public float AlignmentRadius => alignmentRadius;
+    public float CohesionRadius => cohesionRadius;
+
     public float SeparationWeight => separationWeight;
+    public float AlignmentWeight => alignmentWeight;
+    public float CohesionWeight => cohesionWeight;
 
     [Header("Perception Sensors")]
     [SerializeField, Range(1f, 50f)] private float hunterPerceptionRadius = 10f;
@@ -38,7 +47,11 @@ public class Boid : Agent
     [SerializeField, Range(0.5f, 50f)] private float fruitWeight = 2.0f;
     [SerializeField, Range(0.5f, 50f)] private float fruitArriveSlowingRadius = 3.0f;
 
+    [SerializeField, Range(0.02f, 1f)]
+    private float perceptionUpdateInterval = 0.2f;
+
     public float HunterPerceptionRadius => hunterPerceptionRadius;
+    public float FruitPerceptionRadius => fruitPerceptionRadius;
     public float FruitWeight => fruitWeight;
     public float FruitArriveSlowingRadius => fruitArriveSlowingRadius;
 
@@ -51,6 +64,7 @@ public class Boid : Agent
 
     [Header("Audio Feedback")]
     [SerializeField] private AudioClip eatAudioClip;
+
     public AudioClip EatAudioClip => eatAudioClip;
 
     [Header("Feedback")]
@@ -59,6 +73,9 @@ public class Boid : Agent
 
     private MeshRenderer meshRenderer;
     private Animator animator;
+
+    private BoidPerception perception;
+    private BoidFlocking flocking;
 
     protected override void Start()
     {
@@ -71,6 +88,11 @@ public class Boid : Agent
             GameManager.Instance.RegisterBoid(this);
 
         currentHealth = maxHealth;
+
+        perception = new BoidPerception(this, perceptionUpdateInterval);
+        flocking = new BoidFlocking(this);
+
+        perception.Refresh();
 
         InitializeFSM();
 
@@ -102,6 +124,18 @@ public class Boid : Agent
         FSM.ChangeState(FlockingState);
     }
 
+    private void Update()
+    {
+        if (perception != null)
+            perception.Update(Time.deltaTime);
+
+        FSM.Update();
+
+        ApplyPhysics();
+
+        UpdateAnimator();
+    }
+
     public void Revive()
     {
         IsDead = false;
@@ -114,6 +148,9 @@ public class Boid : Agent
 
         Velocity = transform.forward * (maxSpeed * 0.5f);
 
+        if (perception != null)
+            perception.Refresh();
+
         FSM.ChangeState(FlockingState);
 
         RefreshUIFeedback();
@@ -121,7 +158,8 @@ public class Boid : Agent
 
     public void ReceiveDamage(int damage)
     {
-        if (IsDead || IsRespawning) return;
+        if (IsDead || IsRespawning)
+            return;
 
         currentHealth -= damage;
 
@@ -140,203 +178,57 @@ public class Boid : Agent
         ShouldRespawn = true;
     }
 
-    private void Update()
-    {
-        FSM.Update();
-
-        ApplyPhysics();
-
-        UpdateAnimator();
-    }
-
-    // SENSORES LOCALES POR OVERLAPSPHERE
+    // PERCEPTION
 
     public HunterAI DetectHunterInRange()
     {
-        Collider[] hits = Physics.OverlapSphere(
-            transform.position,
-            hunterPerceptionRadius,
-            Physics.DefaultRaycastLayers,
-            QueryTriggerInteraction.Collide
-        );
-
-        foreach (var hit in hits)
-        {
-            HunterAI hunter = hit.GetComponent<HunterAI>();
-
-            if (hunter != null)
-            {
-                float dist = Vector3.Distance(transform.position, hunter.transform.position);
-
-                if (dist <= hunterPerceptionRadius)
-                    return hunter;
-            }
-        }
-
-        return null;
+        return perception != null
+            ? perception.DetectHunterInRange()
+            : null;
     }
 
     public Fruit FindNearestFruit()
     {
-        Collider[] hits = Physics.OverlapSphere(
-            transform.position,
-            fruitPerceptionRadius,
-            Physics.DefaultRaycastLayers,
-            QueryTriggerInteraction.Collide
-        );
-
-        Fruit nearest = null;
-        float minDistance = float.MaxValue;
-
-        foreach (var hit in hits)
-        {
-            Fruit fruit = hit.GetComponent<Fruit>();
-
-            if (fruit != null)
-            {
-                float dist = Vector3.Distance(transform.position, fruit.transform.position);
-
-                if (dist <= fruitPerceptionRadius && dist < minDistance)
-                {
-                    minDistance = dist;
-                    nearest = fruit;
-                }
-            }
-        }
-
-        return nearest;
+        return perception != null
+            ? perception.FindNearestFruit()
+            : null;
     }
 
-    // CÁLCULOS DE FLOCKING (SEPARATION, ALIGNMENT, COHESION)
+    public List<Boid> GetNearbyBoids()
+    {
+        return perception != null
+            ? perception.GetNearbyBoids()
+            : new List<Boid>();
+    }
+
+    // FLOCKING
 
     public Vector3 CalculateFlocking()
     {
-        return (GetSeparationForce() * separationWeight) +
-               (GetAlignmentForce() * alignmentWeight) +
-               (GetCohesionForce() * cohesionWeight);
+        return flocking != null
+            ? flocking.CalculateFlocking()
+            : Vector3.zero;
     }
 
     public Vector3 GetSeparationForce()
     {
-        Collider[] hits = Physics.OverlapSphere(
-            transform.position,
-            separationRadius,
-            Physics.DefaultRaycastLayers,
-            QueryTriggerInteraction.Collide
-        );
-
-        Vector3 force = Vector3.zero;
-        int count = 0;
-
-        foreach (var hit in hits)
-        {
-            Boid other = hit.GetComponent<Boid>();
-
-            if (other != null && other != this && !other.IsDead && !other.IsRespawning)
-            {
-                float dist = Vector3.Distance(transform.position, other.transform.position);
-
-                if (dist <= separationRadius && dist > 0f)
-                {
-                    // Fuerza inversamente proporcional al cuadrado de la distancia para evitar superposiciones.
-                    Vector3 repulse = transform.position - other.transform.position;
-
-                    repulse /= (dist * dist);
-
-                    force += repulse;
-                    count++;
-                }
-            }
-        }
-
-        if (count > 0)
-        {
-            force /= count;
-            force = force.normalized * maxSpeed;
-            force -= Velocity;
-            force = Vector3.ClampMagnitude(force, maxForce);
-        }
-
-        return force;
+        return flocking != null
+            ? flocking.GetSeparationForce()
+            : Vector3.zero;
     }
 
     public Vector3 GetAlignmentForce()
     {
-        Collider[] hits = Physics.OverlapSphere(
-            transform.position,
-            alignmentRadius,
-            Physics.DefaultRaycastLayers,
-            QueryTriggerInteraction.Collide
-        );
-
-        Vector3 sumVelocity = Vector3.zero;
-        int count = 0;
-
-        foreach (var hit in hits)
-        {
-            Boid other = hit.GetComponent<Boid>();
-
-            if (other != null && other != this && !other.IsDead && !other.IsRespawning)
-            {
-                float dist = Vector3.Distance(transform.position, other.transform.position);
-
-                if (dist > alignmentRadius)
-                    continue;
-
-                sumVelocity += other.Velocity;
-                count++;
-            }
-        }
-
-        if (count > 0)
-        {
-            sumVelocity /= count;
-            sumVelocity = sumVelocity.normalized * maxSpeed;
-
-            Vector3 steer = sumVelocity - Velocity;
-
-            return Vector3.ClampMagnitude(steer, maxForce);
-        }
-
-        return Vector3.zero;
+        return flocking != null
+            ? flocking.GetAlignmentForce()
+            : Vector3.zero;
     }
 
     public Vector3 GetCohesionForce()
     {
-        Collider[] hits = Physics.OverlapSphere(
-            transform.position,
-            cohesionRadius,
-            Physics.DefaultRaycastLayers,
-            QueryTriggerInteraction.Collide
-        );
-
-        Vector3 sumPosition = Vector3.zero;
-        int count = 0;
-
-        foreach (var hit in hits)
-        {
-            Boid other = hit.GetComponent<Boid>();
-
-            if (other != null && other != this && !other.IsDead && !other.IsRespawning)
-            {
-                float dist = Vector3.Distance(transform.position, other.transform.position);
-
-                if (dist > cohesionRadius)
-                    continue;
-
-                sumPosition += other.transform.position;
-                count++;
-            }
-        }
-
-        if (count > 0)
-        {
-            sumPosition /= count;
-
-            return Seek(sumPosition);
-        }
-
-        return Vector3.zero;
+        return flocking != null
+            ? flocking.GetCohesionForce()
+            : Vector3.zero;
     }
 
     public void RestoreForwardMomentum()
@@ -387,7 +279,8 @@ public class Boid : Agent
 
     private void OnDrawGizmosSelected()
     {
-        if (!showGizmos) return;
+        if (!showGizmos)
+            return;
 
         Gizmos.color = Color.red;
         Gizmos.DrawWireSphere(transform.position, hunterPerceptionRadius);

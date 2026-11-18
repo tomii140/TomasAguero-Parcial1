@@ -1456,6 +1456,7 @@ MonoBehaviour:
   timeBetweenAttacks: 2
   gatheringTime: 2
   captureRadius: 1.5
+  perceptionUpdateInterval: 0.2
   maxEnergy: 25
   energyConsumptionRate: 2
   energyRecoveryRate: 15

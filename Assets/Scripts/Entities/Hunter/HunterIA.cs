@@ -19,6 +19,9 @@ public class HunterAI : Agent
     [SerializeField, Range(0.5f, 10f)] private float gatheringTime = 2f;
     [SerializeField, Range(0.5f, 5f)] private float captureRadius = 1.5f;
 
+    [Header("Perception Optimization")]
+    [SerializeField, Min(0.02f)] private float perceptionUpdateInterval = 0.2f;
+
     [Header("Energy & Rest")]
     [SerializeField, Range(0f, 500f)] private float maxEnergy = 100f;
     [SerializeField, Range(0.1f, 500f)] private float energyConsumptionRate = 15f;
@@ -48,12 +51,15 @@ public class HunterAI : Agent
     [Header("Feedback")]
     [SerializeField] private TextMeshPro stateTextUI;
     [SerializeField] private bool showGizmos = true;
+
     private Animator animator;
+    private HunterPerception perception;
 
     private Boid targetBoid;
-    public float TimerAttackCooldown { get; private set; } = 0f;
-    private Vector3 lastPosition;
 
+    public float TimerAttackCooldown { get; private set; } = 0f;
+
+    private Vector3 lastPosition;
     private int lastDisplayedEnergy;
 
     public float VisionRadius => visionRadius;
@@ -90,6 +96,9 @@ public class HunterAI : Agent
         currentEnergy = maxEnergy;
         lastPosition = transform.position;
 
+        perception = new HunterPerception(this, perceptionUpdateInterval);
+        perception.Refresh();
+
         PatrolState = new HunterPatrolState(this);
         AttackState = new HunterAttackState(this);
         GatherState = new HunterGatherState(this);
@@ -112,6 +121,8 @@ public class HunterAI : Agent
 
     private void Update()
     {
+        perception.Update(Time.deltaTime);
+
         UpdateCooldowns();
 
         FSM.Update();
@@ -164,45 +175,12 @@ public class HunterAI : Agent
         }
     }
 
-    // --- DETECCIÓN LOCAL DE BOIDS VIVOS O ELIMINADOS ---
-
     public Boid FindBoidInVision(bool lookForDead)
     {
-        if (!lookForDead && targetBoid != null && !targetBoid.IsDead && !targetBoid.IsRespawning)
-        {
-            if (Vector3.Distance(transform.position, targetBoid.transform.position) <= visionRadius)
-            {
-                return targetBoid;
-            }
-        }
+        if (perception == null)
+            return null;
 
-        Collider[] hits = Physics.OverlapSphere(
-            transform.position,
-            visionRadius,
-            Physics.DefaultRaycastLayers,
-            QueryTriggerInteraction.Collide
-        );
-
-        Boid nearest = null;
-        float minDistance = float.MaxValue;
-
-        foreach (var hit in hits)
-        {
-            Boid boid = hit.GetComponent<Boid>();
-
-            if (boid == null || boid.IsRespawning || boid.IsDead != lookForDead)
-                continue;
-
-            float dist = Vector3.Distance(transform.position, boid.transform.position);
-
-            if (dist <= visionRadius && dist < minDistance)
-            {
-                minDistance = dist;
-                nearest = boid;
-            }
-        }
-
-        return nearest;
+        return perception.FindBoidInVision(lookForDead);
     }
 
     public void SpawnFruitIfAllowed()
@@ -213,7 +191,11 @@ public class HunterAI : Agent
 
         Vector2 randomCircle = Random.insideUnitCircle * fruitSpawnRadius;
 
-        Vector3 spawnPos = transform.position + new Vector3(randomCircle.x, 0f, randomCircle.y);
+        Vector3 spawnPos = transform.position + new Vector3(
+            randomCircle.x,
+            0f,
+            randomCircle.y
+        );
 
         Instantiate(fruitPrefab, spawnPos, Quaternion.identity);
     }
@@ -241,7 +223,8 @@ public class HunterAI : Agent
 
         int displayedEnergy = Mathf.RoundToInt(currentEnergy);
 
-        stateTextUI.text = $"State: {currentStateName}\nEnergy: {displayedEnergy}/{maxEnergy}";
+        stateTextUI.text =
+            $"State: {currentStateName}\nEnergy: {displayedEnergy}/{maxEnergy}";
 
         lastDisplayedEnergy = displayedEnergy;
     }

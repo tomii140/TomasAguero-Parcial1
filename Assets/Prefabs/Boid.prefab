@@ -937,7 +937,7 @@ GameObject:
   - component: {fileID: 8839783805554305459}
   - component: {fileID: 5274696340503513126}
   m_Layer: 0
-  m_Name: Wild_Boar
+  m_Name: Boid
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -1009,6 +1009,7 @@ MonoBehaviour:
   fruitPerceptionRadius: 30
   fruitWeight: 2.5
   fruitArriveSlowingRadius: 3
+  perceptionUpdateInterval: 0.2
   minRespawnTime: 3
   maxRespawnTime: 6
   eatAudioClip: {fileID: 8300000, guid: 2d19b26b6dad73246adc8f988cf39b16, type: 3}
