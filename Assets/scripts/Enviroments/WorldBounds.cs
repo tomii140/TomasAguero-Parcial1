@@ -12,6 +12,9 @@ public class WorldBounds : MonoBehaviour
     [SerializeField] private float minZ = -20f;
     [SerializeField] private float maxZ = 20f;
 
+    [Header("Wrap Configuration")]
+    [SerializeField, Min(0f)] private float wrapOffset = 0.5f;
+
     private readonly Dictionary<Boid, int> boidWrapCounts = new Dictionary<Boid, int>();
 
     public float MinX => minX;
@@ -21,81 +24,112 @@ public class WorldBounds : MonoBehaviour
 
     private void Awake()
     {
-        if (Instance == null) Instance = this;
-        else Destroy(gameObject);
+        if (Instance == null)
+            Instance = this;
+        else
+            Destroy(gameObject);
     }
 
     public Vector3 ClampPosition(ref Vector3 position, ref Vector3 velocity)
     {
-        if (position.x < minX) { position.x = minX; velocity.x = -velocity.x; }
-        else if (position.x > maxX) { position.x = maxX; velocity.x = -velocity.x; }
+        if (position.x < minX)
+        {
+            position.x = minX;
+            velocity.x = -velocity.x;
+        }
+        else if (position.x > maxX)
+        {
+            position.x = maxX;
+            velocity.x = -velocity.x;
+        }
 
-        if (position.z < minZ) { position.z = minZ; velocity.z = -velocity.z; }
-        else if (position.z > maxZ) { position.z = maxZ; velocity.z = -velocity.z; }
+        if (position.z < minZ)
+        {
+            position.z = minZ;
+            velocity.z = -velocity.z;
+        }
+        else if (position.z > maxZ)
+        {
+            position.z = maxZ;
+            velocity.z = -velocity.z;
+        }
 
         return position;
     }
 
     public Vector3 WrapPosition(Vector3 position, Boid boid)
     {
-        float offset = 0.5f;
         bool wrapped = false;
-        Vector3 oldPos = position;
 
         if (position.x < minX)
         {
-            position.x = maxX - offset;
+            position.x = maxX - wrapOffset;
             wrapped = true;
         }
         else if (position.x > maxX)
         {
-            position.x = minX + offset;
+            position.x = minX + wrapOffset;
             wrapped = true;
         }
 
         if (position.z < minZ)
         {
-            position.z = maxZ - offset;
+            position.z = maxZ - wrapOffset;
             wrapped = true;
         }
         else if (position.z > maxZ)
         {
-            position.z = minZ + offset;
+            position.z = minZ + wrapOffset;
             wrapped = true;
         }
 
         if (wrapped)
-        {
             RegisterBoidWrap(boid);
-
-            Debug.Log($"<color=green>[WRAP EXITOSO]</color> De {oldPos} a nueva pos: {position}");
-        }
 
         return position;
     }
 
     private void RegisterBoidWrap(Boid boid)
     {
-        if (boid == null) return;
+        if (boid == null)
+            return;
 
-        if (!boidWrapCounts.ContainsKey(boid))
-            boidWrapCounts[boid] = 0;
-
-        boidWrapCounts[boid]++;
+        boidWrapCounts.TryGetValue(boid, out int currentCount);
+        boidWrapCounts[boid] = currentCount + 1;
     }
 
     public int GetBoidWrapCount(Boid boid)
     {
-        if (boid == null) return 0;
+        if (boid == null)
+            return 0;
 
-        return boidWrapCounts.TryGetValue(boid, out int count) ? count : 0;
+        return boidWrapCounts.TryGetValue(boid, out int count)
+            ? count
+            : 0;
+    }
+
+    public void UnregisterBoid(Boid boid)
+    {
+        if (boid != null)
+            boidWrapCounts.Remove(boid);
     }
 
     private void OnDrawGizmos()
     {
         Gizmos.color = Color.cyan;
-        Vector3 center = new Vector3((minX + maxX) / 2f, 0f, (minZ + maxZ) / 2f);
-        Vector3 size = new Vector3(maxX - minX, 1f, maxZ - minZ);
+
+        Vector3 center = new Vector3(
+            (minX + maxX) / 2f,
+            0f,
+            (minZ + maxZ) / 2f
+        );
+
+        Vector3 size = new Vector3(
+            maxX - minX,
+            1f,
+            maxZ - minZ
+        );
+
         Gizmos.DrawWireCube(center, size);
     }
 }

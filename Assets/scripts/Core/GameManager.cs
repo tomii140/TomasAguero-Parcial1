@@ -1,3 +1,4 @@
+
 using UnityEngine;
 using System.Collections.Generic;
 
@@ -7,6 +8,7 @@ public class GameManager : MonoBehaviour
 
     [Header("Hunter Configuration")]
     [SerializeField] private HunterAI hunter;
+
     public HunterAI Hunter => hunter;
 
     [Header("Boid Management")]
@@ -16,43 +18,72 @@ public class GameManager : MonoBehaviour
     [Header("Spawn Settings")]
     [SerializeField, Range(0.5f, 25f)] private float spawnRadius = 8f;
 
-    public List<Boid> ActiveBoids { get; private set; } = new List<Boid>();
-    public List<Fruit> ActiveFruits { get; private set; } = new List<Fruit>();
+    private readonly List<Boid> activeBoids = new List<Boid>();
+    private readonly List<Fruit> activeFruits = new List<Fruit>();
+
+    public IReadOnlyList<Boid> ActiveBoids => activeBoids;
+    public IReadOnlyList<Fruit> ActiveFruits => activeFruits;
 
     private void Awake()
     {
-        if (Instance == null) Instance = this;
-        else { Destroy(gameObject); return; }
+        if (Instance == null)
+            Instance = this;
+        else
+        {
+            Destroy(gameObject);
+            return;
+        }
     }
 
     private void Start()
     {
-        // genero la cantidad inicial de Boids.
         for (int i = 0; i < initialAmount; i++)
-        {
             SpawnGroupedBoid();
-        }
     }
 
-    // el registro dinámico de agentes para evitar consultas globales costosas en escena.
-    public void RegisterBoid(Boid boid) => ActiveBoids.Add(boid);
-    public void UnregisterBoid(Boid boid) => ActiveBoids.Remove(boid);
+    public void RegisterBoid(Boid boid)
+    {
+        if (boid != null && !activeBoids.Contains(boid))
+            activeBoids.Add(boid);
+    }
 
-    public void RegisterFruit(Fruit fruit) => ActiveFruits.Add(fruit);
-    public void UnregisterFruit(Fruit fruit) => ActiveFruits.Remove(fruit);
+    public void UnregisterBoid(Boid boid)
+    {
+        if (boid != null)
+            activeBoids.Remove(boid);
+    }
+
+    public void RegisterFruit(Fruit fruit)
+    {
+        if (fruit != null && !activeFruits.Contains(fruit))
+            activeFruits.Add(fruit);
+    }
+
+    public void UnregisterFruit(Fruit fruit)
+    {
+        if (fruit != null)
+            activeFruits.Remove(fruit);
+    }
 
     public void NotifyBoidDeath(Boid deadBoid)
     {
         if (deadBoid != null)
-        {
             deadBoid.TriggerRespawnFlow();
-        }
     }
 
     private void SpawnGroupedBoid()
     {
+        if (boidPrefab == null)
+            return;
+
         Vector2 randomCircle = Random.insideUnitCircle * spawnRadius;
-        Vector3 pos = new Vector3(randomCircle.x, 0f, randomCircle.y);
-        Instantiate(boidPrefab, pos, Quaternion.identity);
+
+        Vector3 spawnPosition = new Vector3(
+            randomCircle.x,
+            0f,
+            randomCircle.y
+        );
+
+        Instantiate(boidPrefab, spawnPosition, Quaternion.identity);
     }
 }

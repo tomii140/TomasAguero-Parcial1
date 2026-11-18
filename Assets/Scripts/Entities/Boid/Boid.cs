@@ -66,8 +66,10 @@ public class Boid : Agent
 
     [Header("Audio Feedback")]
     [SerializeField] private AudioClip eatAudioClip;
+    [SerializeField, Min(0.05f)] private float eatSoundInterval = 0.5f;
 
     public AudioClip EatAudioClip => eatAudioClip;
+    public float EatSoundInterval => eatSoundInterval;
 
     [Header("Feedback")]
     [SerializeField] private TextMeshPro stateTextUI;
@@ -104,7 +106,6 @@ public class Boid : Agent
         perception.Refresh();
 
         InitializeFSM();
-
         RefreshUIFeedback();
     }
 
@@ -115,6 +116,9 @@ public class Boid : Agent
 
         if (GameManager.Instance != null)
             GameManager.Instance.UnregisterBoid(this);
+
+        if (WorldBounds.Instance != null)
+            WorldBounds.Instance.UnregisterBoid(this);
     }
 
     private void InitializeFSM()
@@ -129,7 +133,6 @@ public class Boid : Agent
         RespawnState = new BoidRespawnState(this);
 
         FSM.OnStateChanged += HandleStateChanged;
-
         FSM.ChangeState(FlockingState);
     }
 
@@ -141,7 +144,6 @@ public class Boid : Agent
         FSM.Update();
 
         ApplyPhysics();
-
         UpdateAnimator();
     }
 
@@ -161,7 +163,6 @@ public class Boid : Agent
             perception.Refresh();
 
         FSM.ChangeState(FlockingState);
-
         RefreshUIFeedback();
     }
 

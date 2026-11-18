@@ -32,8 +32,8 @@ public class HunterAI : Agent
     [SerializeField] private float currentEnergy;
 
     [Header("Patrol")]
-    [SerializeField, Range(0.1f, 10f)] private float waypointThreshold = 1.0f;
-    [SerializeField, Range(0.5f, 10f)] private float waypointArriveSlowingRadius = 2.0f;
+    [SerializeField, Range(0.1f, 10f)] private float waypointThreshold = 1f;
+    [SerializeField, Range(0.5f, 10f)] private float waypointArriveSlowingRadius = 2f;
     [SerializeField] private Transform[] waypoints;
 
     [Header("Fruit Spawning")]
@@ -47,6 +47,7 @@ public class HunterAI : Agent
     [SerializeField] private AudioClip meleeAttackSound;
     [SerializeField] private AudioClip detectBoidSound;
     [SerializeField] private AudioClip restSound;
+
     private AudioSource audioSource;
 
     [Header("Feedback")]
@@ -61,10 +62,9 @@ public class HunterAI : Agent
     private HunterPerception perception;
     private Boid targetBoid;
 
-    public float TimerAttackCooldown { get; private set; } = 0f;
+    public float TimerAttackCooldown { get; private set; }
 
     private Vector3 lastPosition;
-    private int lastDisplayedEnergy;
 
     public float VisionRadius => visionRadius;
     public float RangeAttackRadius => rangeAttackRadius;
@@ -118,7 +118,6 @@ public class HunterAI : Agent
 
         FSM = new FiniteStateMachine();
         FSM.OnStateChanged += HandleStateChanged;
-
         FSM.ChangeState(PatrolState);
 
         RefreshUIFeedback();
@@ -133,13 +132,11 @@ public class HunterAI : Agent
     private void Update()
     {
         perception.Update(Time.deltaTime);
-
         UpdateCooldowns();
 
         FSM.Update();
 
         ApplyPhysics();
-
         UpdateAnimator();
     }
 
@@ -210,21 +207,15 @@ public class HunterAI : Agent
             maxEnergy
         );
 
-        int newDisplayedEnergy = Mathf.RoundToInt(currentEnergy);
-
-        if (newDisplayedEnergy != previousDisplayedEnergy)
-        {
+        if (Mathf.RoundToInt(currentEnergy) != previousDisplayedEnergy)
             RefreshUIFeedback();
-            lastDisplayedEnergy = newDisplayedEnergy;
-        }
     }
 
     public Boid FindBoidInVision(bool lookForDead)
     {
-        if (perception == null)
-            return null;
-
-        return perception.FindBoidInVision(lookForDead);
+        return perception != null
+            ? perception.FindBoidInVision(lookForDead)
+            : null;
     }
 
     public void SpawnFruitIfAllowed()
@@ -269,24 +260,21 @@ public class HunterAI : Agent
 
         stateTextUI.text =
             $"State: {currentStateName}\nEnergy: {displayedEnergy}/{maxEnergy}";
-
-        lastDisplayedEnergy = displayedEnergy;
     }
 
     private void UpdateAnimator()
     {
-        if (animator != null)
-        {
-            float speed = Vector3.Distance(
-                new Vector3(transform.position.x, 0f, transform.position.z),
-                new Vector3(lastPosition.x, 0f, lastPosition.z)
-            ) / Time.deltaTime;
+        if (animator == null) return;
 
-            lastPosition = transform.position;
+        float speed = Vector3.Distance(
+            new Vector3(transform.position.x, 0f, transform.position.z),
+            new Vector3(lastPosition.x, 0f, lastPosition.z)
+        ) / Time.deltaTime;
 
-            animator.SetFloat("Speed", speed);
-            animator.SetBool("IsResting", FSM.CurrentState == RestState);
-        }
+        lastPosition = transform.position;
+
+        animator.SetFloat("Speed", speed);
+        animator.SetBool("IsResting", FSM.CurrentState == RestState);
     }
 
     private void OnDrawGizmos()
