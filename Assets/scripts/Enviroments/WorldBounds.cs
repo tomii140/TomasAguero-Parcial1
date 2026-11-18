@@ -16,18 +16,17 @@ public class WorldBounds : MonoBehaviour
     [SerializeField, Min(0f)] private float wrapOffset = 0.5f;
 
     [Header("Spawn Validation")]
-    [SerializeField, Min(0.1f)] private float spawnClearanceRadius = 2.5f;
-    [SerializeField, Min(1)] private int spawnPositionAttempts = 30;
-    [SerializeField, Min(1)] private int spawnOverlapBufferCapacity = 64;
+    [SerializeField, Min(1)] private int spawnPositionAttempts = 60;
+    [SerializeField, Min(1)] private int spawnOverlapBufferCapacity = 128;
     [SerializeField, Min(0.01f)] private float spawnRetryInterval = 0.25f;
 
     [Header("Debug")]
-    [SerializeField] private bool showWrapDebugLogs = false;
+    [SerializeField] private bool showWrapDebugLogs;
 
     private readonly Dictionary<Boid, int> boidWrapCounts =
         new Dictionary<Boid, int>();
 
-    private Collider[] spawnOverlapResults;
+    private Collider[] overlapResults;
 
     public float MinX => minX;
     public float MaxX => maxX;
@@ -37,17 +36,20 @@ public class WorldBounds : MonoBehaviour
 
     private void Awake()
     {
-        if (Instance == null)
-            Instance = this;
-        else
+        if (Instance != null && Instance != this)
         {
             Destroy(gameObject);
             return;
         }
 
-        spawnOverlapResults = new Collider[
-            Mathf.Max(1, spawnOverlapBufferCapacity)
-        ];
+        Instance = this;
+        overlapResults = new Collider[Mathf.Max(1, spawnOverlapBufferCapacity)];
+    }
+
+    private void OnDestroy()
+    {
+        if (Instance == this)
+            Instance = null;
     }
 
     public Vector3 ClampPosition(ref Vector3 position, ref Vector3 velocity)
@@ -104,17 +106,37 @@ public class WorldBounds : MonoBehaviour
             wrapped = true;
         }
 
-        if (wrapped)
-        {
-            RegisterBoidWrap(boid);
+        if (!wrapped)
+            return position;
 
-            if (showWrapDebugLogs && boid != null)
+        float clearance = boid != null
+            ? boid.HorizontalCollisionRadius
+            : 0f;
+
+        if (!IsPositionAvailable(position, clearance, boid))
+        {
+            if (!TryGetRandomSpawnPosition(
+                position,
+                Mathf.Max(maxX - minX, maxZ - minZ),
+                position.y,
+                clearance,
+                boid,
+                out Vector3 safePosition))
             {
-                Debug.Log(
-                    $"[WORLD BOUNDS] {boid.name} salió del mapa y reapareció del otro lado. " +
-                    $"Posición anterior: {previousPosition}. Nueva posición: {position}."
-                );
+                return previousPosition;
             }
+
+            position = safePosition;
+        }
+
+        RegisterBoidWrap(boid);
+
+        if (showWrapDebugLogs && boid != null)
+        {
+            Debug.Log(
+                $"[WORLD BOUNDS] {boid.name} realizó Wrap. " +
+                $"Anterior: {previousPosition}. Nueva: {position}."
+            );
         }
 
         return position;
@@ -124,6 +146,7 @@ public class WorldBounds : MonoBehaviour
         Vector3 center,
         float searchRadius,
         float y,
+        float clearanceRadius,
         Boid ignoredBoid,
         out Vector3 spawnPosition)
     {
@@ -137,10 +160,10 @@ public class WorldBounds : MonoBehaviour
                 center.z + offset.y
             );
 
-            if (!IsInsideBounds(candidate))
+            if (!IsInsideBounds(candidate, clearanceRadius))
                 continue;
 
-            if (!IsSpawnPositionAvailable(candidate, ignoredBoid))
+            if (!IsPositionAvailable(candidate, clearanceRadius, ignoredBoid))
                 continue;
 
             spawnPosition = candidate;
@@ -152,19 +175,20 @@ public class WorldBounds : MonoBehaviour
     }
 
     public bool TryGetRandomSpawnPosition(
-        Boid ignoredBoid,
         float y,
+        float clearanceRadius,
+        Boid ignoredBoid,
         out Vector3 spawnPosition)
     {
         for (int attempt = 0; attempt < spawnPositionAttempts; attempt++)
         {
             Vector3 candidate = new Vector3(
-                Random.Range(minX, maxX),
+                Random.Range(minX + clearanceRadius, maxX - clearanceRadius),
                 y,
-                Random.Range(minZ, maxZ)
+                Random.Range(minZ + clearanceRadius, maxZ - clearanceRadius)
             );
 
-            if (!IsSpawnPositionAvailable(candidate, ignoredBoid))
+            if (!IsPositionAvailable(candidate, clearanceRadius, ignoredBoid))
                 continue;
 
             spawnPosition = candidate;
@@ -175,41 +199,64 @@ public class WorldBounds : MonoBehaviour
         return false;
     }
 
-    private bool IsInsideBounds(Vector3 position)
+    // Compatibilidad con BoidRespawnState.
+    public bool TryGetRandomSpawnPosition(
+        Boid ignoredBoid,
+        float y,
+        out Vector3 spawnPosition)
     {
-        return position.x >= minX &&
-               position.x <= maxX &&
-               position.z >= minZ &&
-               position.z <= maxZ;
+        float clearance = ignoredBoid != null
+            ? ignoredBoid.HorizontalCollisionRadius
+            : 0f;
+
+        return TryGetRandomSpawnPosition(
+            y,
+            clearance,
+            ignoredBoid,
+            out spawnPosition
+        );
     }
 
-    private bool IsSpawnPositionAvailable(
+    public bool IsPositionAvailable(
         Vector3 position,
-        Boid ignoredBoid)
+        float clearanceRadius,
+        Boid ignoredBoid = null)
     {
+        if (overlapResults == null ||
+            overlapResults.Length != Mathf.Max(1, spawnOverlapBufferCapacity))
+        {
+            overlapResults = new Collider[
+                Mathf.Max(1, spawnOverlapBufferCapacity)
+            ];
+        }
+
         int hitCount = Physics.OverlapSphereNonAlloc(
             position,
-            spawnClearanceRadius,
-            spawnOverlapResults,
+            Mathf.Max(0.01f, clearanceRadius),
+            overlapResults,
             Physics.DefaultRaycastLayers,
             QueryTriggerInteraction.Collide
         );
 
-        // Si el buffer se llena, no se considera segura la posición.
-        if (hitCount >= spawnOverlapResults.Length)
+        if (hitCount >= overlapResults.Length)
             return false;
 
         for (int i = 0; i < hitCount; i++)
         {
-            Collider hit = spawnOverlapResults[i];
+            Collider hit = overlapResults[i];
 
-            if (hit == null)
+            if (hit == null || !hit.enabled)
                 continue;
 
             Boid otherBoid = hit.GetComponentInParent<Boid>();
 
             if (otherBoid != null && otherBoid != ignoredBoid)
-                return false;
+            {
+                if (!otherBoid.IsDead && !otherBoid.IsRespawning)
+                    return false;
+
+                continue;
+            }
 
             Fruit fruit = hit.GetComponentInParent<Fruit>();
 
@@ -220,13 +267,21 @@ public class WorldBounds : MonoBehaviour
         return true;
     }
 
+    private bool IsInsideBounds(Vector3 position, float margin)
+    {
+        return position.x >= minX + margin &&
+               position.x <= maxX - margin &&
+               position.z >= minZ + margin &&
+               position.z <= maxZ - margin;
+    }
+
     private void RegisterBoidWrap(Boid boid)
     {
         if (boid == null)
             return;
 
-        boidWrapCounts.TryGetValue(boid, out int currentCount);
-        boidWrapCounts[boid] = currentCount + 1;
+        boidWrapCounts.TryGetValue(boid, out int count);
+        boidWrapCounts[boid] = count + 1;
     }
 
     public int GetBoidWrapCount(Boid boid)
@@ -250,9 +305,9 @@ public class WorldBounds : MonoBehaviour
         Gizmos.color = Color.cyan;
 
         Vector3 center = new Vector3(
-            (minX + maxX) / 2f,
+            (minX + maxX) * 0.5f,
             0f,
-            (minZ + maxZ) / 2f
+            (minZ + maxZ) * 0.5f
         );
 
         Vector3 size = new Vector3(

@@ -338,7 +338,30 @@ public class Boid : Agent
         animator.SetFloat("Speed", Velocity.magnitude);
         animator.SetBool("IsDead", IsDead || IsRespawning);
     }
+    public float HorizontalCollisionRadius
+    {
+        get
+        {
+            Collider[] colliders = GetComponentsInChildren<Collider>();
 
+            float radius = 0f;
+
+            foreach (Collider currentCollider in colliders)
+            {
+                if (currentCollider == null || !currentCollider.enabled)
+                    continue;
+
+                Bounds bounds = currentCollider.bounds;
+
+                radius = Mathf.Max(
+                    radius,
+                    Mathf.Max(bounds.extents.x, bounds.extents.z)
+                );
+            }
+
+            return radius;
+        }
+    }
     private void OnDrawGizmosSelected()
     {
         if (!showGizmos)

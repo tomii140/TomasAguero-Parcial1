@@ -37,24 +37,54 @@ public class BoidSeekObjectState : IState
             return;
         }
 
-        float distance = Vector3.Distance(
-            boid.transform.position,
-            targetFruit.transform.position
-        );
+        float distance = GetHorizontalDistance(targetFruit);
 
-        if (distance <= targetFruit.ConsumeRadius)
+        float stoppingDistance = GetStoppingDistance(targetFruit);
+
+        if (distance <= stoppingDistance)
         {
+            boid.ResetVelocity();
             boid.FSM.ChangeState(boid.ConsumeState);
             return;
         }
 
-        ApplyApproachForces(targetFruit);
+        ApplyApproachForces(targetFruit, stoppingDistance);
     }
 
-    private void ApplyApproachForces(Fruit targetFruit)
+    private float GetStoppingDistance(Fruit fruit)
     {
+        return fruit.ConsumeRadius +
+               boid.HorizontalCollisionRadius +
+               fruit.HorizontalCollisionRadius;
+    }
+
+    private float GetHorizontalDistance(Fruit fruit)
+    {
+        Vector3 difference =
+            boid.transform.position - fruit.transform.position;
+
+        difference.y = 0f;
+
+        return difference.magnitude;
+    }
+
+    private void ApplyApproachForces(
+        Fruit targetFruit,
+        float stoppingDistance)
+    {
+        Vector3 targetPosition = targetFruit.transform.position;
+
+        Vector3 direction = targetPosition - boid.transform.position;
+        direction.y = 0f;
+
+        if (direction.sqrMagnitude <= boid.DirectionEpsilon)
+            return;
+
+        Vector3 safeTargetPosition =
+            targetPosition - direction.normalized * stoppingDistance;
+
         Vector3 arriveForce = boid.Arrive(
-            targetFruit.transform.position,
+            safeTargetPosition,
             boid.FruitArriveSlowingRadius
         ) * boid.FruitWeight;
 

@@ -1,6 +1,7 @@
 
-using UnityEngine;
+using System.Collections;
 using System.Collections.Generic;
+using UnityEngine;
 
 public class GameManager : MonoBehaviour
 {
@@ -17,6 +18,7 @@ public class GameManager : MonoBehaviour
 
     [Header("Spawn Settings")]
     [SerializeField, Range(0.5f, 25f)] private float spawnRadius = 8f;
+    [SerializeField, Min(0.1f)] private float spawnRetryInterval = 0.5f;
 
     private readonly List<Boid> activeBoids = new List<Boid>();
     private readonly List<Fruit> activeFruits = new List<Fruit>();
@@ -24,21 +26,44 @@ public class GameManager : MonoBehaviour
     public IReadOnlyList<Boid> ActiveBoids => activeBoids;
     public IReadOnlyList<Fruit> ActiveFruits => activeFruits;
 
+    private int spawnedBoids;
+
     private void Awake()
     {
-        if (Instance == null)
-            Instance = this;
-        else
+        if (Instance != null && Instance != this)
         {
             Destroy(gameObject);
             return;
         }
+
+        Instance = this;
     }
 
     private void Start()
     {
-        for (int i = 0; i < initialAmount; i++)
-            SpawnGroupedBoid();
+        StartCoroutine(SpawnInitialBoids());
+    }
+
+    private IEnumerator SpawnInitialBoids()
+    {
+        if (boidPrefab == null)
+        {
+            Debug.LogError("[GAME MANAGER] No hay Boid Prefab asignado.");
+            yield break;
+        }
+
+        while (spawnedBoids < initialAmount)
+        {
+            if (TrySpawnGroupedBoid())
+            {
+                spawnedBoids++;
+                yield return null;
+            }
+            else
+            {
+                yield return new WaitForSeconds(spawnRetryInterval);
+            }
+        }
     }
 
     public void RegisterBoid(Boid boid)
@@ -71,57 +96,96 @@ public class GameManager : MonoBehaviour
             deadBoid.TriggerRespawnFlow();
     }
 
-    private void SpawnGroupedBoid()
+    private bool TrySpawnGroupedBoid()
     {
-        if (boidPrefab == null)
-            return;
+        WorldBounds bounds = WorldBounds.Instance;
 
-        Vector3 spawnPosition;
+        Vector3 spawnPosition = Vector3.zero;
 
-        if (WorldBounds.Instance != null)
+        if (bounds != null)
         {
-            bool foundPosition =
-                WorldBounds.Instance.TryGetRandomSpawnPosition(
-                    Vector3.zero,
-                    spawnRadius,
+            float clearanceRadius = GetPrefabClearanceRadius();
+
+            bool foundPosition = bounds.TryGetRandomSpawnPosition(
+                Vector3.zero,
+                spawnRadius,
+                0f,
+                clearanceRadius,
+                null,
+                out spawnPosition
+            );
+
+            if (!foundPosition)
+            {
+                foundPosition = bounds.TryGetRandomSpawnPosition(
                     0f,
+                    clearanceRadius,
                     null,
                     out spawnPosition
                 );
-
-            if (!foundPosition)
-            {
-                foundPosition =
-                    WorldBounds.Instance.TryGetRandomSpawnPosition(
-                        null,
-                        0f,
-                        out spawnPosition
-                    );
             }
 
             if (!foundPosition)
-            {
-                Debug.LogWarning(
-                    "[GAME MANAGER] No se encontró una posición libre para generar un Boid."
-                );
-                return;
-            }
+                return false;
         }
         else
         {
-            Vector2 randomCircle =
-                Random.insideUnitCircle * spawnRadius;
-
-            spawnPosition = new Vector3(
-                randomCircle.x,
-                0f,
-                randomCircle.y
-            );
+            Vector2 offset = Random.insideUnitCircle * spawnRadius;
+            spawnPosition = new Vector3(offset.x, 0f, offset.y);
         }
 
         Instantiate(boidPrefab, spawnPosition, Quaternion.identity);
-
-        // Actualiza las posiciones físicas antes de buscar el siguiente spawn.
         Physics.SyncTransforms();
+
+        return true;
+    }
+
+    private float GetPrefabClearanceRadius()
+    {
+        Collider[] prefabColliders =
+            boidPrefab.GetComponentsInChildren<Collider>(true);
+
+        float radius = 0.5f;
+
+        foreach (Collider prefabCollider in prefabColliders)
+        {
+            if (prefabCollider == null)
+                continue;
+
+            Vector3 scale = prefabCollider.transform.lossyScale;
+
+            if (prefabCollider is SphereCollider sphere)
+            {
+                float scaledRadius = sphere.radius *
+                    Mathf.Max(Mathf.Abs(scale.x), Mathf.Abs(scale.z));
+
+                radius = Mathf.Max(radius, scaledRadius);
+            }
+            else if (prefabCollider is CapsuleCollider capsule)
+            {
+                float scaledRadius = capsule.radius *
+                    Mathf.Max(Mathf.Abs(scale.x), Mathf.Abs(scale.z));
+
+                radius = Mathf.Max(radius, scaledRadius);
+            }
+            else if (prefabCollider is BoxCollider box)
+            {
+                Vector3 halfSize = Vector3.Scale(
+                    box.size * 0.5f,
+                    new Vector3(
+                        Mathf.Abs(scale.x),
+                        Mathf.Abs(scale.y),
+                        Mathf.Abs(scale.z)
+                    )
+                );
+
+                radius = Mathf.Max(
+                    radius,
+                    new Vector2(halfSize.x, halfSize.z).magnitude
+                );
+            }
+        }
+
+        return radius;
     }
 }
