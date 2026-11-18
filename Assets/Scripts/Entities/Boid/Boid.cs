@@ -64,6 +64,12 @@ public class Boid : Agent
     public float MinRespawnTime => minRespawnTime;
     public float MaxRespawnTime => maxRespawnTime;
 
+    [Header("Movement Configuration")]
+    [SerializeField, Range(0.1f, 1f)]
+    private float recoverySpeedMultiplier = 0.5f;
+
+    public float RecoverySpeedMultiplier => recoverySpeedMultiplier;
+
     [Header("Audio Feedback")]
     [SerializeField] private AudioClip eatAudioClip;
     [SerializeField, Min(0.05f)] private float eatSoundInterval = 0.5f;
@@ -157,7 +163,7 @@ public class Boid : Agent
 
         SetColorFeedback(Color.green);
 
-        Velocity = transform.forward * (maxSpeed * 0.5f);
+        Velocity = transform.forward * (maxSpeed * recoverySpeedMultiplier);
 
         if (perception != null)
             perception.Refresh();
@@ -239,7 +245,7 @@ public class Boid : Agent
 
     public void RestoreForwardMomentum()
     {
-        Velocity = transform.forward * (maxSpeed * 0.5f);
+        Velocity = transform.forward * (maxSpeed * recoverySpeedMultiplier);
     }
 
     public void SetRespawnVisibility(bool visible)

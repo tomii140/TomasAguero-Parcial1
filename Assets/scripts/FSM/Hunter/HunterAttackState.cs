@@ -175,7 +175,9 @@ public class HunterAttackState : IState
 
     private void ExecuteAttack(bool isMelee, Boid target)
     {
-        int damage = isMelee ? 2 : 1;
+        int damage = isMelee
+            ? hunter.MeleeDamage
+            : hunter.RangedDamage;
 
         hunter.PlayAttackSound(isMelee);
         target.ReceiveDamage(damage);

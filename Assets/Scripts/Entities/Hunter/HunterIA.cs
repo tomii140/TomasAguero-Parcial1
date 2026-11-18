@@ -20,6 +20,10 @@ public class HunterAI : Agent
     [SerializeField, Range(0.5f, 10f)] private float gatheringTime = 2f;
     [SerializeField, Range(0.5f, 5f)] private float captureRadius = 1.5f;
 
+    [Header("Combat Damage")]
+    [SerializeField, Min(1)] private int meleeDamage = 2;
+    [SerializeField, Min(1)] private int rangedDamage = 1;
+
     [Header("Perception Optimization")]
     [SerializeField, Min(0.02f)] private float perceptionUpdateInterval = 0.2f;
 
@@ -82,6 +86,9 @@ public class HunterAI : Agent
     public Transform[] Waypoints => waypoints;
     public AudioClip DetectBoidSound => detectBoidSound;
     public AudioClip RestSound => restSound;
+
+    public int MeleeDamage => meleeDamage;
+    public int RangedDamage => rangedDamage;
 
     protected override void Start()
     {
