@@ -1,10 +1,12 @@
+
 using UnityEngine;
 
 public class HunterAttackState : IState
 {
     private readonly HunterAI hunter;
+
     private Vector3 lastKnownTargetPosition;
-    private bool hasLastKnownPosition = false;
+    private bool hasLastKnownPosition;
 
     public HunterAttackState(HunterAI hunter)
     {
@@ -16,6 +18,7 @@ public class HunterAttackState : IState
         hunter.PlaySound(hunter.DetectBoidSound);
 
         Boid initialTarget = hunter.GetTargetBoid();
+
         if (initialTarget != null)
         {
             lastKnownTargetPosition = initialTarget.transform.position;
@@ -23,29 +26,36 @@ public class HunterAttackState : IState
         }
     }
 
-  
     public void Update()
     {
-        if (HasExceededWorldBounds()) return;
+        if (HasExceededWorldBounds())
+            return;
 
-        if (!ProcessEnergyManagement()) return;
+        if (!ProcessEnergyManagement())
+            return;
 
-        if (TryPrioritizeGathering()) return;
+        if (TryPrioritizeGathering())
+            return;
 
         EvaluateTargetAndSearch();
+
         ProcessCombatAndAttack();
+
         ApplyMovement();
     }
 
-    
-
     private bool HasExceededWorldBounds()
     {
-        if (WorldBounds.Instance == null) return false;
+        if (WorldBounds.Instance == null)
+            return false;
 
         bool hunterOutOfBounds = IsOutOfBounds(hunter.transform.position);
+
         Boid currentTarget = hunter.GetTargetBoid();
-        bool targetOutOfBounds = currentTarget != null && IsOutOfBounds(currentTarget.transform.position);
+
+        bool targetOutOfBounds =
+            currentTarget != null &&
+            IsOutOfBounds(currentTarget.transform.position);
 
         if (hunterOutOfBounds || targetOutOfBounds)
         {
@@ -53,96 +63,115 @@ public class HunterAttackState : IState
             hunter.FSM.ChangeState(hunter.PatrolState);
             return true;
         }
+
         return false;
     }
 
-    private bool IsOutOfBounds(Vector3 pos)
+    private bool IsOutOfBounds(Vector3 position)
     {
-        return pos.x < WorldBounds.Instance.MinX || pos.x > WorldBounds.Instance.MaxX ||
-               pos.z < WorldBounds.Instance.MinZ || pos.z > WorldBounds.Instance.MaxZ;
+        return position.x < WorldBounds.Instance.MinX ||
+               position.x > WorldBounds.Instance.MaxX ||
+               position.z < WorldBounds.Instance.MinZ ||
+               position.z > WorldBounds.Instance.MaxZ;
     }
 
     private bool ProcessEnergyManagement()
     {
-        hunter.ConsumeOrRecoverEnergy(-hunter.EnergyConsumptionRate * Time.deltaTime);
+        hunter.ConsumeOrRecoverEnergy(
+            -hunter.EnergyConsumptionRate * Time.deltaTime
+        );
 
         if (hunter.CurrentEnergy <= 0f)
         {
             hunter.FSM.ChangeState(hunter.RestState);
             return false;
         }
+
         return true;
     }
 
     private bool TryPrioritizeGathering()
     {
-        Boid deadBoidInVision = hunter.FindBoidInVision(lookForDead: true);
-        if (deadBoidInVision != null && deadBoidInVision.IsDead)
+        Boid deadBoid = hunter.FindBoidInVision(true);
+
+        if (deadBoid != null && deadBoid.IsDead)
         {
-            hunter.SetTargetBoid(deadBoidInVision);
+            hunter.SetTargetBoid(deadBoid);
             hunter.FSM.ChangeState(hunter.GatherState);
             return true;
         }
+
         return false;
     }
 
     private void EvaluateTargetAndSearch()
     {
-        Boid target = hunter.GetTargetBoid();
+        Boid currentTarget = hunter.GetTargetBoid();
 
-        if (target != null && (target.IsDead || target.IsRespawning))
+        if (currentTarget != null &&
+            (currentTarget.IsDead || currentTarget.IsRespawning))
         {
-            StoreLastKnownPosition(target.transform.position);
             hunter.SetTargetBoid(null);
-            target = null;
+            currentTarget = null;
         }
 
-        if (target == null)
-        {
-            Boid nextLiveBoid = hunter.FindBoidInVision(lookForDead: false);
-            if (nextLiveBoid != null && !nextLiveBoid.IsDead)
-            {
-                hunter.SetTargetBoid(nextLiveBoid);
-                StoreLastKnownPosition(nextLiveBoid.transform.position);
-            }
-        }
-        else
-        {
-            StoreLastKnownPosition(target.transform.position);
-        }
-    }
+        Boid visibleTarget = hunter.FindBoidInVision(false);
 
-    private void StoreLastKnownPosition(Vector3 pos)
-    {
-        lastKnownTargetPosition = pos;
-        hasLastKnownPosition = true;
+        if (visibleTarget != null)
+        {
+            hunter.SetTargetBoid(visibleTarget);
+
+            lastKnownTargetPosition =
+                visibleTarget.transform.position;
+
+            hasLastKnownPosition = true;
+        }
+        else if (currentTarget != null)
+        {
+            // Perdió la visión: conserva solamente la última posición conocida.
+            hunter.SetTargetBoid(null);
+        }
     }
 
     private void ProcessCombatAndAttack()
     {
         Boid target = hunter.GetTargetBoid();
-        if (target == null || target.IsDead) return;
 
-        float distanceToTarget = Vector3.Distance(hunter.transform.position, target.transform.position);
-        bool isMelee = distanceToTarget <= hunter.MeleeAttackRadius;
+        if (target == null || target.IsDead || target.IsRespawning)
+            return;
+
+        float distance = Vector3.Distance(
+            hunter.transform.position,
+            target.transform.position
+        );
+
+        bool isMelee = distance <= hunter.MeleeAttackRadius;
 
         DrawCombatDebugLines(target.transform.position, isMelee);
 
-        if (distanceToTarget <= hunter.RangeAttackRadius && hunter.TimerAttackCooldown <= 0f)
+        if (distance <= hunter.RangeAttackRadius &&
+            hunter.TimerAttackCooldown <= 0f)
         {
             ExecuteAttack(isMelee, target);
         }
     }
 
-    private void DrawCombatDebugLines(Vector3 targetPos, bool isMelee)
+    private void DrawCombatDebugLines(Vector3 targetPosition, bool isMelee)
     {
         Color lineColor = isMelee ? Color.magenta : Color.red;
-        Debug.DrawLine(hunter.transform.position, targetPos, lineColor, 0.1f);
+
+        Debug.DrawLine(
+            hunter.transform.position,
+            targetPosition,
+            lineColor,
+            0.1f
+        );
     }
 
     private void ExecuteAttack(bool isMelee, Boid target)
     {
         int damage = isMelee ? 2 : 1;
+
         hunter.PlayAttackSound(isMelee);
         target.ReceiveDamage(damage);
         hunter.ResetAttackCooldown();
@@ -152,16 +181,34 @@ public class HunterAttackState : IState
     {
         Boid target = hunter.GetTargetBoid();
 
-        if (target != null && !target.IsDead)
+        if (target != null)
         {
-            Vector3 pursuitForce = hunter.Pursuit(target);
-            hunter.AddForce(pursuitForce);
+            hunter.AddForce(hunter.Pursuit(target));
+            return;
         }
-        else if (hasLastKnownPosition)
+
+        if (!hasLastKnownPosition)
+            return;
+
+        Vector3 hunterPosition = hunter.transform.position;
+
+        float distance = Vector3.Distance(
+            new Vector3(hunterPosition.x, 0f, hunterPosition.z),
+            new Vector3(
+                lastKnownTargetPosition.x,
+                0f,
+                lastKnownTargetPosition.z
+            )
+        );
+
+        if (distance <= hunter.WaypointThreshold)
         {
-            Vector3 seekLastPos = hunter.Seek(lastKnownTargetPosition);
-            hunter.AddForce(seekLastPos);
+            hasLastKnownPosition = false;
+            hunter.FSM.ChangeState(hunter.PatrolState);
+            return;
         }
+
+        hunter.AddForce(hunter.Seek(lastKnownTargetPosition));
     }
 
     public void Exit()

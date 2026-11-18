@@ -1,27 +1,27 @@
+
 using UnityEngine;
 
 public class BoidDeadState : IState
 {
-    private readonly Boid _boid;
+    private readonly Boid boid;
 
-    public BoidDeadState(Boid boid) => _boid = boid;
+    public BoidDeadState(Boid boid)
+    {
+        this.boid = boid;
+    }
 
     public void Enter()
     {
-        _boid.SetColorFeedback(Color.black);
-        _boid.ResetVelocity();
+        boid.SetColorFeedback(Color.black);
+        boid.ResetVelocity();
     }
 
     public void Update()
     {
-        // Estado estático de espera hasta que el cazador complete la recolección y ordene el respawn.
-        if (_boid.ShouldRespawn)
+        if (boid.ShouldRespawn)
         {
-            _boid.FSM.ChangeState(_boid.RespawnState);
-            return;
+            boid.FSM.ChangeState(boid.RespawnState);
         }
-
-        _boid.ResetVelocity();
     }
 
     public void Exit() { }

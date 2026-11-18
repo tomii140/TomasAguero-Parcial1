@@ -27,14 +27,14 @@ public class GameManager : MonoBehaviour
 
     private void Start()
     {
-        // Genero la cantidad inicial de Boids requerida por la consigna (mínimo 6).
+        // genero la cantidad inicial de Boids.
         for (int i = 0; i < initialAmount; i++)
         {
             SpawnGroupedBoid();
         }
     }
 
-    // Registro dinámico de agentes para evitar consultas globales costosas en escena.
+    // el registro dinámico de agentes para evitar consultas globales costosas en escena.
     public void RegisterBoid(Boid boid) => ActiveBoids.Add(boid);
     public void UnregisterBoid(Boid boid) => ActiveBoids.Remove(boid);
 

@@ -1,30 +1,58 @@
 
-using UnityEngine;
 using System;
 
 public class FiniteStateMachine
 {
-    private IState _currentState;
+    private IState currentState;
+    private IState pendingState;
+    private bool isChangingState;
 
-    public IState CurrentState => _currentState;
+    public IState CurrentState => currentState;
 
     public event Action<IState> OnStateChanged;
 
     public void ChangeState(IState newState)
     {
-        if (newState == null || _currentState == newState) return;
+        if (newState == null ||
+            newState == currentState ||
+            newState == pendingState)
+        {
+            return;
+        }
 
-        _currentState?.Exit();
+        pendingState = newState;
 
-        _currentState = newState;
+        if (isChangingState)
+            return;
 
-        _currentState.Enter();
+        isChangingState = true;
 
-        OnStateChanged?.Invoke(_currentState);
+        try
+        {
+            while (pendingState != null)
+            {
+                IState nextState = pendingState;
+                pendingState = null;
+
+                if (nextState == currentState)
+                    continue;
+
+                currentState?.Exit();
+
+                currentState = nextState;
+                currentState.Enter();
+
+                OnStateChanged?.Invoke(currentState);
+            }
+        }
+        finally
+        {
+            isChangingState = false;
+        }
     }
 
     public void Update()
     {
-        _currentState?.Update();
+        currentState?.Update();
     }
 }

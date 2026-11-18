@@ -5,6 +5,8 @@ using System.Collections.Generic;
 
 public class Boid : Agent
 {
+    private static readonly List<Boid> EmptyBoids = new List<Boid>();
+
     public FiniteStateMachine FSM { get; private set; }
 
     public BoidFlockingState FlockingState { get; private set; }
@@ -14,9 +16,9 @@ public class Boid : Agent
     public BoidDeadState DeadState { get; private set; }
     public BoidRespawnState RespawnState { get; private set; }
 
-    public bool IsDead { get; private set; } = false;
-    public bool IsRespawning { get; private set; } = false;
-    public bool ShouldRespawn { get; private set; } = false;
+    public bool IsDead { get; private set; }
+    public bool IsRespawning { get; private set; }
+    public bool ShouldRespawn { get; private set; }
 
     [Header("Health Configuration")]
     [SerializeField] private int maxHealth = 2;
@@ -25,12 +27,12 @@ public class Boid : Agent
     public int CurrentHealth => currentHealth;
 
     [Header("Flocking Configuration")]
-    [SerializeField, Range(0.5f, 50f)] private float separationRadius = 2.0f;
-    [SerializeField, Range(2f, 50f)] private float alignmentRadius = 12.0f;
-    [SerializeField, Range(2f, 50f)] private float cohesionRadius = 12.0f;
+    [SerializeField, Range(0.5f, 50f)] private float separationRadius = 2f;
+    [SerializeField, Range(2f, 50f)] private float alignmentRadius = 12f;
+    [SerializeField, Range(2f, 50f)] private float cohesionRadius = 12f;
 
-    [SerializeField, Range(0f, 50f)] private float separationWeight = 2.0f;
-    [SerializeField, Range(0f, 50f)] private float alignmentWeight = 1.0f;
+    [SerializeField, Range(0f, 50f)] private float separationWeight = 2f;
+    [SerializeField, Range(0f, 50f)] private float alignmentWeight = 1f;
     [SerializeField, Range(0f, 50f)] private float cohesionWeight = 1.5f;
 
     public float SeparationRadius => separationRadius;
@@ -44,8 +46,8 @@ public class Boid : Agent
     [Header("Perception Sensors")]
     [SerializeField, Range(1f, 50f)] private float hunterPerceptionRadius = 10f;
     [SerializeField, Range(1f, 50f)] private float fruitPerceptionRadius = 10f;
-    [SerializeField, Range(0.5f, 50f)] private float fruitWeight = 2.0f;
-    [SerializeField, Range(0.5f, 50f)] private float fruitArriveSlowingRadius = 3.0f;
+    [SerializeField, Range(0.5f, 50f)] private float fruitWeight = 2f;
+    [SerializeField, Range(0.5f, 50f)] private float fruitArriveSlowingRadius = 3f;
 
     [SerializeField, Range(0.02f, 1f)]
     private float perceptionUpdateInterval = 0.2f;
@@ -71,17 +73,24 @@ public class Boid : Agent
     [SerializeField] private TextMeshPro stateTextUI;
     [SerializeField] private bool showGizmos = true;
 
-    private MeshRenderer meshRenderer;
     private Animator animator;
+
+    private Renderer[] cachedRenderers;
+    private Collider[] cachedColliders;
 
     private BoidPerception perception;
     private BoidFlocking flocking;
+
+    private void Awake()
+    {
+        cachedRenderers = GetComponentsInChildren<Renderer>(true);
+        cachedColliders = GetComponentsInChildren<Collider>(true);
+    }
 
     protected override void Start()
     {
         base.Start();
 
-        meshRenderer = GetComponent<MeshRenderer>();
         animator = GetComponent<Animator>();
 
         if (GameManager.Instance != null)
@@ -158,7 +167,7 @@ public class Boid : Agent
 
     public void ReceiveDamage(int damage)
     {
-        if (IsDead || IsRespawning)
+        if (IsDead || IsRespawning || damage <= 0)
             return;
 
         currentHealth -= damage;
@@ -178,8 +187,6 @@ public class Boid : Agent
         ShouldRespawn = true;
     }
 
-    // PERCEPTION
-
     public HunterAI DetectHunterInRange()
     {
         return perception != null
@@ -198,10 +205,8 @@ public class Boid : Agent
     {
         return perception != null
             ? perception.GetNearbyBoids()
-            : new List<Boid>();
+            : EmptyBoids;
     }
-
-    // FLOCKING
 
     public Vector3 CalculateFlocking()
     {
@@ -238,17 +243,23 @@ public class Boid : Agent
 
     public void SetRespawnVisibility(bool visible)
     {
-        foreach (Renderer renderer in GetComponentsInChildren<Renderer>(true))
-            renderer.enabled = visible;
+        foreach (Renderer cachedRenderer in cachedRenderers)
+        {
+            if (cachedRenderer != null)
+                cachedRenderer.enabled = visible;
+        }
 
-        foreach (Collider col in GetComponentsInChildren<Collider>(true))
-            col.enabled = visible;
+        foreach (Collider cachedCollider in cachedColliders)
+        {
+            if (cachedCollider != null)
+                cachedCollider.enabled = visible;
+        }
     }
 
     public void SetColorFeedback(Color color)
     {
-        if (meshRenderer != null)
-            meshRenderer.material.color = color;
+        if (agentMeshRenderer != null)
+            agentMeshRenderer.material.color = color;
     }
 
     private void HandleStateChanged(IState newState)
@@ -270,11 +281,11 @@ public class Boid : Agent
 
     private void UpdateAnimator()
     {
-        if (animator != null)
-        {
-            animator.SetFloat("Speed", Velocity.magnitude);
-            animator.SetBool("IsDead", IsDead || IsRespawning);
-        }
+        if (animator == null)
+            return;
+
+        animator.SetFloat("Speed", Velocity.magnitude);
+        animator.SetBool("IsDead", IsDead || IsRespawning);
     }
 
     private void OnDrawGizmosSelected()

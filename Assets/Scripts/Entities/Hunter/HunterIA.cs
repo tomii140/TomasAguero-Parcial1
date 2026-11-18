@@ -1,6 +1,7 @@
 
 using UnityEngine;
 using TMPro;
+using UnityEngine.UI;
 
 public class HunterAI : Agent
 {
@@ -52,9 +53,12 @@ public class HunterAI : Agent
     [SerializeField] private TextMeshPro stateTextUI;
     [SerializeField] private bool showGizmos = true;
 
+    [Header("Gathering Progress UI")]
+    [SerializeField] private Slider gatheringProgressSlider;
+    [SerializeField] private GameObject gatheringProgressCanvas;
+
     private Animator animator;
     private HunterPerception perception;
-
     private Boid targetBoid;
 
     public float TimerAttackCooldown { get; private set; } = 0f;
@@ -84,7 +88,6 @@ public class HunterAI : Agent
         base.Start();
 
         animator = GetComponent<Animator>();
-
         audioSource = GetComponent<AudioSource>();
 
         if (audioSource == null)
@@ -96,6 +99,15 @@ public class HunterAI : Agent
         currentEnergy = maxEnergy;
         lastPosition = transform.position;
 
+        HideGatheringProgress();
+
+        if (gatheringProgressSlider != null)
+        {
+            gatheringProgressSlider.minValue = 0f;
+            gatheringProgressSlider.maxValue = 1f;
+            gatheringProgressSlider.value = 0f;
+        }
+
         perception = new HunterPerception(this, perceptionUpdateInterval);
         perception.Refresh();
 
@@ -105,7 +117,6 @@ public class HunterAI : Agent
         RestState = new HunterRestState(this);
 
         FSM = new FiniteStateMachine();
-
         FSM.OnStateChanged += HandleStateChanged;
 
         FSM.ChangeState(PatrolState);
@@ -132,19 +143,42 @@ public class HunterAI : Agent
         UpdateAnimator();
     }
 
+    public void ShowGatheringProgress(float progress)
+    {
+        if (gatheringProgressCanvas != null)
+            gatheringProgressCanvas.SetActive(true);
+
+        if (gatheringProgressSlider != null)
+            gatheringProgressSlider.value = Mathf.Clamp01(progress);
+    }
+
+    public void HideGatheringProgress()
+    {
+        if (gatheringProgressSlider != null)
+            gatheringProgressSlider.value = 0f;
+
+        if (gatheringProgressCanvas != null)
+            gatheringProgressCanvas.SetActive(false);
+    }
+
     private void UpdateCooldowns()
     {
         if (TimerAttackCooldown > 0f)
             TimerAttackCooldown -= Time.deltaTime;
     }
 
-    public void ResetAttackCooldown() => TimerAttackCooldown = timeBetweenAttacks;
+    public void ResetAttackCooldown()
+    {
+        TimerAttackCooldown = timeBetweenAttacks;
+    }
 
     public void PlayAttackSound(bool isMelee)
     {
         if (audioSource == null) return;
 
-        AudioClip clipToPlay = isMelee ? meleeAttackSound : rangedAttackSound;
+        AudioClip clipToPlay = isMelee
+            ? meleeAttackSound
+            : rangedAttackSound;
 
         if (clipToPlay != null)
             audioSource.PlayOneShot(clipToPlay);
@@ -156,15 +190,25 @@ public class HunterAI : Agent
             audioSource.PlayOneShot(clip);
     }
 
-    public Boid GetTargetBoid() => targetBoid;
+    public Boid GetTargetBoid()
+    {
+        return targetBoid;
+    }
 
-    public void SetTargetBoid(Boid boid) => targetBoid = boid;
+    public void SetTargetBoid(Boid boid)
+    {
+        targetBoid = boid;
+    }
 
     public void ConsumeOrRecoverEnergy(float amount)
     {
         int previousDisplayedEnergy = Mathf.RoundToInt(currentEnergy);
 
-        currentEnergy = Mathf.Clamp(currentEnergy + amount, 0f, maxEnergy);
+        currentEnergy = Mathf.Clamp(
+            currentEnergy + amount,
+            0f,
+            maxEnergy
+        );
 
         int newDisplayedEnergy = Mathf.RoundToInt(currentEnergy);
 
@@ -185,9 +229,11 @@ public class HunterAI : Agent
 
     public void SpawnFruitIfAllowed()
     {
-        if (fruitPrefab == null || GameManager.Instance == null) return;
+        if (fruitPrefab == null || GameManager.Instance == null)
+            return;
 
-        if (GameManager.Instance.ActiveFruits.Count >= maxFruitsInScene) return;
+        if (GameManager.Instance.ActiveFruits.Count >= maxFruitsInScene)
+            return;
 
         Vector2 randomCircle = Random.insideUnitCircle * fruitSpawnRadius;
 
@@ -204,8 +250,6 @@ public class HunterAI : Agent
     {
         GameManager.Instance?.NotifyBoidDeath(boid);
     }
-
-    public void SetColorFeedback(Color color) { }
 
     private void HandleStateChanged(IState newState)
     {

@@ -7,6 +7,8 @@ public class BoidPerception
     private readonly Boid boid;
     private readonly float updateInterval;
 
+    private readonly Collider[] overlapResults = new Collider[64];
+
     private float updateTimer;
 
     private HunterAI detectedHunter;
@@ -45,9 +47,10 @@ public class BoidPerception
             boid.CohesionRadius
         );
 
-        Collider[] hits = Physics.OverlapSphere(
+        int hitCount = Physics.OverlapSphereNonAlloc(
             boid.transform.position,
             maxRadius,
+            overlapResults,
             Physics.DefaultRaycastLayers,
             QueryTriggerInteraction.Collide
         );
@@ -55,8 +58,13 @@ public class BoidPerception
         float nearestHunterDistance = float.MaxValue;
         float nearestFruitDistance = float.MaxValue;
 
-        foreach (Collider hit in hits)
+        for (int i = 0; i < hitCount; i++)
         {
+            Collider hit = overlapResults[i];
+
+            if (hit == null)
+                continue;
+
             HunterAI hunter = hit.GetComponent<HunterAI>();
 
             if (hunter != null)
@@ -120,10 +128,9 @@ public class BoidPerception
             detectedHunter.transform.position
         );
 
-        if (distance > boid.HunterPerceptionRadius)
-            return null;
-
-        return detectedHunter;
+        return distance <= boid.HunterPerceptionRadius
+            ? detectedHunter
+            : null;
     }
 
     public Fruit FindNearestFruit()
@@ -136,10 +143,9 @@ public class BoidPerception
             nearestFruit.transform.position
         );
 
-        if (distance > boid.FruitPerceptionRadius)
-            return null;
-
-        return nearestFruit;
+        return distance <= boid.FruitPerceptionRadius
+            ? nearestFruit
+            : null;
     }
 
     public List<Boid> GetNearbyBoids()

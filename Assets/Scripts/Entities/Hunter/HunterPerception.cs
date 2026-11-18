@@ -6,6 +6,8 @@ public class HunterPerception
     private readonly HunterAI hunter;
     private readonly float updateInterval;
 
+    private readonly Collider[] overlapResults = new Collider[64];
+
     private float updateTimer;
 
     private Boid nearestLiveBoid;
@@ -22,9 +24,10 @@ public class HunterPerception
         nearestLiveBoid = null;
         nearestDeadBoid = null;
 
-        Collider[] hits = Physics.OverlapSphere(
+        int hitCount = Physics.OverlapSphereNonAlloc(
             hunter.transform.position,
             hunter.VisionRadius,
+            overlapResults,
             Physics.DefaultRaycastLayers,
             QueryTriggerInteraction.Collide
         );
@@ -32,8 +35,13 @@ public class HunterPerception
         float nearestLiveDistance = float.MaxValue;
         float nearestDeadDistance = float.MaxValue;
 
-        foreach (Collider hit in hits)
+        for (int i = 0; i < hitCount; i++)
         {
+            Collider hit = overlapResults[i];
+
+            if (hit == null)
+                continue;
+
             Boid boid = hit.GetComponent<Boid>();
 
             if (boid == null || boid.IsRespawning)
@@ -55,13 +63,10 @@ public class HunterPerception
                     nearestDeadBoid = boid;
                 }
             }
-            else
+            else if (distance < nearestLiveDistance)
             {
-                if (distance < nearestLiveDistance)
-                {
-                    nearestLiveDistance = distance;
-                    nearestLiveBoid = boid;
-                }
+                nearestLiveDistance = distance;
+                nearestLiveBoid = boid;
             }
         }
     }
@@ -113,9 +118,8 @@ public class HunterPerception
             candidate.transform.position
         );
 
-        if (distance > hunter.VisionRadius)
-            return null;
-
-        return candidate;
+        return distance <= hunter.VisionRadius
+            ? candidate
+            : null;
     }
 }

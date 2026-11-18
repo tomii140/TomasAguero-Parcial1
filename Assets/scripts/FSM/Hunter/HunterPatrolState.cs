@@ -14,7 +14,7 @@ public class HunterPatrolState : IState
 
     public void Enter()
     {
-        hunter.SetColorFeedback(Color.green);
+        
     }
 
     public void Update()

@@ -1,3 +1,4 @@
+
 using UnityEngine;
 
 public class HunterGatherState : IState
@@ -6,11 +7,13 @@ public class HunterGatherState : IState
     private Boid _targetBoid;
     private float _gatherTimer;
 
-    public HunterGatherState(HunterAI hunter) => _hunter = hunter;
+    public HunterGatherState(HunterAI hunter)
+    {
+        _hunter = hunter;
+    }
 
     public void Enter()
     {
-        _hunter.SetColorFeedback(Color.blue);
         _targetBoid = _hunter.GetTargetBoid();
 
         if (_targetBoid == null || !_targetBoid.IsDead || _targetBoid.IsRespawning)
@@ -21,23 +24,25 @@ public class HunterGatherState : IState
 
         _gatherTimer = 0f;
         _hunter.ResetVelocity();
+        _hunter.HideGatheringProgress();
     }
 
     public void Update()
     {
-        if (!IsTargetValid()) return;
+        if (!IsTargetValid())
+            return;
 
         ProcessGatheringBehavior();
     }
 
     private bool IsTargetValid()
     {
-        // Valido que el boid realmente esté muerto y disponible para recolección.
         if (_targetBoid == null || !_targetBoid.IsDead || _targetBoid.IsRespawning)
         {
             ReturnToPatrol();
             return false;
         }
+
         return true;
     }
 
@@ -50,22 +55,31 @@ public class HunterGatherState : IState
 
         if (distXZ > _hunter.CaptureRadius)
         {
-            // Me acerco al boid caído usando Seek plano.
             Vector3 targetPos = _targetBoid.transform.position;
             targetPos.y = _hunter.transform.position.y;
 
             Vector3 force = _hunter.Seek(targetPos);
             _hunter.AddForce(force);
+
             _gatherTimer = 0f;
+            _hunter.HideGatheringProgress();
         }
         else
         {
-            // Una vez en rango de captura, detengo al cazador y cuento el tiempo necesario para recolectarlo.
             _hunter.ResetVelocity();
+
             _gatherTimer += Time.deltaTime;
+
+            float progress = _hunter.GatheringTime > 0f
+                ? _gatherTimer / _hunter.GatheringTime
+                : 1f;
+
+            _hunter.ShowGatheringProgress(progress);
 
             if (_gatherTimer >= _hunter.GatheringTime)
             {
+                _hunter.HideGatheringProgress();
+
                 _hunter.NotifyBoidCollected(_targetBoid);
                 ReturnToPatrol();
             }
@@ -74,6 +88,7 @@ public class HunterGatherState : IState
 
     private void ReturnToPatrol()
     {
+        _hunter.HideGatheringProgress();
         _hunter.SetTargetBoid(null);
         _hunter.FSM.ChangeState(_hunter.PatrolState);
     }
@@ -81,5 +96,6 @@ public class HunterGatherState : IState
     public void Exit()
     {
         _gatherTimer = 0f;
+        _hunter.HideGatheringProgress();
     }
 }
