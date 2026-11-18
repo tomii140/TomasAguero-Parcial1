@@ -1,3 +1,4 @@
+
 using UnityEngine;
 
 public abstract class Agent : MonoBehaviour
@@ -19,7 +20,7 @@ public abstract class Agent : MonoBehaviour
     protected virtual void Start()
     {
         agentMeshRenderer = GetComponent<MeshRenderer>();
-        // Inicializo una velocidad aleatoria para evitar que todos los agentes arranquen estáticos o en formación perfecta.
+
         Vector2 randomCircle = Random.insideUnitCircle * maxSpeed;
         Velocity = new Vector3(randomCircle.x, 0f, randomCircle.y);
     }
@@ -32,25 +33,17 @@ public abstract class Agent : MonoBehaviour
 
     protected virtual void ApplyPhysics()
     {
-        // Integración de Euler actualizo velocidad limitándola a la máxima permitida y calculo la posición objetivo.
         Velocity += acceleration * Time.deltaTime;
         Velocity = Vector3.ClampMagnitude(Velocity, maxSpeed);
 
         Vector3 displacement = Velocity * Time.deltaTime;
         Vector3 targetPos = transform.position + displacement;
 
-        // Delegación de límites espaciales según el tipo de agente (Wrap para Boids, Clamp con rebote para el Cazador).
         if (WorldBounds.Instance != null)
         {
-            if (this is Boid)
+            if (this is Boid boid)
             {
-                if (targetPos.x < WorldBounds.Instance.MinX || targetPos.x > WorldBounds.Instance.MaxX ||
-                    targetPos.z < WorldBounds.Instance.MinZ || targetPos.z > WorldBounds.Instance.MaxZ)
-                {
-                    Debug.Log($"<color=cyan>[BOID AL LÍMITE]</color> {gameObject.name} intentó salir en pos: {targetPos}");
-                }
-
-                targetPos = WorldBounds.Instance.WrapPosition(targetPos);
+                targetPos = WorldBounds.Instance.WrapPosition(targetPos, boid);
             }
             else
             {
@@ -63,7 +56,6 @@ public abstract class Agent : MonoBehaviour
         transform.position = targetPos;
         acceleration = Vector3.zero;
 
-        // Orientación suave hacia el vector de movimiento actual usando Slerp.
         if (Velocity.sqrMagnitude > 0.001f)
         {
             Quaternion targetRotation = Quaternion.LookRotation(Velocity.normalized);
@@ -72,8 +64,6 @@ public abstract class Agent : MonoBehaviour
     }
 
     public void AddForce(Vector3 forceVector) => acceleration += forceVector;
-
-    // STEERING BEHAVIOURS
 
     public Vector3 Seek(Vector3 targetPosition)
     {
@@ -86,7 +76,6 @@ public abstract class Agent : MonoBehaviour
     {
         if (targetAgent == null) return Vector3.zero;
 
-        // Predicción lineal de la posición futura del objetivo basada en su velocidad actual.
         float distanceToTarget = Vector3.Distance(transform.position, targetAgent.transform.position);
         float predictionTime = distanceToTarget / maxSpeed;
         Vector3 futurePosition = targetAgent.transform.position + targetAgent.Velocity * predictionTime;
@@ -109,8 +98,10 @@ public abstract class Agent : MonoBehaviour
 
         if (distanceToTarget < stopThreshold) return -Velocity;
 
-        // Desaceleración proporcional a la distancia dentro del radio de frenado.
-        float calculatedSpeed = (distanceToTarget < slowingRadius) ? maxSpeed * (distanceToTarget / slowingRadius) : maxSpeed;
+        float calculatedSpeed = (distanceToTarget < slowingRadius)
+            ? maxSpeed * (distanceToTarget / slowingRadius)
+            : maxSpeed;
+
         Vector3 desiredVelocity = desiredVector.normalized * calculatedSpeed;
         return Vector3.ClampMagnitude(desiredVelocity - Velocity, maxForce);
     }
@@ -119,7 +110,6 @@ public abstract class Agent : MonoBehaviour
     {
         if (targetAgent == null) return Vector3.zero;
 
-        // Evasión con predicción de trayectoria del cazador para maniobras de huida anticipadas.
         float distanceToTarget = Vector3.Distance(transform.position, targetAgent.transform.position);
         float predictionTime = distanceToTarget / maxSpeed;
         Vector3 futurePosition = targetAgent.transform.position + targetAgent.Velocity * predictionTime;

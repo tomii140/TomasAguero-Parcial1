@@ -1,3 +1,5 @@
+
+using System.Collections.Generic;
 using UnityEngine;
 
 public class WorldBounds : MonoBehaviour
@@ -10,6 +12,8 @@ public class WorldBounds : MonoBehaviour
     [SerializeField] private float minZ = -20f;
     [SerializeField] private float maxZ = 20f;
 
+    private readonly Dictionary<Boid, int> boidWrapCounts = new Dictionary<Boid, int>();
+
     public float MinX => minX;
     public float MaxX => maxX;
     public float MinZ => minZ;
@@ -21,7 +25,6 @@ public class WorldBounds : MonoBehaviour
         else Destroy(gameObject);
     }
 
-    // Restricción dura con inversión de velocidad de Clamp + Rebote para el Cazador.
     public Vector3 ClampPosition(ref Vector3 position, ref Vector3 velocity)
     {
         if (position.x < minX) { position.x = minX; velocity.x = -velocity.x; }
@@ -33,8 +36,7 @@ public class WorldBounds : MonoBehaviour
         return position;
     }
 
-    // Teletransporte fluido(Wrap) para que los Boids reaparezcan al otro lado del mapa.
-    public Vector3 WrapPosition(Vector3 position)
+    public Vector3 WrapPosition(Vector3 position, Boid boid)
     {
         float offset = 0.5f;
         bool wrapped = false;
@@ -64,10 +66,29 @@ public class WorldBounds : MonoBehaviour
 
         if (wrapped)
         {
+            RegisterBoidWrap(boid);
+
             Debug.Log($"<color=green>[WRAP EXITOSO]</color> De {oldPos} a nueva pos: {position}");
         }
 
         return position;
+    }
+
+    private void RegisterBoidWrap(Boid boid)
+    {
+        if (boid == null) return;
+
+        if (!boidWrapCounts.ContainsKey(boid))
+            boidWrapCounts[boid] = 0;
+
+        boidWrapCounts[boid]++;
+    }
+
+    public int GetBoidWrapCount(Boid boid)
+    {
+        if (boid == null) return 0;
+
+        return boidWrapCounts.TryGetValue(boid, out int count) ? count : 0;
     }
 
     private void OnDrawGizmos()

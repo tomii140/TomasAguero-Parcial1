@@ -7,6 +7,7 @@ public class HunterAttackState : IState
 
     private Vector3 lastKnownTargetPosition;
     private bool hasLastKnownPosition;
+    private int targetWrapCount;
 
     public HunterAttackState(HunterAI hunter)
     {
@@ -23,12 +24,17 @@ public class HunterAttackState : IState
         {
             lastKnownTargetPosition = initialTarget.transform.position;
             hasLastKnownPosition = true;
+            targetWrapCount = GetCurrentWrapCount(initialTarget);
+        }
+        else
+        {
+            targetWrapCount = 0;
         }
     }
 
     public void Update()
     {
-        if (HasExceededWorldBounds())
+        if (HasTargetLeftMap())
             return;
 
         if (!ProcessEnergyManagement())
@@ -44,35 +50,33 @@ public class HunterAttackState : IState
         ApplyMovement();
     }
 
-    private bool HasExceededWorldBounds()
+    private int GetCurrentWrapCount(Boid target)
     {
-        if (WorldBounds.Instance == null)
-            return false;
+        if (WorldBounds.Instance == null || target == null)
+            return 0;
 
-        bool hunterOutOfBounds = IsOutOfBounds(hunter.transform.position);
+        return WorldBounds.Instance.GetBoidWrapCount(target);
+    }
 
+    private bool HasTargetLeftMap()
+    {
         Boid currentTarget = hunter.GetTargetBoid();
 
-        bool targetOutOfBounds =
-            currentTarget != null &&
-            IsOutOfBounds(currentTarget.transform.position);
+        if (currentTarget == null || WorldBounds.Instance == null)
+            return false;
 
-        if (hunterOutOfBounds || targetOutOfBounds)
+        int currentWrapCount = GetCurrentWrapCount(currentTarget);
+
+        if (currentWrapCount > targetWrapCount)
         {
+            Debug.Log("[HUNTER] La presa salió del mapa. Regresando a Patrol.");
+
             hunter.SetTargetBoid(null);
             hunter.FSM.ChangeState(hunter.PatrolState);
             return true;
         }
 
         return false;
-    }
-
-    private bool IsOutOfBounds(Vector3 position)
-    {
-        return position.x < WorldBounds.Instance.MinX ||
-               position.x > WorldBounds.Instance.MaxX ||
-               position.z < WorldBounds.Instance.MinZ ||
-               position.z > WorldBounds.Instance.MaxZ;
     }
 
     private bool ProcessEnergyManagement()
@@ -109,27 +113,28 @@ public class HunterAttackState : IState
         Boid currentTarget = hunter.GetTargetBoid();
 
         if (currentTarget != null &&
-            (currentTarget.IsDead || currentTarget.IsRespawning))
+            !currentTarget.IsDead &&
+            !currentTarget.IsRespawning)
         {
-            hunter.SetTargetBoid(null);
-            currentTarget = null;
+            lastKnownTargetPosition = currentTarget.transform.position;
+            hasLastKnownPosition = true;
+            return;
         }
+
+        if (currentTarget != null)
+            hunter.SetTargetBoid(null);
 
         Boid visibleTarget = hunter.FindBoidInVision(false);
 
-        if (visibleTarget != null)
+        if (visibleTarget != null &&
+            !visibleTarget.IsDead &&
+            !visibleTarget.IsRespawning)
         {
             hunter.SetTargetBoid(visibleTarget);
 
-            lastKnownTargetPosition =
-                visibleTarget.transform.position;
-
+            lastKnownTargetPosition = visibleTarget.transform.position;
             hasLastKnownPosition = true;
-        }
-        else if (currentTarget != null)
-        {
-            // Perdió la visión: conserva solamente la última posición conocida.
-            hunter.SetTargetBoid(null);
+            targetWrapCount = GetCurrentWrapCount(visibleTarget);
         }
     }
 
@@ -181,14 +186,19 @@ public class HunterAttackState : IState
     {
         Boid target = hunter.GetTargetBoid();
 
-        if (target != null)
+        if (target != null &&
+            !target.IsDead &&
+            !target.IsRespawning)
         {
             hunter.AddForce(hunter.Pursuit(target));
             return;
         }
 
         if (!hasLastKnownPosition)
+        {
+            hunter.ResetVelocity();
             return;
+        }
 
         Vector3 hunterPosition = hunter.transform.position;
 
@@ -203,8 +213,7 @@ public class HunterAttackState : IState
 
         if (distance <= hunter.WaypointThreshold)
         {
-            hasLastKnownPosition = false;
-            hunter.FSM.ChangeState(hunter.PatrolState);
+            hunter.ResetVelocity();
             return;
         }
 
@@ -214,5 +223,6 @@ public class HunterAttackState : IState
     public void Exit()
     {
         hasLastKnownPosition = false;
+        targetWrapCount = 0;
     }
 }
