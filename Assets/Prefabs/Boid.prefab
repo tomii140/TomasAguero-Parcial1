@@ -997,6 +997,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::Boid
   maxSpeed: 15
   maxForce: 5
+  rotationSpeed: 10
   stopThreshold: 0.05
   maxHealth: 2
   separationRadius: 15
@@ -1007,12 +1008,16 @@ MonoBehaviour:
   cohesionWeight: 5
   hunterPerceptionRadius: 29
   fruitPerceptionRadius: 30
+  fruitAvoidanceRadius: 3
   fruitWeight: 2.5
+  fruitAvoidanceWeight: 2
   fruitArriveSlowingRadius: 3
   perceptionUpdateInterval: 0.2
   minRespawnTime: 3
   maxRespawnTime: 6
+  recoverySpeedMultiplier: 0.5
   eatAudioClip: {fileID: 8300000, guid: 2d19b26b6dad73246adc8f988cf39b16, type: 3}
+  eatSoundInterval: 0.5
   stateTextUI: {fileID: 2034143383176272650}
   showGizmos: 1
 --- !u!82 &8839783805554305459
@@ -1295,7 +1300,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 180, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: -0.646, y: 1.257}
+  m_AnchoredPosition: {x: -0.955, y: 1.404}
   m_SizeDelta: {x: 1, y: 1}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!23 &9211307885168584969

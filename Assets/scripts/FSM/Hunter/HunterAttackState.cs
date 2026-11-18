@@ -20,14 +20,20 @@ public class HunterAttackState : IState
 
         Boid initialTarget = hunter.GetTargetBoid();
 
+        if (initialTarget == null)
+            initialTarget = hunter.FindBoidInVision(false);
+
         if (initialTarget != null)
         {
+            hunter.SetTargetBoid(initialTarget);
+
             lastKnownTargetPosition = initialTarget.transform.position;
             hasLastKnownPosition = true;
             targetWrapCount = GetCurrentWrapCount(initialTarget);
         }
         else
         {
+            hasLastKnownPosition = false;
             targetWrapCount = 0;
         }
     }
@@ -44,9 +50,7 @@ public class HunterAttackState : IState
             return;
 
         EvaluateTargetAndSearch();
-
         ProcessCombatAndAttack();
-
         ApplyMovement();
     }
 
@@ -69,8 +73,6 @@ public class HunterAttackState : IState
 
         if (currentWrapCount > targetWrapCount)
         {
-            Debug.Log("[CAZADOR] La presa salió del mapa. El cazador abandonó la persecución y volvió a patrullar.");
-
             hunter.SetTargetBoid(null);
             hunter.FSM.ChangeState(hunter.PatrolState);
             return true;
@@ -98,20 +100,20 @@ public class HunterAttackState : IState
     {
         Boid deadBoid = hunter.FindBoidInVision(true);
 
-        if (deadBoid != null && deadBoid.IsDead)
-        {
-            hunter.SetTargetBoid(deadBoid);
-            hunter.FSM.ChangeState(hunter.GatherState);
-            return true;
-        }
+        if (deadBoid == null || !deadBoid.IsDead)
+            return false;
 
-        return false;
+        hunter.SetTargetBoid(deadBoid);
+        hunter.FSM.ChangeState(hunter.GatherState);
+
+        return true;
     }
 
     private void EvaluateTargetAndSearch()
     {
         Boid currentTarget = hunter.GetTargetBoid();
 
+        // Conserva la presa mientras siga viva, aunque salga de visión.
         if (currentTarget != null &&
             !currentTarget.IsDead &&
             !currentTarget.IsRespawning)
@@ -126,16 +128,17 @@ public class HunterAttackState : IState
 
         Boid visibleTarget = hunter.FindBoidInVision(false);
 
-        if (visibleTarget != null &&
-            !visibleTarget.IsDead &&
-            !visibleTarget.IsRespawning)
-        {
-            hunter.SetTargetBoid(visibleTarget);
+        if (visibleTarget == null)
+            return;
 
-            lastKnownTargetPosition = visibleTarget.transform.position;
-            hasLastKnownPosition = true;
-            targetWrapCount = GetCurrentWrapCount(visibleTarget);
-        }
+        if (visibleTarget.IsDead || visibleTarget.IsRespawning)
+            return;
+
+        hunter.SetTargetBoid(visibleTarget);
+
+        lastKnownTargetPosition = visibleTarget.transform.position;
+        hasLastKnownPosition = true;
+        targetWrapCount = GetCurrentWrapCount(visibleTarget);
     }
 
     private void ProcessCombatAndAttack()
@@ -152,25 +155,20 @@ public class HunterAttackState : IState
 
         bool isMelee = distance <= hunter.MeleeAttackRadius;
 
-        DrawCombatDebugLines(target.transform.position, isMelee);
-
-        if (distance <= hunter.RangeAttackRadius &&
-            hunter.TimerAttackCooldown <= 0f)
-        {
-            ExecuteAttack(isMelee, target);
-        }
-    }
-
-    private void DrawCombatDebugLines(Vector3 targetPosition, bool isMelee)
-    {
-        Color lineColor = isMelee ? Color.magenta : Color.red;
-
         Debug.DrawLine(
             hunter.transform.position,
-            targetPosition,
-            lineColor,
+            target.transform.position,
+            isMelee ? Color.magenta : Color.red,
             0.1f
         );
+
+        if (distance > hunter.RangeAttackRadius)
+            return;
+
+        if (hunter.TimerAttackCooldown > 0f)
+            return;
+
+        ExecuteAttack(isMelee, target);
     }
 
     private void ExecuteAttack(bool isMelee, Boid target)
@@ -181,13 +179,6 @@ public class HunterAttackState : IState
 
         hunter.PlayAttackSound(isMelee);
         target.ReceiveDamage(damage);
-
-        string attackType = isMelee ? "cuerpo a cuerpo" : "a distancia";
-
-        Debug.Log(
-            $"[CAZADOR] Atacó a {target.name} ({attackType}). " +
-            $"Daño causado: {damage}. Salud restante: {target.CurrentHealth}."
-        );
 
         hunter.ResetAttackCooldown();
     }
@@ -200,7 +191,16 @@ public class HunterAttackState : IState
             !target.IsDead &&
             !target.IsRespawning)
         {
-            hunter.AddForce(hunter.Pursuit(target));
+            float distance = Vector3.Distance(
+                hunter.transform.position,
+                target.transform.position
+            );
+
+            if (distance > hunter.RangeAttackRadius)
+                hunter.AddForce(hunter.Pursuit(target));
+            else
+                hunter.ResetVelocity();
+
             return;
         }
 
@@ -210,18 +210,12 @@ public class HunterAttackState : IState
             return;
         }
 
-        Vector3 hunterPosition = hunter.transform.position;
-
-        float distance = Vector3.Distance(
-            new Vector3(hunterPosition.x, 0f, hunterPosition.z),
-            new Vector3(
-                lastKnownTargetPosition.x,
-                0f,
-                lastKnownTargetPosition.z
-            )
+        float distanceToLastPosition = Vector3.Distance(
+            hunter.transform.position,
+            lastKnownTargetPosition
         );
 
-        if (distance <= hunter.WaypointThreshold)
+        if (distanceToLastPosition <= hunter.WaypointThreshold)
         {
             hunter.ResetVelocity();
             return;
