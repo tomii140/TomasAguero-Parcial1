@@ -76,14 +76,52 @@ public class GameManager : MonoBehaviour
         if (boidPrefab == null)
             return;
 
-        Vector2 randomCircle = Random.insideUnitCircle * spawnRadius;
+        Vector3 spawnPosition;
 
-        Vector3 spawnPosition = new Vector3(
-            randomCircle.x,
-            0f,
-            randomCircle.y
-        );
+        if (WorldBounds.Instance != null)
+        {
+            bool foundPosition =
+                WorldBounds.Instance.TryGetRandomSpawnPosition(
+                    Vector3.zero,
+                    spawnRadius,
+                    0f,
+                    null,
+                    out spawnPosition
+                );
+
+            if (!foundPosition)
+            {
+                foundPosition =
+                    WorldBounds.Instance.TryGetRandomSpawnPosition(
+                        null,
+                        0f,
+                        out spawnPosition
+                    );
+            }
+
+            if (!foundPosition)
+            {
+                Debug.LogWarning(
+                    "[GAME MANAGER] No se encontró una posición libre para generar un Boid."
+                );
+                return;
+            }
+        }
+        else
+        {
+            Vector2 randomCircle =
+                Random.insideUnitCircle * spawnRadius;
+
+            spawnPosition = new Vector3(
+                randomCircle.x,
+                0f,
+                randomCircle.y
+            );
+        }
 
         Instantiate(boidPrefab, spawnPosition, Quaternion.identity);
+
+        // Actualiza las posiciones físicas antes de buscar el siguiente spawn.
+        Physics.SyncTransforms();
     }
 }

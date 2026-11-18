@@ -3,64 +3,74 @@ using UnityEngine;
 
 public class BoidRespawnState : IState
 {
-    private readonly Boid _boid;
+    private readonly Boid boid;
 
-    private float _respawnTimer;
-    private float _targetRespawnTime;
+    private float respawnTimer;
+    private float targetRespawnTime;
+    private float spawnRetryTimer;
 
     public BoidRespawnState(Boid boid)
     {
-        _boid = boid;
+        this.boid = boid;
     }
 
     public void Enter()
     {
-        _boid.ResetVelocity();
-        _boid.SetRespawnVisibility(false);
+        boid.ResetVelocity();
+        boid.SetRespawnVisibility(false);
 
-        _respawnTimer = 0f;
-        _targetRespawnTime = Random.Range(
-            _boid.MinRespawnTime,
-            _boid.MaxRespawnTime
+        respawnTimer = 0f;
+        spawnRetryTimer = 0f;
+
+        targetRespawnTime = Random.Range(
+            boid.MinRespawnTime,
+            boid.MaxRespawnTime
         );
     }
 
     public void Update()
     {
-        _respawnTimer += Time.deltaTime;
+        respawnTimer += Time.deltaTime;
 
-        if (_respawnTimer >= _targetRespawnTime)
-            ExecuteRandomRespawn();
+        if (respawnTimer < targetRespawnTime)
+            return;
+
+        TryExecuteRespawn();
     }
 
-    private void ExecuteRandomRespawn()
+    private void TryExecuteRespawn()
     {
-        _boid.transform.position = CalculateRandomPosition();
+        WorldBounds worldBounds = WorldBounds.Instance;
 
-        _boid.SetRespawnVisibility(true);
-        _boid.Revive();
-    }
+        if (worldBounds == null)
+        {
+            boid.SetRespawnVisibility(true);
+            boid.Revive();
+            return;
+        }
 
-    private Vector3 CalculateRandomPosition()
-    {
-        if (WorldBounds.Instance == null)
-            return _boid.transform.position;
+        spawnRetryTimer += Time.deltaTime;
 
-        float posX = Random.Range(
-            WorldBounds.Instance.MinX,
-            WorldBounds.Instance.MaxX
+        if (spawnRetryTimer < worldBounds.SpawnRetryInterval)
+            return;
+
+        spawnRetryTimer = 0f;
+
+        bool foundPosition = worldBounds.TryGetRandomSpawnPosition(
+            boid,
+            boid.transform.position.y,
+            out Vector3 spawnPosition
         );
 
-        float posZ = Random.Range(
-            WorldBounds.Instance.MinZ,
-            WorldBounds.Instance.MaxZ
-        );
+        if (!foundPosition)
+            return;
 
-        return new Vector3(
-            posX,
-            _boid.transform.position.y,
-            posZ
-        );
+        boid.transform.position = spawnPosition;
+
+        Physics.SyncTransforms();
+
+        boid.SetRespawnVisibility(true);
+        boid.Revive();
     }
 
     public void Exit() { }

@@ -156,11 +156,11 @@ public class HunterAttackState : IState
         bool isMelee = distance <= hunter.MeleeAttackRadius;
 
         Debug.DrawLine(
-            hunter.transform.position,
-            target.transform.position,
-            isMelee ? Color.magenta : Color.red,
-            0.1f
-        );
+      hunter.transform.position,
+      target.transform.position,
+      isMelee ? Color.magenta : Color.red,
+      hunter.AttackDebugLineDuration
+  );
 
         if (distance > hunter.RangeAttackRadius)
             return;

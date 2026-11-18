@@ -64,6 +64,12 @@ public class HunterAI : Agent
     [SerializeField] private Slider gatheringProgressSlider;
     [SerializeField] private GameObject gatheringProgressCanvas;
 
+    [Header("Debug Settings")]
+    [SerializeField, Min(0f)] private float attackDebugLineDuration = 0.1f;
+
+ 
+    public float AttackDebugLineDuration => attackDebugLineDuration;
+
     private AudioSource audioSource;
     private Animator animator;
     private HunterPerception perception;

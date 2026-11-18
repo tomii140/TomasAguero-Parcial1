@@ -10,6 +10,9 @@ public abstract class Agent : MonoBehaviour
     [Header("Movement Settings")]
     [SerializeField, Min(0f)] private float rotationSpeed = 10f;
 
+    [Header("Movement Thresholds")]
+    [SerializeField, Min(0f)] private float minimumVelocitySqrMagnitude = 0.001f;
+
     [Header("Arrive Settings")]
     [SerializeField, Range(0.01f, 0.5f)] private float stopThreshold = 0.05f;
 
@@ -26,7 +29,12 @@ public abstract class Agent : MonoBehaviour
         agentMeshRenderer = GetComponent<MeshRenderer>();
 
         Vector2 randomCircle = Random.insideUnitCircle * maxSpeed;
-        Velocity = new Vector3(randomCircle.x, 0f, randomCircle.y);
+
+        Velocity = new Vector3(
+            randomCircle.x,
+            0f,
+            randomCircle.y
+        );
     }
 
     public void ResetVelocity()
@@ -47,7 +55,10 @@ public abstract class Agent : MonoBehaviour
         {
             if (this is Boid boid)
             {
-                targetPosition = WorldBounds.Instance.WrapPosition(targetPosition, boid);
+                targetPosition = WorldBounds.Instance.WrapPosition(
+                    targetPosition,
+                    boid
+                );
             }
             else
             {
@@ -70,10 +81,11 @@ public abstract class Agent : MonoBehaviour
 
     private void UpdateRotation()
     {
-        if (Velocity.sqrMagnitude <= 0.001f)
+        if (Velocity.sqrMagnitude <= minimumVelocitySqrMagnitude)
             return;
 
-        Quaternion targetRotation = Quaternion.LookRotation(Velocity.normalized);
+        Quaternion targetRotation =
+            Quaternion.LookRotation(Velocity.normalized);
 
         transform.rotation = Quaternion.Slerp(
             transform.rotation,
@@ -114,7 +126,8 @@ public abstract class Agent : MonoBehaviour
         float predictionTime = distanceToTarget / maxSpeed;
 
         Vector3 futurePosition =
-            targetAgent.transform.position + targetAgent.Velocity * predictionTime;
+            targetAgent.transform.position +
+            targetAgent.Velocity * predictionTime;
 
         return Seek(futurePosition);
     }
@@ -146,7 +159,8 @@ public abstract class Agent : MonoBehaviour
             ? maxSpeed * (distanceToTarget / slowingRadius)
             : maxSpeed;
 
-        Vector3 desiredVelocity = desiredVector.normalized * calculatedSpeed;
+        Vector3 desiredVelocity =
+            desiredVector.normalized * calculatedSpeed;
 
         return Vector3.ClampMagnitude(
             desiredVelocity - Velocity,
@@ -167,7 +181,8 @@ public abstract class Agent : MonoBehaviour
         float predictionTime = distanceToTarget / maxSpeed;
 
         Vector3 futurePosition =
-            targetAgent.transform.position + targetAgent.Velocity * predictionTime;
+            targetAgent.transform.position +
+            targetAgent.Velocity * predictionTime;
 
         return Flee(futurePosition);
     }
