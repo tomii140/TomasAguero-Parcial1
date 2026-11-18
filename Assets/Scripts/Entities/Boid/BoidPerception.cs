@@ -111,20 +111,21 @@ public class BoidPerception
 
             Boid otherBoid = hit.GetComponentInParent<Boid>();
 
-            if (otherBoid != null &&
-                otherBoid != boid &&
-                !otherBoid.IsDead &&
-                !otherBoid.IsRespawning &&
-                !nearbyBoids.Contains(otherBoid))
+            if (otherBoid == null ||
+                otherBoid == boid ||
+                otherBoid.IsRespawning ||
+                nearbyBoids.Contains(otherBoid))
             {
-                float distance = Vector3.Distance(
-                    boid.transform.position,
-                    otherBoid.transform.position
-                );
-
-                if (distance <= maxRadius)
-                    nearbyBoids.Add(otherBoid);
+                continue;
             }
+
+            float boidDistance = Vector3.Distance(
+                boid.transform.position,
+                otherBoid.transform.position
+            );
+
+            if (boidDistance <= maxRadius)
+                nearbyBoids.Add(otherBoid);
         }
     }
 
