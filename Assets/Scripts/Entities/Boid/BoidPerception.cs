@@ -7,7 +7,7 @@ public class BoidPerception
     private readonly Boid boid;
     private readonly float updateInterval;
 
-    private readonly Collider[] overlapResults = new Collider[64];
+    private readonly Collider[] overlapResults = new Collider[128];
 
     private float updateTimer;
 
@@ -15,6 +15,7 @@ public class BoidPerception
     private Fruit nearestFruit;
 
     private readonly List<Boid> nearbyBoids = new List<Boid>();
+    private readonly List<Fruit> nearbyFruits = new List<Fruit>();
 
     public BoidPerception(Boid boid, float updateInterval)
     {
@@ -37,11 +38,14 @@ public class BoidPerception
     {
         detectedHunter = null;
         nearestFruit = null;
+
         nearbyBoids.Clear();
+        nearbyFruits.Clear();
 
         float maxRadius = Mathf.Max(
             boid.HunterPerceptionRadius,
             boid.FruitPerceptionRadius,
+            boid.FruitAvoidanceRadius,
             boid.SeparationRadius,
             boid.AlignmentRadius,
             boid.CohesionRadius
@@ -65,7 +69,7 @@ public class BoidPerception
             if (hit == null)
                 continue;
 
-            HunterAI hunter = hit.GetComponent<HunterAI>();
+            HunterAI hunter = hit.GetComponentInParent<HunterAI>();
 
             if (hunter != null)
             {
@@ -82,7 +86,7 @@ public class BoidPerception
                 }
             }
 
-            Fruit fruit = hit.GetComponent<Fruit>();
+            Fruit fruit = hit.GetComponentInParent<Fruit>();
 
             if (fruit != null)
             {
@@ -90,6 +94,12 @@ public class BoidPerception
                     boid.transform.position,
                     fruit.transform.position
                 );
+
+                if (distance <= boid.FruitAvoidanceRadius &&
+                    !nearbyFruits.Contains(fruit))
+                {
+                    nearbyFruits.Add(fruit);
+                }
 
                 if (distance <= boid.FruitPerceptionRadius &&
                     distance < nearestFruitDistance)
@@ -99,7 +109,7 @@ public class BoidPerception
                 }
             }
 
-            Boid otherBoid = hit.GetComponent<Boid>();
+            Boid otherBoid = hit.GetComponentInParent<Boid>();
 
             if (otherBoid != null &&
                 otherBoid != boid &&
@@ -151,5 +161,10 @@ public class BoidPerception
     public List<Boid> GetNearbyBoids()
     {
         return nearbyBoids;
+    }
+
+    public List<Fruit> GetNearbyFruits()
+    {
+        return nearbyFruits;
     }
 }

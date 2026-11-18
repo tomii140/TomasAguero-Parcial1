@@ -1,66 +1,80 @@
+
 using UnityEngine;
 
 public class BoidFlockingState : IState
 {
-    private readonly Boid _boid;
+    private readonly Boid boid;
 
-    public BoidFlockingState(Boid boid) => _boid = boid;
+    public BoidFlockingState(Boid boid)
+    {
+        this.boid = boid;
+    }
 
-    public void Enter() => _boid.SetColorFeedback(Color.green);
+    public void Enter()
+    {
+        boid.SetColorFeedback(Color.green);
+    }
 
     public void Update()
     {
-        if (CheckIfDead()) return;
+        if (CheckIfDead())
+            return;
 
-        if (CheckThreatAndEvade()) return;
+        if (CheckThreatAndEvade())
+            return;
 
-        if (CheckFoodAndSeek()) return;
+        if (CheckFoodAndSeek())
+            return;
 
         ApplyFlockingBehavior();
     }
 
     private bool CheckIfDead()
     {
-        if (_boid.IsDead)
-        {
-            _boid.FSM.ChangeState(_boid.DeadState);
-            return true;
-        }
-        return false;
+        if (!boid.IsDead)
+            return false;
+
+        boid.FSM.ChangeState(boid.DeadState);
+        return true;
     }
 
     private bool CheckThreatAndEvade()
     {
-        // Prioridad máxima defensiva: si el cazador entra en rango, salto inmediatamente a evasión.
-        if (_boid.DetectHunterInRange() != null)
-        {
-            _boid.FSM.ChangeState(_boid.EvadeState);
-            return true;
-        }
-        return false;
+        if (boid.DetectHunterInRange() == null)
+            return false;
+
+        boid.FSM.ChangeState(boid.EvadeState);
+        return true;
     }
 
     private bool CheckFoodAndSeek()
     {
-        // Prioridad secundaria: búsqueda y consumo de recursos (frutas) en el entorno.
-        Fruit targetFruit = _boid.FindNearestFruit();
-        if (targetFruit != null)
-        {
-            float distToFruit = Vector3.Distance(_boid.transform.position, targetFruit.transform.position);
-            if (distToFruit <= targetFruit.ConsumeRadius)
-                _boid.FSM.ChangeState(_boid.ConsumeState);
-            else
-                _boid.FSM.ChangeState(_boid.SeekObjectState);
-            return true;
-        }
-        return false;
+        Fruit targetFruit = boid.FindNearestFruit();
+
+        if (targetFruit == null)
+            return false;
+
+        float distance = Vector3.Distance(
+            boid.transform.position,
+            targetFruit.transform.position
+        );
+
+        if (distance <= targetFruit.ConsumeRadius)
+            boid.FSM.ChangeState(boid.ConsumeState);
+        else
+            boid.FSM.ChangeState(boid.SeekObjectState);
+
+        return true;
     }
 
     private void ApplyFlockingBehavior()
     {
-        // Cálculo ponderado de las reglas de floco (Separación + Alineación + Cohesión).
-        Vector3 flockingForce = _boid.CalculateFlocking();
-        _boid.AddForce(flockingForce);
+        Vector3 flockingForce = boid.CalculateFlocking();
+
+        Vector3 fruitAvoidanceForce =
+            boid.GetFruitAvoidanceForce() * boid.FruitAvoidanceWeight;
+
+        boid.AddForce(flockingForce + fruitAvoidanceForce);
     }
 
     public void Exit() { }

@@ -1,38 +1,50 @@
+
 using UnityEngine;
 
 public class BoidSeekObjectState : IState
 {
-    private readonly Boid _boid;
+    private readonly Boid boid;
 
-    public BoidSeekObjectState(Boid boid) => _boid = boid;
+    public BoidSeekObjectState(Boid boid)
+    {
+        this.boid = boid;
+    }
 
-    public void Enter() => _boid.SetColorFeedback(Color.yellow);
+    public void Enter()
+    {
+        boid.SetColorFeedback(Color.yellow);
+    }
 
     public void Update()
     {
-        if (_boid.IsDead)
+        if (boid.IsDead)
         {
-            _boid.FSM.ChangeState(_boid.DeadState);
+            boid.FSM.ChangeState(boid.DeadState);
             return;
         }
 
-        if (_boid.DetectHunterInRange() != null)
+        if (boid.DetectHunterInRange() != null)
         {
-            _boid.FSM.ChangeState(_boid.EvadeState);
+            boid.FSM.ChangeState(boid.EvadeState);
             return;
         }
 
-        Fruit targetFruit = _boid.FindNearestFruit();
+        Fruit targetFruit = boid.FindNearestFruit();
+
         if (targetFruit == null)
         {
-            _boid.FSM.ChangeState(_boid.FlockingState);
+            boid.FSM.ChangeState(boid.FlockingState);
             return;
         }
 
-        float distToFruit = Vector3.Distance(_boid.transform.position, targetFruit.transform.position);
-        if (distToFruit <= targetFruit.ConsumeRadius)
+        float distance = Vector3.Distance(
+            boid.transform.position,
+            targetFruit.transform.position
+        );
+
+        if (distance <= targetFruit.ConsumeRadius)
         {
-            _boid.FSM.ChangeState(_boid.ConsumeState);
+            boid.FSM.ChangeState(boid.ConsumeState);
             return;
         }
 
@@ -41,10 +53,23 @@ public class BoidSeekObjectState : IState
 
     private void ApplyApproachForces(Fruit targetFruit)
     {
-        // Comportamiento de Arrive hacia la fruta combinado con separación para no solaparse con otros boids.
-        Vector3 arriveForce = _boid.Arrive(targetFruit.transform.position, _boid.FruitArriveSlowingRadius) * _boid.FruitWeight;
-        Vector3 separationForce = _boid.GetSeparationForce() * _boid.SeparationWeight;
-        _boid.AddForce(arriveForce + separationForce);
+        Vector3 arriveForce = boid.Arrive(
+            targetFruit.transform.position,
+            boid.FruitArriveSlowingRadius
+        ) * boid.FruitWeight;
+
+        Vector3 separationForce =
+            boid.GetSeparationForce() * boid.SeparationWeight;
+
+        Vector3 fruitAvoidanceForce =
+            boid.GetFruitAvoidanceForce(targetFruit) *
+            boid.FruitAvoidanceWeight;
+
+        boid.AddForce(
+            arriveForce +
+            separationForce +
+            fruitAvoidanceForce
+        );
     }
 
     public void Exit() { }

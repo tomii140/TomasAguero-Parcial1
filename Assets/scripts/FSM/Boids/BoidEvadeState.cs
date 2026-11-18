@@ -1,22 +1,29 @@
+
 using UnityEngine;
 
 public class BoidEvadeState : IState
 {
-    private readonly Boid _boid;
+    private readonly Boid boid;
 
-    public BoidEvadeState(Boid boid) => _boid = boid;
+    public BoidEvadeState(Boid boid)
+    {
+        this.boid = boid;
+    }
 
-    public void Enter() => _boid.SetColorFeedback(Color.red);
+    public void Enter()
+    {
+        boid.SetColorFeedback(Color.red);
+    }
 
     public void Update()
     {
-        if (_boid.IsDead)
+        if (boid.IsDead)
         {
-            _boid.FSM.ChangeState(_boid.DeadState);
+            boid.FSM.ChangeState(boid.DeadState);
             return;
         }
 
-        HunterAI hunter = _boid.DetectHunterInRange();
+        HunterAI hunter = boid.DetectHunterInRange();
 
         if (hunter == null)
         {
@@ -29,25 +36,42 @@ public class BoidEvadeState : IState
 
     private void EvaluatePostEvacuationTransition()
     {
-        // Si el peligro desaparece, decido si vuelvo a buscar comida o me reincorporo al floco.
-        Fruit targetFruit = _boid.FindNearestFruit();
+        Fruit targetFruit = boid.FindNearestFruit();
+
         if (targetFruit != null)
         {
-            float distToFruit = Vector3.Distance(_boid.transform.position, targetFruit.transform.position);
-            _boid.FSM.ChangeState(distToFruit <= targetFruit.ConsumeRadius ? _boid.ConsumeState : _boid.SeekObjectState);
+            float distance = Vector3.Distance(
+                boid.transform.position,
+                targetFruit.transform.position
+            );
+
+            boid.FSM.ChangeState(
+                distance <= targetFruit.ConsumeRadius
+                    ? boid.ConsumeState
+                    : boid.SeekObjectState
+            );
         }
         else
         {
-            _boid.FSM.ChangeState(_boid.FlockingState);
+            boid.FSM.ChangeState(boid.FlockingState);
         }
     }
 
     private void ExecuteEvadeManeuver(HunterAI hunter)
     {
-        // Combinación de fuerza de huida (Evade) con separación local para evitar embotellamientos grupales.
-        Vector3 evadeForce = _boid.Evade(hunter);
-        Vector3 separationForce = _boid.GetSeparationForce() * _boid.SeparationWeight;
-        _boid.AddForce(evadeForce + separationForce);
+        Vector3 evadeForce = boid.Evade(hunter);
+
+        Vector3 separationForce =
+            boid.GetSeparationForce() * boid.SeparationWeight;
+
+        Vector3 fruitAvoidanceForce =
+            boid.GetFruitAvoidanceForce() * boid.FruitAvoidanceWeight;
+
+        boid.AddForce(
+            evadeForce +
+            separationForce +
+            fruitAvoidanceForce
+        );
     }
 
     public void Exit() { }

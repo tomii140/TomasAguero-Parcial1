@@ -46,7 +46,9 @@ public class Boid : Agent
     [Header("Perception Sensors")]
     [SerializeField, Range(1f, 50f)] private float hunterPerceptionRadius = 10f;
     [SerializeField, Range(1f, 50f)] private float fruitPerceptionRadius = 10f;
+    [SerializeField, Range(0.5f, 20f)] private float fruitAvoidanceRadius = 3f;
     [SerializeField, Range(0.5f, 50f)] private float fruitWeight = 2f;
+    [SerializeField, Range(0.5f, 50f)] private float fruitAvoidanceWeight = 2f;
     [SerializeField, Range(0.5f, 50f)] private float fruitArriveSlowingRadius = 3f;
 
     [SerializeField, Range(0.02f, 1f)]
@@ -54,7 +56,9 @@ public class Boid : Agent
 
     public float HunterPerceptionRadius => hunterPerceptionRadius;
     public float FruitPerceptionRadius => fruitPerceptionRadius;
+    public float FruitAvoidanceRadius => fruitAvoidanceRadius;
     public float FruitWeight => fruitWeight;
+    public float FruitAvoidanceWeight => fruitAvoidanceWeight;
     public float FruitArriveSlowingRadius => fruitArriveSlowingRadius;
 
     [Header("Respawn Configuration")]
@@ -82,7 +86,6 @@ public class Boid : Agent
     [SerializeField] private bool showGizmos = true;
 
     private Animator animator;
-
     private Renderer[] cachedRenderers;
     private Collider[] cachedColliders;
 
@@ -215,6 +218,13 @@ public class Boid : Agent
             : EmptyBoids;
     }
 
+    public List<Fruit> GetNearbyFruits()
+    {
+        return perception != null
+            ? perception.GetNearbyFruits()
+            : null;
+    }
+
     public Vector3 CalculateFlocking()
     {
         return flocking != null
@@ -240,6 +250,13 @@ public class Boid : Agent
     {
         return flocking != null
             ? flocking.GetCohesionForce()
+            : Vector3.zero;
+    }
+
+    public Vector3 GetFruitAvoidanceForce(Fruit ignoredFruit = null)
+    {
+        return flocking != null
+            ? flocking.GetFruitAvoidanceForce(ignoredFruit)
             : Vector3.zero;
     }
 
@@ -311,6 +328,9 @@ public class Boid : Agent
 
         Gizmos.color = Color.green;
         Gizmos.DrawWireSphere(transform.position, fruitPerceptionRadius);
+
+        Gizmos.color = Color.magenta;
+        Gizmos.DrawWireSphere(transform.position, fruitAvoidanceRadius);
 
         Gizmos.color = Color.blue;
         Gizmos.DrawWireSphere(transform.position, separationRadius);
