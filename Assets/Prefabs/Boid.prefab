@@ -1000,7 +1000,7 @@ MonoBehaviour:
   rotationSpeed: 10
   stopThreshold: 0.05
   maxHealth: 2
-  separationRadius: 15
+  separationRadius: 18
   alignmentRadius: 30
   cohesionRadius: 40
   separationWeight: 6
@@ -1013,6 +1013,10 @@ MonoBehaviour:
   fruitAvoidanceWeight: 2
   fruitArriveSlowingRadius: 3
   perceptionUpdateInterval: 0.2
+  perceptionBufferCapacity: 128
+  minimumPerceptionInterval: 0.02
+  distanceEpsilon: 0.001
+  directionEpsilon: 0.001
   minRespawnTime: 3
   maxRespawnTime: 6
   recoverySpeedMultiplier: 0.5

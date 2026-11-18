@@ -21,16 +21,18 @@ public class Boid : Agent
     public bool ShouldRespawn { get; private set; }
 
     [Header("Health Configuration")]
-    [SerializeField] private int maxHealth = 2;
+    [SerializeField, Min(1)] private int maxHealth = 2;
+
     private int currentHealth;
 
     public int CurrentHealth => currentHealth;
 
-    [Header("Flocking Configuration")]
+    [Header("Flocking Radii")]
     [SerializeField, Range(0.5f, 50f)] private float separationRadius = 2f;
-    [SerializeField, Range(2f, 50f)] private float alignmentRadius = 12f;
-    [SerializeField, Range(2f, 50f)] private float cohesionRadius = 12f;
+    [SerializeField, Range(0.5f, 50f)] private float alignmentRadius = 12f;
+    [SerializeField, Range(0.5f, 50f)] private float cohesionRadius = 12f;
 
+    [Header("Flocking Weights")]
     [SerializeField, Range(0f, 50f)] private float separationWeight = 2f;
     [SerializeField, Range(0f, 50f)] private float alignmentWeight = 1f;
     [SerializeField, Range(0f, 50f)] private float cohesionWeight = 1.5f;
@@ -47,19 +49,34 @@ public class Boid : Agent
     [SerializeField, Range(1f, 50f)] private float hunterPerceptionRadius = 10f;
     [SerializeField, Range(1f, 50f)] private float fruitPerceptionRadius = 10f;
     [SerializeField, Range(0.5f, 20f)] private float fruitAvoidanceRadius = 3f;
+
+    [Header("Fruit Behavior")]
     [SerializeField, Range(0.5f, 50f)] private float fruitWeight = 2f;
     [SerializeField, Range(0.5f, 50f)] private float fruitAvoidanceWeight = 2f;
     [SerializeField, Range(0.5f, 50f)] private float fruitArriveSlowingRadius = 3f;
 
-    [SerializeField, Range(0.02f, 1f)]
-    private float perceptionUpdateInterval = 0.2f;
+    [Header("Perception Update")]
+    [SerializeField, Range(0.02f, 1f)] private float perceptionUpdateInterval = 0.2f;
+
+    [Header("Perception Technical Settings")]
+    [SerializeField, Min(1)] private int perceptionBufferCapacity = 128;
+    [SerializeField, Min(0.001f)] private float minimumPerceptionInterval = 0.02f;
+
+    [Header("Calculation Thresholds")]
+    [SerializeField, Min(0.0001f)] private float distanceEpsilon = 0.001f;
+    [SerializeField, Min(0.0001f)] private float directionEpsilon = 0.001f;
 
     public float HunterPerceptionRadius => hunterPerceptionRadius;
     public float FruitPerceptionRadius => fruitPerceptionRadius;
     public float FruitAvoidanceRadius => fruitAvoidanceRadius;
+
     public float FruitWeight => fruitWeight;
     public float FruitAvoidanceWeight => fruitAvoidanceWeight;
     public float FruitArriveSlowingRadius => fruitArriveSlowingRadius;
+
+    public float MinimumPerceptionInterval => minimumPerceptionInterval;
+    public float DistanceEpsilon => distanceEpsilon;
+    public float DirectionEpsilon => directionEpsilon;
 
     [Header("Respawn Configuration")]
     [SerializeField, Range(1f, 10f)] private float minRespawnTime = 3f;
@@ -69,8 +86,7 @@ public class Boid : Agent
     public float MaxRespawnTime => maxRespawnTime;
 
     [Header("Movement Configuration")]
-    [SerializeField, Range(0.1f, 1f)]
-    private float recoverySpeedMultiplier = 0.5f;
+    [SerializeField, Range(0.1f, 1f)] private float recoverySpeedMultiplier = 0.5f;
 
     public float RecoverySpeedMultiplier => recoverySpeedMultiplier;
 
@@ -109,7 +125,12 @@ public class Boid : Agent
 
         currentHealth = maxHealth;
 
-        perception = new BoidPerception(this, perceptionUpdateInterval);
+        perception = new BoidPerception(
+            this,
+            perceptionUpdateInterval,
+            perceptionBufferCapacity
+        );
+
         flocking = new BoidFlocking(this);
 
         perception.Refresh();

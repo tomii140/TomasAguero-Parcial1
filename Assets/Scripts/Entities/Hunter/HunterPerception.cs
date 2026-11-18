@@ -4,19 +4,27 @@ using UnityEngine;
 public class HunterPerception
 {
     private readonly HunterAI hunter;
-    private readonly float updateInterval;
+    private readonly Collider[] overlapResults;
 
-    private readonly Collider[] overlapResults = new Collider[64];
+    private readonly float updateInterval;
 
     private float updateTimer;
 
     private Boid nearestLiveBoid;
     private Boid nearestDeadBoid;
 
-    public HunterPerception(HunterAI hunter, float updateInterval)
+    public HunterPerception(HunterAI hunter)
     {
         this.hunter = hunter;
-        this.updateInterval = Mathf.Max(0.02f, updateInterval);
+
+        updateInterval = Mathf.Max(
+            hunter.MinimumPerceptionInterval,
+            hunter.PerceptionUpdateInterval
+        );
+
+        overlapResults = new Collider[
+            Mathf.Max(1, hunter.PerceptionBufferCapacity)
+        ];
     }
 
     public void Refresh()
@@ -37,36 +45,36 @@ public class HunterPerception
 
         for (int i = 0; i < hitCount; i++)
         {
-            Collider hit = overlapResults[i];
+            Collider detectedCollider = overlapResults[i];
 
-            if (hit == null)
+            if (detectedCollider == null)
                 continue;
 
-            Boid boid = hit.GetComponentInParent<Boid>();
+            Boid detectedBoid = detectedCollider.GetComponentInParent<Boid>();
 
-            if (boid == null || boid.IsRespawning)
+            if (detectedBoid == null || detectedBoid.IsRespawning)
                 continue;
 
-            float distance = Vector3.Distance(
+            float distanceToBoid = Vector3.Distance(
                 hunter.transform.position,
-                boid.transform.position
+                detectedBoid.transform.position
             );
 
-            if (distance > hunter.VisionRadius)
+            if (distanceToBoid > hunter.VisionRadius)
                 continue;
 
-            if (boid.IsDead)
+            if (detectedBoid.IsDead)
             {
-                if (distance < nearestDeadDistance)
+                if (distanceToBoid < nearestDeadDistance)
                 {
-                    nearestDeadDistance = distance;
-                    nearestDeadBoid = boid;
+                    nearestDeadDistance = distanceToBoid;
+                    nearestDeadBoid = detectedBoid;
                 }
             }
-            else if (distance < nearestLiveDistance)
+            else if (distanceToBoid < nearestLiveDistance)
             {
-                nearestLiveDistance = distance;
-                nearestLiveBoid = boid;
+                nearestLiveDistance = distanceToBoid;
+                nearestLiveBoid = detectedBoid;
             }
         }
     }
@@ -75,11 +83,11 @@ public class HunterPerception
     {
         updateTimer += deltaTime;
 
-        if (updateTimer >= updateInterval)
-        {
-            updateTimer = 0f;
-            Refresh();
-        }
+        if (updateTimer < updateInterval)
+            return;
+
+        updateTimer = 0f;
+        Refresh();
     }
 
     public Boid FindBoidInVision(bool lookForDead)
@@ -113,15 +121,13 @@ public class HunterPerception
             return null;
         }
 
-        float distance = Vector3.Distance(
+        float distanceToCandidate = Vector3.Distance(
             hunter.transform.position,
             candidate.transform.position
         );
 
-        return distance <= hunter.VisionRadius
+        return distanceToCandidate <= hunter.VisionRadius
             ? candidate
             : null;
-   
-        }
-
+    }
 }

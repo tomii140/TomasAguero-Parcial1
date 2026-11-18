@@ -6,8 +6,7 @@ public class BoidPerception
 {
     private readonly Boid boid;
     private readonly float updateInterval;
-
-    private readonly Collider[] overlapResults = new Collider[128];
+    private readonly Collider[] overlapResults;
 
     private float updateTimer;
 
@@ -17,21 +16,30 @@ public class BoidPerception
     private readonly List<Boid> nearbyBoids = new List<Boid>();
     private readonly List<Fruit> nearbyFruits = new List<Fruit>();
 
-    public BoidPerception(Boid boid, float updateInterval)
+    public BoidPerception(
+        Boid boid,
+        float updateInterval,
+        int bufferCapacity)
     {
         this.boid = boid;
-        this.updateInterval = Mathf.Max(0.02f, updateInterval);
+
+        this.updateInterval = Mathf.Max(
+            boid.MinimumPerceptionInterval,
+            updateInterval
+        );
+
+        overlapResults = new Collider[Mathf.Max(1, bufferCapacity)];
     }
 
     public void Update(float deltaTime)
     {
         updateTimer += deltaTime;
 
-        if (updateTimer >= updateInterval)
-        {
-            updateTimer = 0f;
-            Refresh();
-        }
+        if (updateTimer < updateInterval)
+            return;
+
+        updateTimer = 0f;
+        Refresh();
     }
 
     public void Refresh()
@@ -69,64 +77,75 @@ public class BoidPerception
             if (hit == null)
                 continue;
 
-            HunterAI hunter = hit.GetComponentInParent<HunterAI>();
-
-            if (hunter != null)
-            {
-                float distance = Vector3.Distance(
-                    boid.transform.position,
-                    hunter.transform.position
-                );
-
-                if (distance <= boid.HunterPerceptionRadius &&
-                    distance < nearestHunterDistance)
-                {
-                    nearestHunterDistance = distance;
-                    detectedHunter = hunter;
-                }
-            }
-
-            Fruit fruit = hit.GetComponentInParent<Fruit>();
-
-            if (fruit != null)
-            {
-                float distance = Vector3.Distance(
-                    boid.transform.position,
-                    fruit.transform.position
-                );
-
-                if (distance <= boid.FruitAvoidanceRadius &&
-                    !nearbyFruits.Contains(fruit))
-                {
-                    nearbyFruits.Add(fruit);
-                }
-
-                if (distance <= boid.FruitPerceptionRadius &&
-                    distance < nearestFruitDistance)
-                {
-                    nearestFruitDistance = distance;
-                    nearestFruit = fruit;
-                }
-            }
-
-            Boid otherBoid = hit.GetComponentInParent<Boid>();
-
-            if (otherBoid == null ||
-                otherBoid == boid ||
-                otherBoid.IsRespawning ||
-                nearbyBoids.Contains(otherBoid))
-            {
-                continue;
-            }
-
-            float boidDistance = Vector3.Distance(
-                boid.transform.position,
-                otherBoid.transform.position
-            );
-
-            if (boidDistance <= maxRadius)
-                nearbyBoids.Add(otherBoid);
+            DetectHunter(hit, ref nearestHunterDistance);
+            DetectFruit(hit, ref nearestFruitDistance);
+            DetectBoid(hit, maxRadius);
         }
+    }
+
+    private void DetectHunter(Collider hit, ref float nearestDistance)
+    {
+        HunterAI hunter = hit.GetComponentInParent<HunterAI>();
+
+        if (hunter == null)
+            return;
+
+        float distance = Vector3.Distance(
+            boid.transform.position,
+            hunter.transform.position
+        );
+
+        if (distance > boid.HunterPerceptionRadius ||
+            distance >= nearestDistance)
+            return;
+
+        nearestDistance = distance;
+        detectedHunter = hunter;
+    }
+
+    private void DetectFruit(Collider hit, ref float nearestDistance)
+    {
+        Fruit fruit = hit.GetComponentInParent<Fruit>();
+
+        if (fruit == null)
+            return;
+
+        float distance = Vector3.Distance(
+            boid.transform.position,
+            fruit.transform.position
+        );
+
+        if (distance <= boid.FruitAvoidanceRadius &&
+            !nearbyFruits.Contains(fruit))
+        {
+            nearbyFruits.Add(fruit);
+        }
+
+        if (distance > boid.FruitPerceptionRadius ||
+            distance >= nearestDistance)
+            return;
+
+        nearestDistance = distance;
+        nearestFruit = fruit;
+    }
+
+    private void DetectBoid(Collider hit, float maxRadius)
+    {
+        Boid otherBoid = hit.GetComponentInParent<Boid>();
+
+        if (otherBoid == null ||
+            otherBoid == boid ||
+            otherBoid.IsRespawning ||
+            nearbyBoids.Contains(otherBoid))
+            return;
+
+        float distance = Vector3.Distance(
+            boid.transform.position,
+            otherBoid.transform.position
+        );
+
+        if (distance <= maxRadius)
+            nearbyBoids.Add(otherBoid);
     }
 
     public HunterAI DetectHunterInRange()

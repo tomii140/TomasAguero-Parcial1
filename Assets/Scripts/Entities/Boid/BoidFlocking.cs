@@ -23,109 +23,153 @@ public class BoidFlocking
         List<Boid> nearbyBoids = boid.GetNearbyBoids();
 
         Vector3 separationDirection = Vector3.zero;
-        int count = 0;
+        int neighborCount = 0;
 
-        foreach (Boid other in nearbyBoids)
+        foreach (Boid otherBoid in nearbyBoids)
         {
-            if (other == null || other.IsRespawning)
+            if (otherBoid == null || otherBoid.IsRespawning)
                 continue;
 
-            float distance = Vector3.Distance(
-                boid.transform.position,
-                other.transform.position
-            );
+            Vector3 offset =
+                boid.transform.position - otherBoid.transform.position;
 
-            if (distance <= 0f || distance > boid.SeparationRadius)
+            offset.y = 0f;
+
+            float distance = offset.magnitude;
+
+            if (distance > boid.SeparationRadius)
                 continue;
 
-            Vector3 direction =
-                (boid.transform.position - other.transform.position).normalized;
+            Vector3 direction;
+
+            if (distance <= boid.DistanceEpsilon)
+            {
+                // Evita que dos Boids superpuestos queden sin repulsión.
+                direction = GetFallbackSeparationDirection(otherBoid);
+                distance = boid.DistanceEpsilon;
+            }
+            else
+            {
+                direction = offset / distance;
+            }
 
             float proximityWeight =
-                1f - (distance / boid.SeparationRadius);
+                1f - Mathf.Clamp01(distance / boid.SeparationRadius);
 
             separationDirection += direction * proximityWeight;
-            count++;
+            neighborCount++;
         }
 
-        if (count == 0)
+        if (neighborCount == 0)
             return Vector3.zero;
 
-        separationDirection /= count;
+        separationDirection /= neighborCount;
+
+        if (separationDirection.sqrMagnitude <= boid.DirectionEpsilon)
+            return Vector3.zero;
 
         Vector3 desiredVelocity =
-            separationDirection * boid.MaxSpeed;
+            separationDirection.normalized * boid.MaxSpeed;
 
         Vector3 steeringForce = desiredVelocity - boid.Velocity;
 
         return Vector3.ClampMagnitude(steeringForce, boid.MaxForce);
     }
 
+    private Vector3 GetFallbackSeparationDirection(Boid otherBoid)
+    {
+        Vector3 direction = boid.transform.position - otherBoid.transform.position;
+
+        if (direction.sqrMagnitude > 0f)
+            return direction.normalized;
+
+        // Genera direcciones opuestas y reproducibles para pares superpuestos.
+        int firstId = boid.GetInstanceID();
+        int secondId = otherBoid.GetInstanceID();
+
+        int lowerId = Mathf.Min(firstId, secondId);
+        int higherId = Mathf.Max(firstId, secondId);
+
+        float angle = Mathf.Abs(
+            (lowerId * 0.754877666f + higherId * 0.569840296f) * 360f
+        );
+
+        Vector3 fallbackDirection = Quaternion.Euler(0f, angle, 0f) * Vector3.forward;
+
+        return firstId < secondId
+            ? fallbackDirection
+            : -fallbackDirection;
+    }
+
     public Vector3 GetAlignmentForce()
     {
         List<Boid> nearbyBoids = boid.GetNearbyBoids();
 
-        Vector3 sumVelocity = Vector3.zero;
-        int count = 0;
+        Vector3 averageVelocity = Vector3.zero;
+        int neighborCount = 0;
 
-        foreach (Boid other in nearbyBoids)
+        foreach (Boid otherBoid in nearbyBoids)
         {
-            if (other == null || other.IsDead || other.IsRespawning)
+            if (otherBoid == null ||
+                otherBoid.IsDead ||
+                otherBoid.IsRespawning)
                 continue;
 
             float distance = Vector3.Distance(
                 boid.transform.position,
-                other.transform.position
+                otherBoid.transform.position
             );
 
             if (distance > boid.AlignmentRadius)
                 continue;
 
-            sumVelocity += other.Velocity;
-            count++;
+            averageVelocity += otherBoid.Velocity;
+            neighborCount++;
         }
 
-        if (count == 0)
+        if (neighborCount == 0)
             return Vector3.zero;
 
-        sumVelocity /= count;
-        sumVelocity = sumVelocity.normalized * boid.MaxSpeed;
+        averageVelocity /= neighborCount;
+        averageVelocity = averageVelocity.normalized * boid.MaxSpeed;
 
-        Vector3 steer = sumVelocity - boid.Velocity;
+        Vector3 steeringForce = averageVelocity - boid.Velocity;
 
-        return Vector3.ClampMagnitude(steer, boid.MaxForce);
+        return Vector3.ClampMagnitude(steeringForce, boid.MaxForce);
     }
 
     public Vector3 GetCohesionForce()
     {
         List<Boid> nearbyBoids = boid.GetNearbyBoids();
 
-        Vector3 sumPosition = Vector3.zero;
-        int count = 0;
+        Vector3 averagePosition = Vector3.zero;
+        int neighborCount = 0;
 
-        foreach (Boid other in nearbyBoids)
+        foreach (Boid otherBoid in nearbyBoids)
         {
-            if (other == null || other.IsDead || other.IsRespawning)
+            if (otherBoid == null ||
+                otherBoid.IsDead ||
+                otherBoid.IsRespawning)
                 continue;
 
             float distance = Vector3.Distance(
                 boid.transform.position,
-                other.transform.position
+                otherBoid.transform.position
             );
 
             if (distance > boid.CohesionRadius)
                 continue;
 
-            sumPosition += other.transform.position;
-            count++;
+            averagePosition += otherBoid.transform.position;
+            neighborCount++;
         }
 
-        if (count == 0)
+        if (neighborCount == 0)
             return Vector3.zero;
 
-        sumPosition /= count;
+        averagePosition /= neighborCount;
 
-        return boid.Seek(sumPosition);
+        return boid.Seek(averagePosition);
     }
 
     public Vector3 GetFruitAvoidanceForce(Fruit ignoredFruit = null)
@@ -136,7 +180,7 @@ public class BoidFlocking
             return Vector3.zero;
 
         Vector3 avoidanceDirection = Vector3.zero;
-        int count = 0;
+        int fruitCount = 0;
 
         foreach (Fruit fruit in nearbyFruits)
         {
@@ -150,15 +194,16 @@ public class BoidFlocking
 
             float distance = direction.magnitude;
 
-            if (distance <= 0.001f ||
+            if (distance <= boid.DistanceEpsilon ||
                 distance > boid.FruitAvoidanceRadius)
                 continue;
 
             avoidanceDirection += direction.normalized / distance;
-            count++;
+            fruitCount++;
         }
 
-        if (count == 0 || avoidanceDirection.sqrMagnitude <= 0.001f)
+        if (fruitCount == 0 ||
+            avoidanceDirection.sqrMagnitude <= boid.DirectionEpsilon)
             return Vector3.zero;
 
         Vector3 desiredVelocity =

@@ -1700,6 +1700,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::HunterAI
   maxSpeed: 15
   maxForce: 10
+  rotationSpeed: 10
   stopThreshold: 0.05
   visionRadius: 40
   rangeAttackRadius: 25
@@ -1707,7 +1708,11 @@ MonoBehaviour:
   timeBetweenAttacks: 2
   gatheringTime: 2
   captureRadius: 1.5
+  meleeDamage: 2
+  rangedDamage: 1
   perceptionUpdateInterval: 0.2
+  perceptionBufferCapacity: 64
+  minimumPerceptionInterval: 0.02
   maxEnergy: 25
   energyConsumptionRate: 2
   energyRecoveryRate: 15
@@ -4984,6 +4989,7 @@ MonoBehaviour:
   maxX: 100
   minZ: -100
   maxZ: 100
+  wrapOffset: 0.5
 --- !u!1001 &1846325577
 PrefabInstance:
   m_ObjectHideFlags: 0

@@ -24,8 +24,12 @@ public class HunterAI : Agent
     [SerializeField, Min(1)] private int meleeDamage = 2;
     [SerializeField, Min(1)] private int rangedDamage = 1;
 
-    [Header("Perception Optimization")]
+    [Header("Perception Behavior")]
     [SerializeField, Min(0.02f)] private float perceptionUpdateInterval = 0.2f;
+
+    [Header("Perception Technical Settings")]
+    [SerializeField, Min(1)] private int perceptionBufferCapacity = 64;
+    [SerializeField, Min(0.001f)] private float minimumPerceptionInterval = 0.02f;
 
     [Header("Energy & Rest")]
     [SerializeField, Range(0f, 500f)] private float maxEnergy = 100f;
@@ -52,8 +56,6 @@ public class HunterAI : Agent
     [SerializeField] private AudioClip detectBoidSound;
     [SerializeField] private AudioClip restSound;
 
-    private AudioSource audioSource;
-
     [Header("Feedback")]
     [SerializeField] private TextMeshPro stateTextUI;
     [SerializeField] private bool showGizmos = true;
@@ -62,13 +64,14 @@ public class HunterAI : Agent
     [SerializeField] private Slider gatheringProgressSlider;
     [SerializeField] private GameObject gatheringProgressCanvas;
 
+    private AudioSource audioSource;
     private Animator animator;
     private HunterPerception perception;
     private Boid targetBoid;
 
-    public float TimerAttackCooldown { get; private set; }
-
     private Vector3 lastPosition;
+
+    public float TimerAttackCooldown { get; private set; }
 
     public float VisionRadius => visionRadius;
     public float RangeAttackRadius => rangeAttackRadius;
@@ -76,14 +79,22 @@ public class HunterAI : Agent
     public float TimeBetweenAttacks => timeBetweenAttacks;
     public float GatheringTime => gatheringTime;
     public float CaptureRadius => captureRadius;
+
+    public float PerceptionUpdateInterval => perceptionUpdateInterval;
+    public float MinimumPerceptionInterval => minimumPerceptionInterval;
+    public int PerceptionBufferCapacity => perceptionBufferCapacity;
+
     public float WaypointThreshold => waypointThreshold;
     public float WaypointArriveSlowingRadius => waypointArriveSlowingRadius;
     public float FruitSpawnInterval => fruitSpawnInterval;
+
     public float MaxEnergy => maxEnergy;
     public float CurrentEnergy => currentEnergy;
     public float EnergyConsumptionRate => energyConsumptionRate;
     public float EnergyRecoveryRate => energyRecoveryRate;
+
     public Transform[] Waypoints => waypoints;
+
     public AudioClip DetectBoidSound => detectBoidSound;
     public AudioClip RestSound => restSound;
 
@@ -106,26 +117,10 @@ public class HunterAI : Agent
         currentEnergy = maxEnergy;
         lastPosition = transform.position;
 
-        HideGatheringProgress();
-
-        if (gatheringProgressSlider != null)
-        {
-            gatheringProgressSlider.minValue = 0f;
-            gatheringProgressSlider.maxValue = 1f;
-            gatheringProgressSlider.value = 0f;
-        }
-
-        perception = new HunterPerception(this, perceptionUpdateInterval);
-        perception.Refresh();
-
-        PatrolState = new HunterPatrolState(this);
-        AttackState = new HunterAttackState(this);
-        GatherState = new HunterGatherState(this);
-        RestState = new HunterRestState(this);
-
-        FSM = new FiniteStateMachine();
-        FSM.OnStateChanged += HandleStateChanged;
-        FSM.ChangeState(PatrolState);
+        InitializeGatheringProgressUI();
+        InitializePerception();
+        InitializeStates();
+        InitializeStateMachine();
 
         RefreshUIFeedback();
     }
@@ -145,6 +140,39 @@ public class HunterAI : Agent
 
         ApplyPhysics();
         UpdateAnimator();
+    }
+
+    private void InitializeGatheringProgressUI()
+    {
+        HideGatheringProgress();
+
+        if (gatheringProgressSlider == null)
+            return;
+
+        gatheringProgressSlider.minValue = 0f;
+        gatheringProgressSlider.maxValue = 1f;
+        gatheringProgressSlider.value = 0f;
+    }
+
+    private void InitializePerception()
+    {
+        perception = new HunterPerception(this);
+        perception.Refresh();
+    }
+
+    private void InitializeStates()
+    {
+        PatrolState = new HunterPatrolState(this);
+        AttackState = new HunterAttackState(this);
+        GatherState = new HunterGatherState(this);
+        RestState = new HunterRestState(this);
+    }
+
+    private void InitializeStateMachine()
+    {
+        FSM = new FiniteStateMachine();
+        FSM.OnStateChanged += HandleStateChanged;
+        FSM.ChangeState(PatrolState);
     }
 
     public void ShowGatheringProgress(float progress)
@@ -178,7 +206,8 @@ public class HunterAI : Agent
 
     public void PlayAttackSound(bool isMelee)
     {
-        if (audioSource == null) return;
+        if (audioSource == null)
+            return;
 
         AudioClip clipToPlay = isMelee
             ? meleeAttackSound
@@ -235,13 +264,13 @@ public class HunterAI : Agent
 
         Vector2 randomCircle = Random.insideUnitCircle * fruitSpawnRadius;
 
-        Vector3 spawnPos = transform.position + new Vector3(
+        Vector3 spawnPosition = transform.position + new Vector3(
             randomCircle.x,
             0f,
             randomCircle.y
         );
 
-        Instantiate(fruitPrefab, spawnPos, Quaternion.identity);
+        Instantiate(fruitPrefab, spawnPosition, Quaternion.identity);
     }
 
     public void NotifyBoidCollected(Boid boid)
@@ -277,12 +306,26 @@ public class HunterAI : Agent
 
     private void UpdateAnimator()
     {
-        if (animator == null) return;
+        if (animator == null)
+            return;
 
-        float speed = Vector3.Distance(
-            new Vector3(transform.position.x, 0f, transform.position.z),
-            new Vector3(lastPosition.x, 0f, lastPosition.z)
-        ) / Time.deltaTime;
+        Vector3 currentPositionXZ = new Vector3(
+            transform.position.x,
+            0f,
+            transform.position.z
+        );
+
+        Vector3 previousPositionXZ = new Vector3(
+            lastPosition.x,
+            0f,
+            lastPosition.z
+        );
+
+        float deltaTime = Time.deltaTime;
+
+        float speed = deltaTime > 0f
+            ? Vector3.Distance(currentPositionXZ, previousPositionXZ) / deltaTime
+            : 0f;
 
         lastPosition = transform.position;
 
@@ -292,7 +335,8 @@ public class HunterAI : Agent
 
     private void OnDrawGizmos()
     {
-        if (!showGizmos) return;
+        if (!showGizmos)
+            return;
 
         Gizmos.color = Color.yellow;
         Gizmos.DrawWireSphere(transform.position, visionRadius);
