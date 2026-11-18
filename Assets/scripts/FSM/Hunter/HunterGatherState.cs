@@ -25,6 +25,8 @@ public class HunterGatherState : IState
         _gatherTimer = 0f;
         _hunter.ResetVelocity();
         _hunter.HideGatheringProgress();
+
+        Debug.Log($"[CAZADOR] Comenzó a recolectar a {_targetBoid.name}.");
     }
 
     public void Update()
@@ -78,6 +80,8 @@ public class HunterGatherState : IState
 
             if (_gatherTimer >= _hunter.GatheringTime)
             {
+                Debug.Log($"[CAZADOR] Terminó de recolectar a {_targetBoid.name}.");
+
                 _hunter.HideGatheringProgress();
 
                 _hunter.NotifyBoidCollected(_targetBoid);

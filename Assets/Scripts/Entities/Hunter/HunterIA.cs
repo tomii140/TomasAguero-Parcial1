@@ -244,6 +244,12 @@ public class HunterAI : Agent
 
     private void HandleStateChanged(IState newState)
     {
+        string stateName = newState.GetType().Name
+            .Replace("Hunter", "")
+            .Replace("State", "");
+
+        Debug.Log($"[CAZADOR] Cambió su comportamiento: {stateName}.");
+
         RefreshUIFeedback();
     }
 

@@ -59,6 +59,7 @@ public class WorldBounds : MonoBehaviour
 
     public Vector3 WrapPosition(Vector3 position, Boid boid)
     {
+        Vector3 previousPosition = position;
         bool wrapped = false;
 
         if (position.x < minX)
@@ -84,7 +85,17 @@ public class WorldBounds : MonoBehaviour
         }
 
         if (wrapped)
+        {
             RegisterBoidWrap(boid);
+
+            if (boid != null)
+            {
+                Debug.Log(
+                    $"[WORLD BOUNDS] {boid.name} salió del mapa y reapareció del otro lado. " +
+                    $"Posición anterior: {previousPosition}. Nueva posición: {position}."
+                );
+            }
+        }
 
         return position;
     }

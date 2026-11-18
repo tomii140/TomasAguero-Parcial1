@@ -69,7 +69,7 @@ public class HunterAttackState : IState
 
         if (currentWrapCount > targetWrapCount)
         {
-            Debug.Log("[HUNTER] La presa salió del mapa. Regresando a Patrol.");
+            Debug.Log("[CAZADOR] La presa salió del mapa. El cazador abandonó la persecución y volvió a patrullar.");
 
             hunter.SetTargetBoid(null);
             hunter.FSM.ChangeState(hunter.PatrolState);
@@ -179,6 +179,14 @@ public class HunterAttackState : IState
 
         hunter.PlayAttackSound(isMelee);
         target.ReceiveDamage(damage);
+
+        string attackType = isMelee ? "cuerpo a cuerpo" : "a distancia";
+
+        Debug.Log(
+            $"[CAZADOR] Atacó a {target.name} ({attackType}). " +
+            $"Daño causado: {damage}. Salud restante: {target.CurrentHealth}."
+        );
+
         hunter.ResetAttackCooldown();
     }
 

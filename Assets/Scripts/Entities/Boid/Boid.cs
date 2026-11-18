@@ -265,6 +265,12 @@ public class Boid : Agent
 
     private void HandleStateChanged(IState newState)
     {
+        string stateName = newState.GetType().Name
+            .Replace("Boid", "")
+            .Replace("State", "");
+
+        Debug.Log($"[BOID] {name} cambió su comportamiento: {stateName}.");
+
         RefreshUIFeedback();
     }
 
