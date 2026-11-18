@@ -42,7 +42,7 @@ public class HunterPerception
             if (hit == null)
                 continue;
 
-            Boid boid = hit.GetComponent<Boid>();
+            Boid boid = hit.GetComponentInParent<Boid>();
 
             if (boid == null || boid.IsRespawning)
                 continue;
@@ -121,5 +121,7 @@ public class HunterPerception
         return distance <= hunter.VisionRadius
             ? candidate
             : null;
-    }
+   
+        }
+
 }
