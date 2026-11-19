@@ -4993,7 +4993,7 @@ MonoBehaviour:
   maxZ: 100
   wrapOffset: 0.5
   spawnClearanceRadius: 4
-  spawnPositionAttempts: 30
+  spawnPositionAttempts: 10
   spawnOverlapBufferCapacity: 64
   spawnRetryInterval: 0.25
   showWrapDebugLogs: 1

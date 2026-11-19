@@ -29,6 +29,7 @@ public class FiniteStateMachine
 
         try
         {
+            // Procesa los cambios pendientes sin interrumpir una transición en curso.
             while (pendingState != null)
             {
                 IState nextState = pendingState;

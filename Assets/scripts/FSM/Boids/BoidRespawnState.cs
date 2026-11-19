@@ -63,7 +63,10 @@ public class BoidRespawnState : IState
         );
 
         if (!foundPosition)
+        {
+            // Si no hay espacio libre, espera antes de volver a intentar.
             return;
+        }
 
         boid.transform.position = spawnPosition;
 

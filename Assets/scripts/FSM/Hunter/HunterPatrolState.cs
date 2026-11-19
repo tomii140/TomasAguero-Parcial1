@@ -1,3 +1,4 @@
+
 using UnityEngine;
 
 public class HunterPatrolState : IState
@@ -14,14 +15,15 @@ public class HunterPatrolState : IState
 
     public void Enter()
     {
-        
+
     }
 
     public void Update()
     {
         HandleFruitSpawning();
 
-        if (EvaluateTargetTransitions()) return;
+        if (EvaluateTargetTransitions())
+            return;
 
         ExecutePatrolMovement();
     }
@@ -30,6 +32,7 @@ public class HunterPatrolState : IState
     {
         // Generación periódica de frutas en el escenario según el intervalo configurado.
         fruitSpawnTimer += Time.deltaTime;
+
         if (fruitSpawnTimer >= hunter.FruitSpawnInterval)
         {
             fruitSpawnTimer = 0f;
@@ -41,6 +44,7 @@ public class HunterPatrolState : IState
     {
         // Transición prioritaria a Gather si detecta un Boid muerto.
         Boid deadBoid = hunter.FindBoidInVision(lookForDead: true);
+
         if (deadBoid != null && deadBoid.IsDead)
         {
             hunter.SetTargetBoid(deadBoid);
@@ -52,6 +56,7 @@ public class HunterPatrolState : IState
         if (hunter.TimerAttackCooldown <= 0)
         {
             Boid liveBoid = hunter.FindBoidInVision(lookForDead: false);
+
             if (liveBoid != null && !liveBoid.IsDead)
             {
                 hunter.SetTargetBoid(liveBoid);
@@ -66,32 +71,41 @@ public class HunterPatrolState : IState
     private void ExecutePatrolMovement()
     {
         Transform[] waypoints = hunter.Waypoints;
-        if (waypoints == null || waypoints.Length == 0) return;
+
+        if (waypoints == null || waypoints.Length == 0)
+            return;
 
         Transform targetWaypoint = waypoints[currentWaypointIndex];
-        Vector3 targetPos = targetWaypoint.position;
-        targetPos.y = hunter.transform.position.y;
+
+        Vector3 targetPosition = targetWaypoint.position;
+        targetPosition.y = hunter.transform.position.y;
 
         // Movimiento de patrulla usando Arrive para frenar suavemente al llegar a cada waypoint.
-        Vector3 force = hunter.Arrive(targetPos, hunter.WaypointArriveSlowingRadius);
-        hunter.AddForce(force);
-
-        UpdateWaypointProgress(targetPos);
-    }
-
-    private void UpdateWaypointProgress(Vector3 targetPos)
-    {
-        float distanceXZ = Vector3.Distance(
-            new Vector3(hunter.transform.position.x, 0f, hunter.transform.position.z),
-            new Vector3(targetPos.x, 0f, targetPos.z)
+        Vector3 steeringForce = hunter.Arrive(
+            targetPosition,
+            hunter.WaypointArriveSlowingRadius
         );
 
-        if (distanceXZ < hunter.WaypointThreshold)
+        hunter.AddForce(steeringForce);
+
+        UpdateWaypointProgress(targetPosition);
+    }
+
+    private void UpdateWaypointProgress(Vector3 targetPosition)
+    {
+        float distanceOnXZPlane = Vector3.Distance(
+            new Vector3(hunter.transform.position.x, 0f, hunter.transform.position.z),
+            new Vector3(targetPosition.x, 0f, targetPosition.z)
+        );
+
+        if (distanceOnXZPlane < hunter.WaypointThreshold)
         {
             Transform[] waypoints = hunter.Waypoints;
+
             if (movingForward)
             {
                 currentWaypointIndex++;
+
                 if (currentWaypointIndex >= waypoints.Length)
                 {
                     currentWaypointIndex = Mathf.Max(0, waypoints.Length - 2);
@@ -101,6 +115,7 @@ public class HunterPatrolState : IState
             else
             {
                 currentWaypointIndex--;
+
                 if (currentWaypointIndex < 0)
                 {
                     currentWaypointIndex = waypoints.Length > 1 ? 1 : 0;

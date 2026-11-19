@@ -91,6 +91,7 @@ public class HunterPerception
             if (hitCount < overlapResults.Length)
                 return hitCount;
 
+            // Si se llena el buffer, se amplía para no perder detecciones.
             System.Array.Resize(
                 ref overlapResults,
                 overlapResults.Length * 2

@@ -54,6 +54,7 @@ public class BoidFlocking
                 direction = offset / distance;
             }
 
+            // Los vecinos más cercanos tienen mayor influencia en la separación.
             float proximityWeight =
                 1f - Mathf.Clamp01(distance / boid.SeparationRadius);
 
@@ -95,6 +96,7 @@ public class BoidFlocking
             (lowerId * 0.754877666f + higherId * 0.569840296f) * 360f
         );
 
+        // Si coinciden exactamente, usa sus IDs para asignar direcciones opuestas.
         Vector3 fallbackDirection =
             Quaternion.Euler(0f, angle, 0f) * Vector3.forward;
 

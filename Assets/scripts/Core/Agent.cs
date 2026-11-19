@@ -55,6 +55,7 @@ public abstract class Agent : MonoBehaviour
         {
             if (this is Boid boid)
             {
+                // Los Boids reaparecen del lado opuesto; los demás agentes rebotan en los límites.
                 targetPosition = WorldBounds.Instance.WrapPosition(
                     targetPosition,
                     boid
@@ -125,6 +126,7 @@ public abstract class Agent : MonoBehaviour
 
         float predictionTime = distanceToTarget / maxSpeed;
 
+        // Calcula una posición futura para anticipar el movimiento del objetivo.
         Vector3 futurePosition =
             targetAgent.transform.position +
             targetAgent.Velocity * predictionTime;
@@ -163,9 +165,9 @@ public abstract class Agent : MonoBehaviour
             desiredVector.normalized * calculatedSpeed;
 
         return Vector3.ClampMagnitude(
-            desiredVelocity - Velocity,
-            maxForce
-        );
+     desiredVelocity - Velocity,
+     maxForce
+ );
     }
 
     public Vector3 Evade(Agent targetAgent)

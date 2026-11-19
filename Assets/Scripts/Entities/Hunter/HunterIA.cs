@@ -67,7 +67,6 @@ public class HunterAI : Agent
     [Header("Debug Settings")]
     [SerializeField, Min(0f)] private float attackDebugLineDuration = 0.1f;
 
- 
     public float AttackDebugLineDuration => attackDebugLineDuration;
 
     private AudioSource audioSource;
@@ -75,7 +74,7 @@ public class HunterAI : Agent
     private HunterPerception perception;
     private Boid targetBoid;
 
-    private Vector3 lastPosition;
+    private Vector3 previousPosition;
 
     public float TimerAttackCooldown { get; private set; }
 
@@ -121,7 +120,7 @@ public class HunterAI : Agent
         }
 
         currentEnergy = maxEnergy;
-        lastPosition = transform.position;
+        previousPosition = transform.position;
 
         InitializeGatheringProgressUI();
         InitializePerception();
@@ -322,9 +321,9 @@ public class HunterAI : Agent
         );
 
         Vector3 previousPositionXZ = new Vector3(
-            lastPosition.x,
+            previousPosition.x,
             0f,
-            lastPosition.z
+            previousPosition.z
         );
 
         float deltaTime = Time.deltaTime;
@@ -333,7 +332,7 @@ public class HunterAI : Agent
             ? Vector3.Distance(currentPositionXZ, previousPositionXZ) / deltaTime
             : 0f;
 
-        lastPosition = transform.position;
+        previousPosition = transform.position;
 
         animator.SetFloat("Speed", speed);
         animator.SetBool("IsResting", FSM.CurrentState == RestState);

@@ -37,12 +37,12 @@ public class BoidSeekObjectState : IState
             return;
         }
 
-        float distance = Vector3.Distance(
+        float distanceToFruit = Vector3.Distance(
             boid.transform.position,
             targetFruit.transform.position
         );
 
-        if (distance <= targetFruit.ConsumeRadius)
+        if (distanceToFruit <= targetFruit.ConsumeRadius)
         {
             boid.FSM.ChangeState(boid.ConsumeState);
             return;

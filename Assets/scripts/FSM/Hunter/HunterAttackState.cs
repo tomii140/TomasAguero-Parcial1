@@ -148,21 +148,21 @@ public class HunterAttackState : IState
         if (target == null || target.IsDead || target.IsRespawning)
             return;
 
-        float distance = Vector3.Distance(
+        float distanceToTarget = Vector3.Distance(
             hunter.transform.position,
             target.transform.position
         );
 
-        bool isMelee = distance <= hunter.MeleeAttackRadius;
+        bool isMelee = distanceToTarget <= hunter.MeleeAttackRadius;
 
         Debug.DrawLine(
-      hunter.transform.position,
-      target.transform.position,
-      isMelee ? Color.magenta : Color.red,
-      hunter.AttackDebugLineDuration
-  );
+            hunter.transform.position,
+            target.transform.position,
+            isMelee ? Color.magenta : Color.red,
+            hunter.AttackDebugLineDuration
+        );
 
-        if (distance > hunter.RangeAttackRadius)
+        if (distanceToTarget > hunter.RangeAttackRadius)
             return;
 
         if (hunter.TimerAttackCooldown > 0f)
@@ -191,12 +191,12 @@ public class HunterAttackState : IState
             !target.IsDead &&
             !target.IsRespawning)
         {
-            float distance = Vector3.Distance(
+            float distanceToTarget = Vector3.Distance(
                 hunter.transform.position,
                 target.transform.position
             );
 
-            if (distance > hunter.RangeAttackRadius)
+            if (distanceToTarget > hunter.RangeAttackRadius)
                 hunter.AddForce(hunter.Pursuit(target));
             else
                 hunter.ResetVelocity();

@@ -94,6 +94,7 @@ public class BoidPerception
             if (hitCount < overlapResults.Length)
                 return hitCount;
 
+            // Si se llena el buffer, se amplía y se repite para no perder detecciones.
             System.Array.Resize(
                 ref overlapResults,
                 overlapResults.Length * 2

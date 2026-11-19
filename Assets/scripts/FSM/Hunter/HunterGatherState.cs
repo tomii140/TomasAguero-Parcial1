@@ -3,30 +3,30 @@ using UnityEngine;
 
 public class HunterGatherState : IState
 {
-    private readonly HunterAI _hunter;
-    private Boid _targetBoid;
-    private float _gatherTimer;
+    private readonly HunterAI hunter;
+    private Boid targetBoid;
+    private float gatherTimer;
 
     public HunterGatherState(HunterAI hunter)
     {
-        _hunter = hunter;
+        this.hunter = hunter;
     }
 
     public void Enter()
     {
-        _targetBoid = _hunter.GetTargetBoid();
+        targetBoid = hunter.GetTargetBoid();
 
-        if (_targetBoid == null || !_targetBoid.IsDead || _targetBoid.IsRespawning)
+        if (targetBoid == null || !targetBoid.IsDead || targetBoid.IsRespawning)
         {
             ReturnToPatrol();
             return;
         }
 
-        _gatherTimer = 0f;
-        _hunter.ResetVelocity();
-        _hunter.HideGatheringProgress();
+        gatherTimer = 0f;
+        hunter.ResetVelocity();
+        hunter.HideGatheringProgress();
 
-        Debug.Log($"[CAZADOR] Comenzó a recolectar a {_targetBoid.name}.");
+        Debug.Log($"[CAZADOR] Comenzó a recolectar a {targetBoid.name}.");
     }
 
     public void Update()
@@ -39,7 +39,7 @@ public class HunterGatherState : IState
 
     private bool IsTargetValid()
     {
-        if (_targetBoid == null || !_targetBoid.IsDead || _targetBoid.IsRespawning)
+        if (targetBoid == null || !targetBoid.IsDead || targetBoid.IsRespawning)
         {
             ReturnToPatrol();
             return false;
@@ -50,41 +50,42 @@ public class HunterGatherState : IState
 
     private void ProcessGatheringBehavior()
     {
-        float distXZ = Vector3.Distance(
-            new Vector3(_hunter.transform.position.x, 0f, _hunter.transform.position.z),
-            new Vector3(_targetBoid.transform.position.x, 0f, _targetBoid.transform.position.z)
+        float distanceToTarget = Vector3.Distance(
+            new Vector3(hunter.transform.position.x, 0f, hunter.transform.position.z),
+            new Vector3(targetBoid.transform.position.x, 0f, targetBoid.transform.position.z)
         );
 
-        if (distXZ > _hunter.CaptureRadius)
+        if (distanceToTarget > hunter.CaptureRadius)
         {
-            Vector3 targetPos = _targetBoid.transform.position;
-            targetPos.y = _hunter.transform.position.y;
+            Vector3 targetPosition = targetBoid.transform.position;
+            targetPosition.y = hunter.transform.position.y;
 
-            Vector3 force = _hunter.Seek(targetPos);
-            _hunter.AddForce(force);
+            Vector3 steeringForce = hunter.Seek(targetPosition);
+            hunter.AddForce(steeringForce);
 
-            _gatherTimer = 0f;
-            _hunter.HideGatheringProgress();
+            // La recolección solo avanza mientras permanece dentro del radio.
+            gatherTimer = 0f;
+            hunter.HideGatheringProgress();
         }
         else
         {
-            _hunter.ResetVelocity();
+            hunter.ResetVelocity();
 
-            _gatherTimer += Time.deltaTime;
+            gatherTimer += Time.deltaTime;
 
-            float progress = _hunter.GatheringTime > 0f
-                ? _gatherTimer / _hunter.GatheringTime
+            float progress = hunter.GatheringTime > 0f
+                ? gatherTimer / hunter.GatheringTime
                 : 1f;
 
-            _hunter.ShowGatheringProgress(progress);
+            hunter.ShowGatheringProgress(progress);
 
-            if (_gatherTimer >= _hunter.GatheringTime)
+            if (gatherTimer >= hunter.GatheringTime)
             {
-                Debug.Log($"[CAZADOR] Terminó de recolectar a {_targetBoid.name}.");
+                Debug.Log($"[CAZADOR] Terminó de recolectar a {targetBoid.name}.");
 
-                _hunter.HideGatheringProgress();
+                hunter.HideGatheringProgress();
 
-                _hunter.NotifyBoidCollected(_targetBoid);
+                hunter.NotifyBoidCollected(targetBoid);
                 ReturnToPatrol();
             }
         }
@@ -92,14 +93,14 @@ public class HunterGatherState : IState
 
     private void ReturnToPatrol()
     {
-        _hunter.HideGatheringProgress();
-        _hunter.SetTargetBoid(null);
-        _hunter.FSM.ChangeState(_hunter.PatrolState);
+        hunter.HideGatheringProgress();
+        hunter.SetTargetBoid(null);
+        hunter.FSM.ChangeState(hunter.PatrolState);
     }
 
     public void Exit()
     {
-        _gatherTimer = 0f;
-        _hunter.HideGatheringProgress();
+        gatherTimer = 0f;
+        hunter.HideGatheringProgress();
     }
 }

@@ -3,43 +3,43 @@ using UnityEngine;
 
 public class BoidConsumeState : IState
 {
-    private readonly Boid _boid;
-    private readonly AudioSource _audioSource;
-    private readonly AudioClip _eatSound;
+    private readonly Boid boid;
+    private readonly AudioSource audioSource;
+    private readonly AudioClip eatSound;
 
-    private float _audioTimer;
+    private float audioTimer;
 
     public BoidConsumeState(Boid boid)
     {
-        _boid = boid;
-        _audioSource = _boid.GetComponent<AudioSource>();
-        _eatSound = _boid.EatAudioClip;
+        this.boid = boid;
+        audioSource = boid.GetComponent<AudioSource>();
+        eatSound = boid.EatAudioClip;
     }
 
     public void Enter()
     {
-        _boid.SetColorFeedback(new Color(1f, 0.5f, 0f));
-        _boid.ResetVelocity();
+        boid.SetColorFeedback(new Color(1f, 0.5f, 0f));
+        boid.ResetVelocity();
 
-        _audioTimer = 0f;
+        audioTimer = 0f;
         PlayEatSound();
     }
 
     public void Update()
     {
-        if (_boid.IsDead)
+        if (boid.IsDead)
         {
-            _boid.FSM.ChangeState(_boid.DeadState);
+            boid.FSM.ChangeState(boid.DeadState);
             return;
         }
 
-        if (_boid.DetectHunterInRange() != null)
+        if (boid.DetectHunterInRange() != null)
         {
-            _boid.FSM.ChangeState(_boid.EvadeState);
+            boid.FSM.ChangeState(boid.EvadeState);
             return;
         }
 
-        Fruit targetFruit = _boid.FindNearestFruit();
+        Fruit targetFruit = boid.FindNearestFruit();
 
         if (!IsFruitValid(targetFruit))
             return;
@@ -51,19 +51,19 @@ public class BoidConsumeState : IState
     {
         if (fruit == null)
         {
-            _boid.RestoreForwardMomentum();
-            _boid.FSM.ChangeState(_boid.FlockingState);
+            boid.RestoreForwardMomentum();
+            boid.FSM.ChangeState(boid.FlockingState);
             return false;
         }
 
         float distanceToFruit = Vector3.Distance(
-            _boid.transform.position,
+            boid.transform.position,
             fruit.transform.position
         );
 
         if (distanceToFruit > fruit.ConsumeRadius)
         {
-            _boid.FSM.ChangeState(_boid.SeekObjectState);
+            boid.FSM.ChangeState(boid.SeekObjectState);
             return false;
         }
 
@@ -74,24 +74,24 @@ public class BoidConsumeState : IState
     {
         fruit.Consume(fruit.DamagePerSecond * Time.deltaTime);
 
-        _audioTimer += Time.deltaTime;
+        audioTimer += Time.deltaTime;
 
-        if (_audioTimer >= _boid.EatSoundInterval)
+        if (audioTimer >= boid.EatSoundInterval)
         {
             PlayEatSound();
-            _audioTimer = 0f;
+            audioTimer = 0f;
         }
     }
 
     private void PlayEatSound()
     {
-        if (_audioSource != null && _eatSound != null)
-            _audioSource.PlayOneShot(_eatSound);
+        if (audioSource != null && eatSound != null)
+            audioSource.PlayOneShot(eatSound);
     }
 
     public void Exit()
     {
-        if (_audioSource != null && _audioSource.isPlaying)
-            _audioSource.Stop();
+        if (audioSource != null && audioSource.isPlaying)
+            audioSource.Stop();
     }
 }
