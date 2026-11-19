@@ -1,5 +1,5 @@
+
 using UnityEngine;
-using System.Collections;
 using System.Collections.Generic;
 
 public class GameManager : MonoBehaviour
@@ -8,27 +8,26 @@ public class GameManager : MonoBehaviour
 
     [Header("Hunter Configuration")]
     [SerializeField] private HunterAI hunter;
+
     public HunterAI Hunter => hunter;
 
     [Header("Boid Management")]
     [SerializeField] private GameObject boidPrefab;
     [SerializeField, Range(1, 50)] private int initialAmount = 6;
-    [SerializeField, Range(0.5f, 10f)] private float respawnDelay = 4f;
 
     [Header("Spawn Settings")]
-    [SerializeField] private Transform cotoCenter; // Referencia al centro del Coto de Caza
-    [SerializeField, Range(0.5f, 20f)] private float spawnRadius = 2.5f;
+    [SerializeField, Range(0.5f, 25f)] private float spawnRadius = 3f; 
 
-    public List<Boid> ActiveBoids { get; private set; } = new List<Boid>();
-    public List<Fruit> ActiveFruits { get; private set; } = new List<Fruit>();
-    public List<GameObject> ActiveWolves { get; private set; } = new List<GameObject>();
+    private readonly List<Boid> activeBoids = new List<Boid>();
+    private readonly List<Fruit> activeFruits = new List<Fruit>();
+
+    public IReadOnlyList<Boid> ActiveBoids => activeBoids;
+    public IReadOnlyList<Fruit> ActiveFruits => activeFruits;
 
     private void Awake()
     {
         if (Instance == null)
-        {
             Instance = this;
-        }
         else
         {
             Destroy(gameObject);
@@ -39,42 +38,90 @@ public class GameManager : MonoBehaviour
     private void Start()
     {
         for (int i = 0; i < initialAmount; i++)
-        {
             SpawnGroupedBoid();
-        }
     }
 
-    public void RegisterBoid(Boid boid) => ActiveBoids.Add(boid);
-    public void UnregisterBoid(Boid boid) => ActiveBoids.Remove(boid);
+    public void RegisterBoid(Boid boid)
+    {
+        if (boid != null && !activeBoids.Contains(boid))
+            activeBoids.Add(boid);
+    }
 
-    public void RegisterFruit(Fruit fruit) => ActiveFruits.Add(fruit);
-    public void UnregisterFruit(Fruit fruit) => ActiveFruits.Remove(fruit);
+    public void UnregisterBoid(Boid boid)
+    {
+        if (boid != null)
+            activeBoids.Remove(boid);
+    }
+
+    public void RegisterFruit(Fruit fruit)
+    {
+        if (fruit != null && !activeFruits.Contains(fruit))
+            activeFruits.Add(fruit);
+    }
+
+    public void UnregisterFruit(Fruit fruit)
+    {
+        if (fruit != null)
+            activeFruits.Remove(fruit);
+    }
 
     public void NotifyBoidDeath(Boid deadBoid)
     {
-        deadBoid.gameObject.SetActive(false);
-        StartCoroutine(RespawnBoidRoutine(deadBoid));
-    }
-
-    private IEnumerator RespawnBoidRoutine(Boid boid)
-    {
-        yield return new WaitForSeconds(respawnDelay);
-
-        Vector3 spawnOrigin = cotoCenter != null ? cotoCenter.position : Vector3.zero;
-        Vector2 randomCircle = Random.insideUnitCircle * spawnRadius;
-        Vector3 newPos = spawnOrigin + new Vector3(randomCircle.x, 0f, randomCircle.y);
-
-        boid.transform.position = newPos;
-        boid.gameObject.SetActive(true);
-        boid.Revive();
+        if (deadBoid != null)
+            deadBoid.TriggerRespawnFlow();
     }
 
     private void SpawnGroupedBoid()
     {
-        Vector3 spawnOrigin = cotoCenter != null ? cotoCenter.position : Vector3.zero;
-        Vector2 randomCircle = Random.insideUnitCircle * spawnRadius;
-        Vector3 pos = spawnOrigin + new Vector3(randomCircle.x, 0f, randomCircle.y);
+        if (boidPrefab == null)
+            return;
 
-        Instantiate(boidPrefab, pos, Quaternion.identity);
+        Vector3 spawnPosition;
+
+        if (WorldBounds.Instance != null)
+        {
+            bool foundPosition =
+                WorldBounds.Instance.TryGetRandomSpawnPosition(
+                    Vector3.zero,
+                    spawnRadius,
+                    0f,
+                    null,
+                    out spawnPosition
+                );
+
+            if (!foundPosition)
+            {
+                foundPosition =
+                    WorldBounds.Instance.TryGetRandomSpawnPosition(
+                        null,
+                        0f,
+                        out spawnPosition
+                    );
+            }
+
+            if (!foundPosition)
+            {
+                Debug.LogWarning(
+                    "[GAME MANAGER] No se encontró una posición libre para generar un Boid."
+                );
+                return;
+            }
+        }
+        else
+        {
+            Vector2 randomCircle =
+                Random.insideUnitCircle * spawnRadius;
+
+            spawnPosition = new Vector3(
+                randomCircle.x,
+                0f,
+                randomCircle.y
+            );
+        }
+
+        Instantiate(boidPrefab, spawnPosition, Quaternion.identity);
+
+        // Actualiza las posiciones físicas antes de buscar el siguiente spawn.
+        Physics.SyncTransforms();
     }
 }

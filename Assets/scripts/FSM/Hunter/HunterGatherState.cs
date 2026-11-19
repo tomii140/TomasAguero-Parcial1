@@ -1,74 +1,109 @@
+
 using UnityEngine;
 
 public class HunterGatherState : IState
 {
-    private readonly HunterAI _hunter;
-    private Boid _targetBoid;
-    private float _gatherTimer;
+    private readonly HunterAI hunter;
+    private Boid targetBoid;
+    private float gatherTimer;
 
-    public HunterGatherState(HunterAI hunter) => _hunter = hunter;
+    public HunterGatherState(HunterAI hunter)
+    {
+        this.hunter = hunter;
+    }
 
     public void Enter()
     {
-        _hunter.SetColorFeedback(Color.blue);
-        _targetBoid = _hunter.GetTargetBoid();
+        targetBoid = hunter.GetTargetBoid();
 
-        if (_targetBoid == null)
+        if (targetBoid == null || !targetBoid.IsDead || targetBoid.IsRespawning)
         {
-            _hunter.FSM.ChangeState(_hunter.SearchState);
+            ReturnToPatrol();
             return;
         }
 
-        // Asegura que el boid quede congelado inmediatamente
-        _targetBoid.isDead = true;
-        _gatherTimer = 0f;
-        _hunter.ResetVelocity();
+        gatherTimer = 0f;
+        hunter.ResetVelocity();
+        hunter.HideGatheringProgress();
+
+        Debug.Log($"[CAZADOR] Comenzó a recolectar a {targetBoid.name}.");
     }
 
     public void Update()
     {
-        if (_targetBoid == null)
-        {
-            _hunter.SetTargetBoid(null);
-            _hunter.FSM.ChangeState(_hunter.SearchState);
+        if (!IsTargetValid())
             return;
+
+        ProcessGatheringBehavior();
+    }
+
+    private bool IsTargetValid()
+    {
+        if (targetBoid == null || !targetBoid.IsDead || targetBoid.IsRespawning)
+        {
+            ReturnToPatrol();
+            return false;
         }
 
-        float dist = Vector3.Distance(_hunter.transform.position, _targetBoid.transform.position);
+        return true;
+    }
 
-        // Si la distancia es mayor al radio de captura, se desplaza hacia el objetivo
-        if (dist > _hunter.CaptureRadius)
+    private void ProcessGatheringBehavior()
+    {
+        float distanceToTarget = Vector3.Distance(
+            new Vector3(hunter.transform.position.x, 0f, hunter.transform.position.z),
+            new Vector3(targetBoid.transform.position.x, 0f, targetBoid.transform.position.z)
+        );
+
+        if (distanceToTarget > hunter.CaptureRadius)
         {
-            Vector3 force = _hunter.Arrive(_targetBoid.transform.position, 2f);
-            _hunter.AddForce(force);
-            _gatherTimer = 0f;
+            Vector3 targetPosition = targetBoid.transform.position;
+            targetPosition.y = hunter.transform.position.y;
+
+            Vector3 steeringForce = hunter.Seek(targetPosition);
+            hunter.AddForce(steeringForce);
+
+            // La recolección solo avanza mientras permanece dentro del radio.
+            gatherTimer = 0f;
+            hunter.HideGatheringProgress();
         }
         else
         {
-            // Detención total y ejecución del temporizador de recolección
-            _hunter.ResetVelocity();
-            _gatherTimer += Time.deltaTime;
+            hunter.ResetVelocity();
 
-            if (_gatherTimer >= _hunter.GatheringTime)
+            gatherTimer += Time.deltaTime;
+
+            float progress = hunter.GatheringTime > 0f
+                ? gatherTimer / hunter.GatheringTime
+                : 1f;
+
+            hunter.ShowGatheringProgress(progress);
+
+            if (gatherTimer >= hunter.GatheringTime)
             {
-                Object.Destroy(_targetBoid.gameObject);
-                _hunter.AddGather();
-                _hunter.SetTargetBoid(null);
+                Debug.Log($"[CAZADOR] Terminó de recolectar a {targetBoid.name}.");
 
-                if (_hunter.CurrentGathers >= _hunter.RequiredGathers)
-                {
-                    _hunter.FSM.ChangeState(_hunter.ExitState);
-                }
-                else
-                {
-                    _hunter.FSM.ChangeState(_hunter.SearchState);
-                }
+                hunter.HideGatheringProgress();
+
+                // Registra el Boid capturado antes de iniciar su respawn.
+                UIManager.Instance?.AddCapturedBoid();
+
+                hunter.NotifyBoidCollected(targetBoid);
+                ReturnToPatrol();
             }
         }
     }
 
+    private void ReturnToPatrol()
+    {
+        hunter.HideGatheringProgress();
+        hunter.SetTargetBoid(null);
+        hunter.FSM.ChangeState(hunter.PatrolState);
+    }
+
     public void Exit()
     {
-        _gatherTimer = 0f;
+        gatherTimer = 0f;
+        hunter.HideGatheringProgress();
     }
 }

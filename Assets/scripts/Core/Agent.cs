@@ -6,10 +6,17 @@ public abstract class Agent : MonoBehaviour
     [SerializeField, Range(1f, 30f)] protected float maxSpeed = 5f;
     [SerializeField, Range(1f, 30f)] protected float maxForce = 5f;
 
+    [Header("Movement Settings")]
+    [SerializeField, Min(0f)] private float rotationSpeed = 10f;
+
+    [Header("Movement Thresholds")]
+    [SerializeField, Min(0f)] private float minimumVelocitySqrMagnitude = 0.001f;
+
     [Header("Arrive Settings")]
     [SerializeField, Range(0.01f, 0.5f)] private float stopThreshold = 0.05f;
 
     public Vector3 Velocity { get; protected set; }
+
     protected Vector3 acceleration;
     protected MeshRenderer agentMeshRenderer;
 
@@ -19,8 +26,14 @@ public abstract class Agent : MonoBehaviour
     protected virtual void Start()
     {
         agentMeshRenderer = GetComponent<MeshRenderer>();
+
         Vector2 randomCircle = Random.insideUnitCircle * maxSpeed;
-        Velocity = new Vector3(randomCircle.x, 0f, randomCircle.y);
+
+        Velocity = new Vector3(
+            randomCircle.x,
+            0f,
+            randomCircle.y
+        );
     }
 
     public void ResetVelocity()
@@ -29,58 +42,93 @@ public abstract class Agent : MonoBehaviour
         acceleration = Vector3.zero;
     }
 
-    protected void ApplyPhysics()
+    protected virtual void ApplyPhysics()
     {
         Velocity += acceleration * Time.deltaTime;
         Velocity = Vector3.ClampMagnitude(Velocity, maxSpeed);
 
         Vector3 displacement = Velocity * Time.deltaTime;
-        Vector3 targetPos = transform.position + displacement;
+        Vector3 targetPosition = transform.position + displacement;
 
-        // Radio aproximado del agente para las colisiones con el entorno
-        float agentRadius = 0.4f;
-        Vector3 rayOrigin = transform.position + Vector3.up * 0.5f;
-
-        // Comprobamos si el movimiento va a impactar contra un collider en la escena
-        if (Physics.SphereCast(rayOrigin, agentRadius, displacement.normalized, out RaycastHit hit, displacement.magnitude))
+        if (WorldBounds.Instance != null)
         {
-            // Si choca contra una valla o pared, detenemos/ajustamos la posición para que no la traspase
-            Vector3 safePosition = hit.point - displacement.normalized * agentRadius;
-            safePosition.y = transform.position.y;
-            transform.position = safePosition;
+            if (this is Boid boid)
+            {
+                // Los Boids reaparecen del lado opuesto; los demás agentes rebotan en los límites.
+                targetPosition = WorldBounds.Instance.WrapPosition(
+                    targetPosition,
+                    boid
+                );
+            }
+            else
+            {
+                Vector3 currentVelocity = Velocity;
 
-            // Opcional: anulamos la velocidad en esa dirección para que no "patine" contra el muro
-            Velocity = Vector3.ProjectOnPlane(Velocity, hit.normal);
-        }
-        else
-        {
-            transform.position = targetPos;
+                targetPosition = WorldBounds.Instance.ClampPosition(
+                    ref targetPosition,
+                    ref currentVelocity
+                );
+
+                Velocity = currentVelocity;
+            }
         }
 
+        transform.position = targetPosition;
         acceleration = Vector3.zero;
 
-        if (Velocity.sqrMagnitude > 0.001f)
-        {
-            Quaternion targetRotation = Quaternion.LookRotation(Velocity.normalized);
-            transform.rotation = Quaternion.Slerp(transform.rotation, targetRotation, Time.deltaTime * 10f);
-        }
+        UpdateRotation();
     }
-    public void AddForce(Vector3 forceVector) => acceleration += forceVector;
+
+    private void UpdateRotation()
+    {
+        if (Velocity.sqrMagnitude <= minimumVelocitySqrMagnitude)
+            return;
+
+        Quaternion targetRotation =
+            Quaternion.LookRotation(Velocity.normalized);
+
+        transform.rotation = Quaternion.Slerp(
+            transform.rotation,
+            targetRotation,
+            Time.deltaTime * rotationSpeed
+        );
+    }
+
+    // Acumula una fuerza de steering para aplicarla durante la actualización física.
+    public void AddForce(Vector3 steeringForce)
+    {
+        acceleration += steeringForce;
+    }
 
     public Vector3 Seek(Vector3 targetPosition)
     {
         targetPosition.y = transform.position.y;
-        Vector3 desiredVelocity = (targetPosition - transform.position).normalized * maxSpeed;
-        return Vector3.ClampMagnitude(desiredVelocity - Velocity, maxForce);
+
+        Vector3 desiredVelocity =
+            (targetPosition - transform.position).normalized * maxSpeed;
+
+        return Vector3.ClampMagnitude(
+            desiredVelocity - Velocity,
+            maxForce
+        );
     }
 
     public Vector3 Pursuit(Agent targetAgent)
     {
-        if (targetAgent == null) return Vector3.zero;
+        if (targetAgent == null)
+            return Vector3.zero;
 
-        float distanceToTarget = Vector3.Distance(transform.position, targetAgent.transform.position);
+        float distanceToTarget = Vector3.Distance(
+            transform.position,
+            targetAgent.transform.position
+        );
+
         float predictionTime = distanceToTarget / maxSpeed;
-        Vector3 futurePosition = targetAgent.transform.position + targetAgent.Velocity * predictionTime;
+
+        // Calcula una posición futura para anticipar el movimiento del objetivo.
+        Vector3 futurePosition =
+            targetAgent.transform.position +
+            targetAgent.Velocity * predictionTime;
 
         return Seek(futurePosition);
     }
@@ -88,30 +136,54 @@ public abstract class Agent : MonoBehaviour
     public Vector3 Flee(Vector3 targetPosition)
     {
         targetPosition.y = transform.position.y;
-        Vector3 desiredVelocity = (transform.position - targetPosition).normalized * maxSpeed;
-        return Vector3.ClampMagnitude(desiredVelocity - Velocity, maxForce);
+
+        Vector3 desiredVelocity =
+            (transform.position - targetPosition).normalized * maxSpeed;
+
+        return Vector3.ClampMagnitude(
+            desiredVelocity - Velocity,
+            maxForce
+        );
     }
 
     public Vector3 Arrive(Vector3 targetPosition, float slowingRadius)
     {
         targetPosition.y = transform.position.y;
+
         Vector3 desiredVector = targetPosition - transform.position;
         float distanceToTarget = desiredVector.magnitude;
 
-        if (distanceToTarget < stopThreshold) return -Velocity;
+        if (distanceToTarget < stopThreshold)
+            return -Velocity;
 
-        float calculatedSpeed = (distanceToTarget < slowingRadius) ? maxSpeed * (distanceToTarget / slowingRadius) : maxSpeed;
-        Vector3 desiredVelocity = desiredVector.normalized * calculatedSpeed;
-        return Vector3.ClampMagnitude(desiredVelocity - Velocity, maxForce);
+        float calculatedSpeed = distanceToTarget < slowingRadius
+            ? maxSpeed * (distanceToTarget / slowingRadius)
+            : maxSpeed;
+
+        Vector3 desiredVelocity =
+            desiredVector.normalized * calculatedSpeed;
+
+        return Vector3.ClampMagnitude(
+            desiredVelocity - Velocity,
+            maxForce
+        );
     }
 
     public Vector3 Evade(Agent targetAgent)
     {
-        if (targetAgent == null) return Vector3.zero;
+        if (targetAgent == null)
+            return Vector3.zero;
 
-        float distanceToTarget = Vector3.Distance(transform.position, targetAgent.transform.position);
+        float distanceToTarget = Vector3.Distance(
+            transform.position,
+            targetAgent.transform.position
+        );
+
         float predictionTime = distanceToTarget / maxSpeed;
-        Vector3 futurePosition = targetAgent.transform.position + targetAgent.Velocity * predictionTime;
+
+        Vector3 futurePosition =
+            targetAgent.transform.position +
+            targetAgent.Velocity * predictionTime;
 
         return Flee(futurePosition);
     }
