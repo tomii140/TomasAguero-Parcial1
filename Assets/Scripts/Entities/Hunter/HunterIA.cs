@@ -70,7 +70,6 @@ public class HunterAI : Agent
     private Boid targetBoid;
 
     private Vector3 previousPosition;
-    private float fruitSpawnTimer;
 
     public float TimerAttackCooldown { get; private set; }
 
@@ -133,7 +132,6 @@ public class HunterAI : Agent
     {
         currentEnergy = maxEnergy;
         previousPosition = transform.position;
-        fruitSpawnTimer = fruitSpawnInterval;
     }
 
     private void OnDestroy()
@@ -146,7 +144,7 @@ public class HunterAI : Agent
     {
         perception.Update(Time.deltaTime);
         UpdateCooldowns();
-        UpdateFruitSpawnTimer();
+        UpdateFruitSpawnFeedback();
 
         FSM.Update();
 
@@ -211,18 +209,22 @@ public class HunterAI : Agent
             TimerAttackCooldown -= Time.deltaTime;
     }
 
-    private void UpdateFruitSpawnTimer()
+    private void UpdateFruitSpawnFeedback()
     {
-        if (fruitSpawnTimer > 0f)
-            fruitSpawnTimer -= Time.deltaTime;
+        if (fruitSpawnTextUI == null)
+            return;
 
-        if (fruitSpawnTextUI != null)
+        if (FSM == null || PatrolState == null || FSM.CurrentState != PatrolState)
         {
-            float remainingTime = Mathf.Max(0f, fruitSpawnTimer);
-
-            fruitSpawnTextUI.text =
-                $"Proxima fruta: {Mathf.CeilToInt(remainingTime)}s";
+            fruitSpawnTextUI.text = "Generacion en pausa";
+            return;
         }
+
+        int remainingTime = Mathf.CeilToInt(
+            PatrolState.FruitSpawnTimeRemaining
+        );
+
+        fruitSpawnTextUI.text = $"Proxima fruta: {remainingTime}s";
     }
 
     public void ResetAttackCooldown()
@@ -271,11 +273,9 @@ public class HunterAI : Agent
             : null;
     }
 
-    public void SpawnFruitIfAllowed() //Genera una fruta si no se alcanzó el máximo y encuentra una posición libre.
-
+    // Genera una fruta si no se alcanzó el máximo y encuentra una posición libre.
+    public void SpawnFruitIfAllowed()
     {
-        fruitSpawnTimer = fruitSpawnInterval;
-
         if (fruitPrefab == null || GameManager.Instance == null)
             return;
 

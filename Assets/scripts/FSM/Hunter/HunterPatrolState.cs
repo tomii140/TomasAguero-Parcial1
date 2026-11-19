@@ -8,6 +8,9 @@ public class HunterPatrolState : IState
     private bool movingForward = true;
     private float fruitSpawnTimer = 0f;
 
+    public float FruitSpawnTimeRemaining =>
+        Mathf.Max(0f, hunter.FruitSpawnInterval - fruitSpawnTimer);
+
     public HunterPatrolState(HunterAI hunter)
     {
         this.hunter = hunter;
