@@ -856,9 +856,6 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 100020, guid: 3ce16b0c2ae4ac84fa450432c1f64f35, type: 3}
       insertIndex: -1
       addedObject: {fileID: 551552555}
-    - targetCorrespondingSourceObject: {fileID: 100020, guid: 3ce16b0c2ae4ac84fa450432c1f64f35, type: 3}
-      insertIndex: -1
-      addedObject: {fileID: 551552557}
   m_SourcePrefab: {fileID: 100100000, guid: 3ce16b0c2ae4ac84fa450432c1f64f35, type: 3}
 --- !u!1001 &227296415
 PrefabInstance:
@@ -2167,20 +2164,6 @@ MonoBehaviour:
   meleeAttackSound: {fileID: 8300000, guid: a2829557a8d347c47bb7489cfe0890e6, type: 3}
   detectBoidSound: {fileID: 8300000, guid: 5d3256ddce1d7fc46bfec00ec2c3e55b, type: 3}
   restSound: {fileID: 8300000, guid: 387fab59cd3917446826849a96537d59, type: 3}
---- !u!114 &551552557
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 551552546}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: da6042f197473bc41a08db3036f4fc32, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::UIManager
-  capturedBoidsTextObjectName: CapturedBoids_txt
-  consumedFruitsTextObjectName: ConsumedFruits_txt
 --- !u!1001 &564844270
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -2558,6 +2541,8 @@ Transform:
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 892302579}
+  - {fileID: 1796381609}
+  - {fileID: 1591225310}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &832575517
@@ -4243,7 +4228,6 @@ Transform:
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 1200523135}
-  - {fileID: 1796381609}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1001 &1547317610
@@ -4402,6 +4386,52 @@ Transform:
   m_CorrespondingSourceObject: {fileID: -8679921383154817045, guid: 3bbe4ea184a761142ac103f6e1e6ebbd, type: 3}
   m_PrefabInstance: {fileID: 1576056858}
   m_PrefabAsset: {fileID: 0}
+--- !u!1 &1591225309
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1591225310}
+  - component: {fileID: 1591225311}
+  m_Layer: 0
+  m_Name: UIManager
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &1591225310
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1591225309}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 798606377}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1591225311
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1591225309}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: da6042f197473bc41a08db3036f4fc32, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::UIManager
+  capturedBoidsTextObjectName: CapturedBoids_txt
+  consumedFruitsTextObjectName: ConsumedFruits_txt
 --- !u!1001 &1657651534
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -5167,12 +5197,12 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1796381608}
   serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
-  m_Father: {fileID: 1539964466}
+  m_Father: {fileID: 798606377}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!114 &1796381610
 MonoBehaviour:

@@ -6,12 +6,9 @@ public class UIManager : MonoBehaviour
 {
     public static UIManager Instance { get; private set; }
 
-    [Header("UI Text Object Names")]
-    [SerializeField] private string capturedBoidsTextObjectName = "CapturedBoids_txt";
-    [SerializeField] private string consumedFruitsTextObjectName = "ConsumedFruits_txt";
-
-    private TMP_Text capturedBoidsText;
-    private TMP_Text consumedFruitsText;
+    [Header("Counter Text References")]
+    [SerializeField] private TMP_Text capturedBoidsText;
+    [SerializeField] private TMP_Text consumedFruitsText;
 
     private int capturedBoids = 0;
     private int consumedFruits = 0;
@@ -29,33 +26,14 @@ public class UIManager : MonoBehaviour
 
     private void Start()
     {
-        FindCounterTexts();
-
         UpdateCapturedBoidsText();
         UpdateConsumedFruitsText();
-    }
-
-    private void FindCounterTexts()
-    {
-        TMP_Text[] texts = FindObjectsByType<TMP_Text>(
-            FindObjectsInactive.Include,
-            FindObjectsSortMode.None
-        );
-
-        foreach (TMP_Text text in texts)
-        {
-            if (text.gameObject.name == capturedBoidsTextObjectName)
-                capturedBoidsText = text;
-
-            if (text.gameObject.name == consumedFruitsTextObjectName)
-                consumedFruitsText = text;
-        }
 
         if (capturedBoidsText == null)
-            Debug.LogWarning($"[UI] No se encontró el texto: {capturedBoidsTextObjectName}");
+            Debug.LogWarning("[UI] Falta asignar el texto de Boids capturados.");
 
         if (consumedFruitsText == null)
-            Debug.LogWarning($"[UI] No se encontró el texto: {consumedFruitsTextObjectName}");
+            Debug.LogWarning("[UI] Falta asignar el texto de frutas consumidas.");
     }
 
     public void AddCapturedBoid()

@@ -44,8 +44,7 @@ public class BoidRespawnState : IState
 
         if (worldBounds == null)
         {
-            boid.SetRespawnVisibility(true);
-            boid.Revive();
+            CompleteRespawn();
             return;
         }
 
@@ -72,8 +71,15 @@ public class BoidRespawnState : IState
 
         Physics.SyncTransforms();
 
+        CompleteRespawn();
+    }
+
+    private void CompleteRespawn()
+    {
         boid.SetRespawnVisibility(true);
         boid.Revive();
+
+        boid.FSM.ChangeState(boid.FlockingState);
     }
 
     public void Exit() { }

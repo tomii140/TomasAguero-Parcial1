@@ -215,7 +215,6 @@ public class Boid : Agent
         if (perception != null)
             perception.Refresh();
 
-        FSM.ChangeState(FlockingState);
         RefreshUIFeedback();
     }
 

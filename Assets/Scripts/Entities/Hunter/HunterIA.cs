@@ -94,7 +94,7 @@ public class HunterAI : Agent
 
     public Transform[] Waypoints => waypoints;
 
-    // Se mantienen estas propiedades para compatibilidad con los estados actuales.
+    
     public AudioClip DetectBoidSound => hunterAudio != null ? hunterAudio.DetectBoidSound : null;
     public AudioClip RestSound => hunterAudio != null ? hunterAudio.RestSound : null;
 
