@@ -85,6 +85,9 @@ public class HunterGatherState : IState
 
                 hunter.HideGatheringProgress();
 
+                // Registra el Boid capturado antes de iniciar su respawn.
+                UIManager.Instance?.AddCapturedBoid();
+
                 hunter.NotifyBoidCollected(targetBoid);
                 ReturnToPatrol();
             }
