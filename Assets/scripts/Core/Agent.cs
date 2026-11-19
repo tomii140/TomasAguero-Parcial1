@@ -1,4 +1,3 @@
-
 using UnityEngine;
 
 public abstract class Agent : MonoBehaviour
@@ -165,9 +164,9 @@ public abstract class Agent : MonoBehaviour
             desiredVector.normalized * calculatedSpeed;
 
         return Vector3.ClampMagnitude(
-     desiredVelocity - Velocity,
-     maxForce
- );
+            desiredVelocity - Velocity,
+            maxForce
+        );
     }
 
     public Vector3 Evade(Agent targetAgent)

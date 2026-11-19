@@ -2,14 +2,14 @@ using UnityEngine;
 
 public class HunterRestState : IState
 {
-    private readonly HunterAI _hunter;
+    private readonly HunterAI hunter;
 
-    public HunterRestState(HunterAI hunter) => _hunter = hunter;
+    public HunterRestState(HunterAI hunter) => this.hunter = hunter;
 
     public void Enter()
     {
-        _hunter.ResetVelocity();
-        _hunter.PlaySound(_hunter.RestSound);
+        hunter.ResetVelocity();
+        hunter.PlaySound(hunter.RestSound);
     }
 
     public void Update()
@@ -20,11 +20,11 @@ public class HunterRestState : IState
     private void RecoverEnergyContinuously()
     {
         // Regeneración de energía progresiva hasta el tope máximo para reanudar tareas.
-        _hunter.ConsumeOrRecoverEnergy(_hunter.EnergyRecoveryRate * Time.deltaTime);
+        hunter.ConsumeOrRecoverEnergy(hunter.EnergyRecoveryRate * Time.deltaTime);
 
-        if (_hunter.CurrentEnergy >= _hunter.MaxEnergy)
+        if (hunter.CurrentEnergy >= hunter.MaxEnergy)
         {
-            _hunter.FSM.ChangeState(_hunter.PatrolState);
+            hunter.FSM.ChangeState(hunter.PatrolState);
         }
     }
 

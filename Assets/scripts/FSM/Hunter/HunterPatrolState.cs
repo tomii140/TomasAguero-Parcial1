@@ -15,7 +15,7 @@ public class HunterPatrolState : IState
 
     public void Enter()
     {
-
+        // No requiere inicialización adicional al comenzar la patrulla.
     }
 
     public void Update()
