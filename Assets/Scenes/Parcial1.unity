@@ -4430,8 +4430,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: da6042f197473bc41a08db3036f4fc32, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::UIManager
-  capturedBoidsTextObjectName: CapturedBoids_txt
-  consumedFruitsTextObjectName: ConsumedFruits_txt
+  capturedBoidsText: {fileID: 1788458135}
+  consumedFruitsText: {fileID: 1835113664}
 --- !u!1001 &1657651534
 PrefabInstance:
   m_ObjectHideFlags: 0
