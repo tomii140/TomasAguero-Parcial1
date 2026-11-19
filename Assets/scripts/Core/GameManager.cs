@@ -16,7 +16,7 @@ public class GameManager : MonoBehaviour
     [SerializeField, Range(1, 50)] private int initialAmount = 6;
 
     [Header("Spawn Settings")]
-    [SerializeField, Range(0.5f, 25f)] private float spawnRadius = 8f;
+    [SerializeField, Range(0.5f, 25f)] private float spawnRadius = 3f; 
 
     private readonly List<Boid> activeBoids = new List<Boid>();
     private readonly List<Fruit> activeFruits = new List<Fruit>();

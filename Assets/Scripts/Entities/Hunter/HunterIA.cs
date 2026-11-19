@@ -18,7 +18,7 @@ public class HunterAI : Agent
     [SerializeField, Range(0.5f, 25f)] private float meleeAttackRadius = 3f;
     [SerializeField, Range(0.1f, 10f)] private float timeBetweenAttacks = 2f;
     [SerializeField, Range(0.5f, 10f)] private float gatheringTime = 2f;
-    [SerializeField, Range(0.5f, 5f)] private float captureRadius = 1.5f;
+    [SerializeField, Range(0.5f, 50f)] private float captureRadius = 1.5f;
 
     [Header("Combat Damage")]
     [SerializeField, Min(1)] private int meleeDamage = 2;
