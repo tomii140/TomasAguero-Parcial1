@@ -49,6 +49,7 @@ public class HunterAI : Agent
     [SerializeField, Range(1f, 10f)] private float fruitSpawnInterval = 4f;
     [SerializeField, Range(1f, 20f)] private float fruitSpawnRadius = 8f;
     [SerializeField, Range(1, 10)] private int maxFruitsInScene = 5;
+    [SerializeField] private TextMeshPro fruitSpawnTextUI;
 
     [Header("Feedback")]
     [SerializeField] private TextMeshPro stateTextUI;
@@ -69,6 +70,7 @@ public class HunterAI : Agent
     private Boid targetBoid;
 
     private Vector3 previousPosition;
+    private float fruitSpawnTimer;
 
     public float TimerAttackCooldown { get; private set; }
 
@@ -94,7 +96,6 @@ public class HunterAI : Agent
 
     public Transform[] Waypoints => waypoints;
 
-    
     public AudioClip DetectBoidSound => hunterAudio != null ? hunterAudio.DetectBoidSound : null;
     public AudioClip RestSound => hunterAudio != null ? hunterAudio.RestSound : null;
 
@@ -132,6 +133,7 @@ public class HunterAI : Agent
     {
         currentEnergy = maxEnergy;
         previousPosition = transform.position;
+        fruitSpawnTimer = fruitSpawnInterval;
     }
 
     private void OnDestroy()
@@ -144,6 +146,7 @@ public class HunterAI : Agent
     {
         perception.Update(Time.deltaTime);
         UpdateCooldowns();
+        UpdateFruitSpawnTimer();
 
         FSM.Update();
 
@@ -208,12 +211,25 @@ public class HunterAI : Agent
             TimerAttackCooldown -= Time.deltaTime;
     }
 
+    private void UpdateFruitSpawnTimer()
+    {
+        if (fruitSpawnTimer > 0f)
+            fruitSpawnTimer -= Time.deltaTime;
+
+        if (fruitSpawnTextUI != null)
+        {
+            float remainingTime = Mathf.Max(0f, fruitSpawnTimer);
+
+            fruitSpawnTextUI.text =
+                $"Proxima fruta: {Mathf.CeilToInt(remainingTime)}s";
+        }
+    }
+
     public void ResetAttackCooldown()
     {
         TimerAttackCooldown = timeBetweenAttacks;
     }
 
-   
     public void PlayAttackSound(bool isMelee)
     {
         hunterAudio?.PlayAttackSound(isMelee);
@@ -255,21 +271,44 @@ public class HunterAI : Agent
             : null;
     }
 
-    public void SpawnFruitIfAllowed()
+    public void SpawnFruitIfAllowed() //Genera una fruta si no se alcanzó el máximo y encuentra una posición libre.
+
     {
+        fruitSpawnTimer = fruitSpawnInterval;
+
         if (fruitPrefab == null || GameManager.Instance == null)
             return;
 
         if (GameManager.Instance.ActiveFruits.Count >= maxFruitsInScene)
             return;
 
-        Vector2 randomCircle = Random.insideUnitCircle * fruitSpawnRadius;
+        Vector3 spawnPosition;
 
-        Vector3 spawnPosition = transform.position + new Vector3(
-            randomCircle.x,
-            0f,
-            randomCircle.y
-        );
+        if (WorldBounds.Instance != null)
+        {
+            bool foundPosition =
+                WorldBounds.Instance.TryGetRandomSpawnPosition(
+                    transform.position,
+                    fruitSpawnRadius,
+                    transform.position.y,
+                    null,
+                    out spawnPosition
+                );
+
+            if (!foundPosition)
+                return;
+        }
+        else
+        {
+            Vector2 randomCircle =
+                Random.insideUnitCircle * fruitSpawnRadius;
+
+            spawnPosition = transform.position + new Vector3(
+                randomCircle.x,
+                0f,
+                randomCircle.y
+            );
+        }
 
         Instantiate(fruitPrefab, spawnPosition, Quaternion.identity);
     }
