@@ -50,12 +50,6 @@ public class HunterAI : Agent
     [SerializeField, Range(1f, 20f)] private float fruitSpawnRadius = 8f;
     [SerializeField, Range(1, 10)] private int maxFruitsInScene = 5;
 
-    [Header("Audio Feedback")]
-    [SerializeField] private AudioClip rangedAttackSound;
-    [SerializeField] private AudioClip meleeAttackSound;
-    [SerializeField] private AudioClip detectBoidSound;
-    [SerializeField] private AudioClip restSound;
-
     [Header("Feedback")]
     [SerializeField] private TextMeshPro stateTextUI;
     [SerializeField] private bool showGizmos = true;
@@ -69,8 +63,8 @@ public class HunterAI : Agent
 
     public float AttackDebugLineDuration => attackDebugLineDuration;
 
-    private AudioSource audioSource;
     private Animator animator;
+    private HunterAudio hunterAudio;
     private HunterPerception perception;
     private Boid targetBoid;
 
@@ -100,8 +94,9 @@ public class HunterAI : Agent
 
     public Transform[] Waypoints => waypoints;
 
-    public AudioClip DetectBoidSound => detectBoidSound;
-    public AudioClip RestSound => restSound;
+    // Se mantienen estas propiedades para compatibilidad con los estados actuales.
+    public AudioClip DetectBoidSound => hunterAudio != null ? hunterAudio.DetectBoidSound : null;
+    public AudioClip RestSound => hunterAudio != null ? hunterAudio.RestSound : null;
 
     public int MeleeDamage => meleeDamage;
     public int RangedDamage => rangedDamage;
@@ -110,17 +105,8 @@ public class HunterAI : Agent
     {
         base.Start();
 
-        animator = GetComponent<Animator>();
-        audioSource = GetComponent<AudioSource>();
-
-        if (audioSource == null)
-        {
-            audioSource = gameObject.AddComponent<AudioSource>();
-            audioSource.spatialBlend = 1f;
-        }
-
-        currentEnergy = maxEnergy;
-        previousPosition = transform.position;
+        InitializeComponents();
+        InitializeRuntimeValues();
 
         InitializeGatheringProgressUI();
         InitializePerception();
@@ -128,6 +114,24 @@ public class HunterAI : Agent
         InitializeStateMachine();
 
         RefreshUIFeedback();
+    }
+
+    // Obtiene los componentes necesarios para el funcionamiento del cazador.
+    private void InitializeComponents()
+    {
+        animator = GetComponent<Animator>();
+
+        hunterAudio = GetComponent<HunterAudio>();
+
+        if (hunterAudio == null)
+            hunterAudio = gameObject.AddComponent<HunterAudio>();
+    }
+
+    // Establece los valores iniciales de la simulación.
+    private void InitializeRuntimeValues()
+    {
+        currentEnergy = maxEnergy;
+        previousPosition = transform.position;
     }
 
     private void OnDestroy()
@@ -209,23 +213,15 @@ public class HunterAI : Agent
         TimerAttackCooldown = timeBetweenAttacks;
     }
 
+   
     public void PlayAttackSound(bool isMelee)
     {
-        if (audioSource == null)
-            return;
-
-        AudioClip clipToPlay = isMelee
-            ? meleeAttackSound
-            : rangedAttackSound;
-
-        if (clipToPlay != null)
-            audioSource.PlayOneShot(clipToPlay);
+        hunterAudio?.PlayAttackSound(isMelee);
     }
 
     public void PlaySound(AudioClip clip)
     {
-        if (audioSource != null && clip != null)
-            audioSource.PlayOneShot(clip);
+        hunterAudio?.PlaySound(clip);
     }
 
     public Boid GetTargetBoid()

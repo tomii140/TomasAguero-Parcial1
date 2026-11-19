@@ -853,6 +853,9 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 100020, guid: 3ce16b0c2ae4ac84fa450432c1f64f35, type: 3}
       insertIndex: -1
       addedObject: {fileID: 551552554}
+    - targetCorrespondingSourceObject: {fileID: 100020, guid: 3ce16b0c2ae4ac84fa450432c1f64f35, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 551552555}
   m_SourcePrefab: {fileID: 100100000, guid: 3ce16b0c2ae4ac84fa450432c1f64f35, type: 3}
 --- !u!1001 &227296415
 PrefabInstance:
@@ -1729,10 +1732,6 @@ MonoBehaviour:
   fruitSpawnInterval: 4
   fruitSpawnRadius: 8
   maxFruitsInScene: 5
-  rangedAttackSound: {fileID: 8300000, guid: c4cc2f437db008448869971cbe2abc0f, type: 3}
-  meleeAttackSound: {fileID: 8300000, guid: a2829557a8d347c47bb7489cfe0890e6, type: 3}
-  detectBoidSound: {fileID: 8300000, guid: 5d3256ddce1d7fc46bfec00ec2c3e55b, type: 3}
-  restSound: {fileID: 8300000, guid: 387fab59cd3917446826849a96537d59, type: 3}
   stateTextUI: {fileID: 1362122259}
   showGizmos: 1
   gatheringProgressSlider: {fileID: 1719192864}
@@ -2149,6 +2148,22 @@ CapsuleCollider:
   m_Height: 2
   m_Direction: 1
   m_Center: {x: 0, y: 1, z: 0}
+--- !u!114 &551552555
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 551552546}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7d4f8d08bfe4de74c9bcc9e7bb9a07cf, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::HunterAudio
+  rangedAttackSound: {fileID: 8300000, guid: c4cc2f437db008448869971cbe2abc0f, type: 3}
+  meleeAttackSound: {fileID: 8300000, guid: a2829557a8d347c47bb7489cfe0890e6, type: 3}
+  detectBoidSound: {fileID: 8300000, guid: 5d3256ddce1d7fc46bfec00ec2c3e55b, type: 3}
+  restSound: {fileID: 8300000, guid: 387fab59cd3917446826849a96537d59, type: 3}
 --- !u!1001 &564844270
 PrefabInstance:
   m_ObjectHideFlags: 0

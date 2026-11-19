@@ -110,6 +110,12 @@ public class Boid : Agent
 
     private void Awake()
     {
+        InitializeCachedComponents();
+    }
+
+    // Guarda las referencias visuales y físicas para reutilizarlas durante el respawn.
+    private void InitializeCachedComponents()
+    {
         cachedRenderers = GetComponentsInChildren<Renderer>(true);
         cachedColliders = GetComponentsInChildren<Collider>(true);
     }
@@ -118,25 +124,42 @@ public class Boid : Agent
     {
         base.Start();
 
-        animator = GetComponent<Animator>();
+        InitializeComponents();
+        InitializeRuntimeValues();
+        InitializePerception();
+        InitializeFlocking();
 
+        InitializeFSM();
+        RefreshUIFeedback();
+    }
+
+    private void InitializeComponents()
+    {
+        animator = GetComponent<Animator>();
+    }
+
+    private void InitializeRuntimeValues()
+    {
         if (GameManager.Instance != null)
             GameManager.Instance.RegisterBoid(this);
 
         currentHealth = maxHealth;
+    }
 
+    private void InitializePerception()
+    {
         perception = new BoidPerception(
             this,
             perceptionUpdateInterval,
             perceptionBufferCapacity
         );
 
-        flocking = new BoidFlocking(this);
-
         perception.Refresh();
+    }
 
-        InitializeFSM();
-        RefreshUIFeedback();
+    private void InitializeFlocking()
+    {
+        flocking = new BoidFlocking(this);
     }
 
     private void OnDestroy()
