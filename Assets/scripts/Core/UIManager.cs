@@ -10,8 +10,8 @@ public class UIManager : MonoBehaviour
     [SerializeField] private string capturedBoidsTextObjectName = "CapturedBoids_txt";
     [SerializeField] private string consumedFruitsTextObjectName = "ConsumedFruits_txt";
 
-    private TextMeshProUGUI capturedBoidsText;
-    private TextMeshProUGUI consumedFruitsText;
+    private TMP_Text capturedBoidsText;
+    private TMP_Text consumedFruitsText;
 
     private int capturedBoids = 0;
     private int consumedFruits = 0;
@@ -37,18 +37,12 @@ public class UIManager : MonoBehaviour
 
     private void FindCounterTexts()
     {
-        HunterAI hunter = FindFirstObjectByType<HunterAI>();
+        TMP_Text[] texts = FindObjectsByType<TMP_Text>(
+            FindObjectsInactive.Include,
+            FindObjectsSortMode.None
+        );
 
-        if (hunter == null)
-        {
-            Debug.LogWarning("[UI] No se encontró al Hunter.");
-            return;
-        }
-
-        TextMeshProUGUI[] texts =
-            hunter.GetComponentsInChildren<TextMeshProUGUI>(true);
-
-        foreach (TextMeshProUGUI text in texts)
+        foreach (TMP_Text text in texts)
         {
             if (text.gameObject.name == capturedBoidsTextObjectName)
                 capturedBoidsText = text;
